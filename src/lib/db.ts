@@ -87,7 +87,8 @@ function migrate(d: DatabaseSync) {
       summarised_at  INTEGER,
       summarised_n   INTEGER DEFAULT 0,
       attempts       INTEGER NOT NULL DEFAULT 0,
-      place_id       TEXT REFERENCES places(id)
+      place_id       TEXT REFERENCES places(id),
+      framing_left   TEXT, framing_centre TEXT, framing_right  TEXT
     );
     CREATE INDEX IF NOT EXISTS clusters_last_seen ON clusters(last_seen DESC);
     CREATE INDEX IF NOT EXISTS clusters_category  ON clusters(category, last_seen DESC);
@@ -130,6 +131,12 @@ function migrate(d: DatabaseSync) {
   };
   add('clusters', 'attempts', 'attempts INTEGER NOT NULL DEFAULT 0');
   add('clusters', 'place_id', 'place_id TEXT REFERENCES places(id)');
+  // One paragraph per side that actually ran the story, written in the same
+  // summarisation call. Nullable: a cluster summarised before v2.0 has none,
+  // and one covered by a single side only gets the side it has.
+  add('clusters', 'framing_left', 'framing_left TEXT');
+  add('clusters', 'framing_centre', 'framing_centre TEXT');
+  add('clusters', 'framing_right', 'framing_right TEXT');
   add('prefs', 'place_ids', 'place_ids TEXT');
   add('prefs', 'geo_consent', 'geo_consent INTEGER NOT NULL DEFAULT 0');
   add('prefs', 'geo_place_id', 'geo_place_id TEXT');

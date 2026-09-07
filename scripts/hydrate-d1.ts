@@ -110,6 +110,7 @@ async function main() {
   }
 
   const clusterCols = ['id','headline','crux','category','place','country','place_id','importance','image_url',
+    'framing_left','framing_centre','framing_right',
     'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'];
   const clusters = await pull<Record<string, unknown>>('clusters',
     (await columns('clusters', clusterCols)).join(','), 'WHERE last_seen >= ?', [since]);

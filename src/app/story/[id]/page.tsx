@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getStory } from '@/lib/feed';
+import { CoverageSplit } from '@/components/CoverageSplit';
 import { isSaved } from '@/lib/library';
 import { ago, storyAge } from '@/components/StoryCard';
 import { Back, Photo } from '@/components/icons';
@@ -18,7 +19,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   // this call starts it first -- so no loading.tsx may sit on this route or any
   // of its ancestors, root included.
   if (!story) notFound();
-  const { cluster, articles, related } = story;
+  const { cluster, articles, related, coverage } = story;
 
   const outlets = [...new Map(articles.map((a) => [a.source, a])).values()];
   // Two sentences per paragraph reads better than one wall of prose.
@@ -60,18 +61,15 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="detail__side">
-            <div className="panel">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div className="label">How it&rsquo;s covered</div>
-                <div style={{ fontSize: 11.5, fontWeight: 600, color: 'oklch(0.60 0.014 258)' }}>
-                  {articles.length} article{articles.length === 1 ? '' : 's'}
-                </div>
-              </div>
-              <p style={{ fontSize: 13, lineHeight: 1.5, color: 'oklch(0.42 0.014 258)' }}>
-                {cluster.source_count} independent outlet{cluster.source_count === 1 ? '' : 's'} ran this story.
-                Left/centre/right breakdown arrives with the source-ratings table in v2.
-              </p>
-            </div>
+            <CoverageSplit
+              coverage={coverage}
+              articleCount={articles.length}
+              framing={{
+                left: cluster.framing_left,
+                centre: cluster.framing_centre,
+                right: cluster.framing_right,
+              }}
+            />
 
             {related.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>

@@ -32,12 +32,13 @@ function imageOf(item: Item): string | null {
 function seedSources() {
   const d = db();
   const stmt = d.prepare(
-    `INSERT INTO sources (id, name, feed_url, homepage, country, category)
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO sources (id, name, feed_url, homepage, country, category, bias)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET name=excluded.name, feed_url=excluded.feed_url,
-       homepage=excluded.homepage, country=excluded.country, category=excluded.category`,
+       homepage=excluded.homepage, country=excluded.country, category=excluded.category,
+       bias=excluded.bias`,
   );
-  for (const s of SOURCES) stmt.run(s.id, s.name, s.feed_url, s.homepage, s.country, s.category);
+  for (const s of SOURCES) stmt.run(s.id, s.name, s.feed_url, s.homepage, s.country, s.category, s.bias);
 }
 
 async function extractBody(url: string): Promise<string | null> {

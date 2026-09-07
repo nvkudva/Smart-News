@@ -110,8 +110,8 @@ async function main() {
   const t0 = cycleStart(dbPath);
 
   console.log(t0 ? `Pushing what changed since ${new Date(t0).toISOString().slice(11, 19)}…` : 'Pushing the full window…');
-  await push('sources', ['id', 'name', 'feed_url', 'homepage', 'country', 'category'],
-    all('SELECT id,name,feed_url,homepage,country,category FROM sources'));
+  await push('sources', ['id', 'name', 'feed_url', 'homepage', 'country', 'category', 'bias'],
+    all('SELECT id,name,feed_url,homepage,country,category,bias FROM sources'));
 
   // The gazetteer is a few hundred rows and only changes when someone edits the
   // seed, so it goes up whole rather than carrying a changed-since column. It
@@ -122,6 +122,7 @@ async function main() {
   await push('place_aliases', aliasCols, all(`SELECT ${aliasCols.join(',')} FROM place_aliases`));
 
   const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,
+            framing_left,framing_centre,framing_right,
             article_count,source_count,first_seen,last_seen,summarised_at,summarised_n,attempts`;
   const clusters = t0
     ? all<Record<string, unknown>>(
@@ -129,6 +130,7 @@ async function main() {
     : all<Record<string, unknown>>(`SELECT ${clusterCols} FROM clusters WHERE last_seen >= ?`, since);
   await push('clusters',
     ['id','headline','crux','category','place','country','place_id','importance','image_url',
+     'framing_left','framing_centre','framing_right',
      'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'],
     clusters);
 

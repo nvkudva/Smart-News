@@ -1,4 +1,5 @@
 import { d1 } from './d1';
+import type { Bias } from './sources';
 import { expandPlaceIds, geoAdjacentPlaceIds, placesReady } from './places';
 
 export type Story = {
@@ -8,6 +9,7 @@ export type Story = {
   importance: number;
   image_url: string | null; article_count: number; source_count: number;
   first_seen: number; last_seen: number;
+  framing_left: string | null; framing_centre: string | null; framing_right: string | null;
   exploration: 0 | 1; exploration_kind: 'category' | 'place' | null;
 };
 
@@ -258,8 +260,9 @@ export async function getStory(id: string) {
   const d = await d1();
   const cluster = await d.get<Story>('SELECT * FROM clusters WHERE id = ?', [id]);
   if (!cluster) return null;
-  const articles = await d.all<{ title: string; url: string; published_at: number; source: string; homepage: string }>(
-    `SELECT a.title, a.url, a.published_at, s.name AS source, s.homepage
+  const articles = await d.all<{ title: string; url: string; published_at: number;
+                                 source: string; homepage: string; bias: Bias | null }>(
+    `SELECT a.title, a.url, a.published_at, s.name AS source, s.homepage, s.bias
        FROM articles a JOIN sources s ON s.id = a.source_id
       WHERE a.cluster_id = ? ORDER BY a.published_at ASC`, [id]);
 
@@ -268,7 +271,46 @@ export async function getStory(id: string) {
       WHERE category = ? AND id != ? AND headline IS NOT NULL
       ORDER BY last_seen DESC LIMIT 3`, [cluster.category, id]);
 
-  return { cluster, articles, related };
+  return { cluster, articles, related, coverage: coverageOf(articles) };
+}
+
+export type Coverage = {
+  /** Distinct outlets per side — outlets, not articles: one paper filing six
+   *  times is one voice, and counting articles would let it drown the rest. */
+  counts: Record<Bias, number>;
+  total: number;
+  /** The side holding at least BLINDSPOT_SHARE of the outlets, if any. */
+  dominant: Bias | null;
+  /** Sides with a rating that ran nothing. Only meaningful once `total` is
+   *  large enough that silence is a choice rather than a small sample. */
+  missing: Bias[];
+  rated: number;
+  unrated: number;
+};
+
+const BLINDSPOT_SHARE = 0.75;
+const BLINDSPOT_MIN_OUTLETS = 3;
+
+export function coverageOf(articles: { source: string; bias: Bias | null }[]): Coverage {
+  const bySource = new Map<string, Bias | null>();
+  for (const a of articles) if (!bySource.has(a.source)) bySource.set(a.source, a.bias);
+
+  const counts: Record<Bias, number> = { left: 0, centre: 0, right: 0 };
+  let unrated = 0;
+  for (const bias of bySource.values()) {
+    if (bias === 'left' || bias === 'centre' || bias === 'right') counts[bias]++;
+    else unrated++;
+  }
+  const rated = counts.left + counts.centre + counts.right;
+
+  const dominant = (Object.keys(counts) as Bias[]).find(
+    (b) => rated >= BLINDSPOT_MIN_OUTLETS && counts[b] / rated >= BLINDSPOT_SHARE) ?? null;
+
+  return {
+    counts, total: bySource.size, dominant, rated, unrated,
+    missing: rated >= BLINDSPOT_MIN_OUTLETS
+      ? (Object.keys(counts) as Bias[]).filter((b) => counts[b] === 0) : [],
+  };
 }
 
 export async function logEvent(clusterId: string, kind: string, dwellMs?: number, userId = 'local') {

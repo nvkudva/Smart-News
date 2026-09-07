@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS clusters (
   article_count INTEGER NOT NULL DEFAULT 0, source_count INTEGER NOT NULL DEFAULT 0,
   first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
   summarised_at INTEGER, summarised_n INTEGER DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0,
-  place_id TEXT);
+  place_id TEXT,
+  framing_left TEXT, framing_centre TEXT, framing_right TEXT);
 CREATE TABLE IF NOT EXISTS articles (
   id TEXT PRIMARY KEY, source_id TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL,
   lead TEXT, body TEXT, image_url TEXT, published_at INTEGER NOT NULL,
@@ -60,7 +61,12 @@ CREATE INDEX IF NOT EXISTS places_admin1 ON places(admin1_id);
  * same way db.ts does it locally.
  */
 export const ADDED_COLUMNS: Record<string, [string, string][]> = {
-  clusters: [['place_id', 'place_id TEXT']],
+  clusters: [
+    ['place_id', 'place_id TEXT'],
+    ['framing_left', 'framing_left TEXT'],
+    ['framing_centre', 'framing_centre TEXT'],
+    ['framing_right', 'framing_right TEXT'],
+  ],
   prefs: [
     ['place_ids', 'place_ids TEXT'],
     ['geo_consent', 'geo_consent INTEGER NOT NULL DEFAULT 0'],
