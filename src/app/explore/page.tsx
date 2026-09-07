@@ -14,7 +14,7 @@ export default async function Explore({
   const { category, country } = await searchParams;
 
   if (category || country) {
-    const stories = category ? getByCategory(category) : getByCountry(country!);
+    const stories = category ? await getByCategory(category) : await getByCountry(country!);
     const title = category ?? countryName(country!);
     return (
       <>
@@ -33,8 +33,7 @@ export default async function Explore({
     );
   }
 
-  const categories = getCategoryFacets();
-  const places = getPlaceFacets();
+  const [categories, places] = await Promise.all([getCategoryFacets(), getPlaceFacets()]);
 
   return (
     <>

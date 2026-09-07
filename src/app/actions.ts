@@ -6,7 +6,7 @@ import { toggleSaved } from '@/lib/library';
 import { CATEGORIES } from '@/lib/db';
 
 export async function toggleSavedAction(clusterId: string): Promise<boolean> {
-  const nowSaved = toggleSaved(clusterId);
+  const nowSaved = await toggleSaved(clusterId);
   revalidatePath('/saved');
   return nowSaved;
 }
@@ -18,7 +18,7 @@ export async function savePrefsAction(formData: FormData) {
     places: String(formData.get('places') ?? '')
       .split(',').map((p) => p.trim()).filter(Boolean).slice(0, 12),
   };
-  savePrefs(prefs);
+  await savePrefs(prefs);
   revalidatePath('/');
   revalidatePath('/profile');
 }

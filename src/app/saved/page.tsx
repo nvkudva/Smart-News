@@ -4,8 +4,8 @@ import { getSaved } from '@/lib/library';
 
 export const dynamic = 'force-dynamic';
 
-export default function Saved() {
-  const stories = getSaved();
+export default async function Saved() {
+  const stories = await getSaved();
 
   return (
     <>

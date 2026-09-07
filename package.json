@@ -9,7 +9,9 @@
     "ingest": "tsx scripts/ingest.ts",
     "pipeline": "tsx scripts/pipeline.ts",
     "build:check": "tsc --noEmit",
-    "cycle": "tsx scripts/cycle.ts"
+    "cycle": "tsx scripts/cycle.ts",
+    "sync": "tsx scripts/sync-d1.ts",
+    "deploy": "opennextjs-cloudflare build && wrangler deploy"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
@@ -23,6 +25,7 @@
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.6",
     "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.4.1",
@@ -31,11 +34,13 @@
     "dotenv": "^17.4.2",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.129.0"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
-    "fsevents@2.3.3": true
+    "fsevents@2.3.3": true,
+    "workerd@1.20260903.1": true
   },
   "browserslist": [
     "last 2 Chrome versions",

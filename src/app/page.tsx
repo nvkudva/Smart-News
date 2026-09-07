@@ -6,9 +6,8 @@ import { Logo } from '@/components/Logo';
 
 export const dynamic = 'force-dynamic';
 
-export default function Home() {
-  const stories = getFeed(30);
-  const prefs = getPrefs();
+export default async function Home() {
+  const [stories, prefs] = await Promise.all([getFeed(30), getPrefs()]);
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (

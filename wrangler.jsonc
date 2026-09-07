@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "smartnews",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "observability": { "enabled": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "smartnews", "database_id": "1e779125-88d9-4688-85f2-08c3c6bcecf3" }
+  ],
+  "ai": { "binding": "AI" }
+}

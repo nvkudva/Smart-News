@@ -46,3 +46,6 @@ data/
 
 # ...but the template documenting every provider must be tracked
 !.env.local.example
+
+.open-next/
+.wrangler/

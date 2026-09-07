@@ -1,4 +1,4 @@
-import { db } from './db';
+import { d1 } from './d1';
 
 export type Story = {
   id: string; headline: string; crux: string; category: string;
@@ -15,9 +15,9 @@ export const DEFAULT_PREFS: Prefs = {
   places: ['Bengaluru'],
 };
 
-export function getPrefs(userId = 'local'): Prefs {
-  const row = db().prepare('SELECT country, categories, places FROM prefs WHERE user_id = ?')
-    .get(userId) as unknown as { country: string; categories: string; places: string } | undefined;
+export async function getPrefs(userId = 'local'): Promise<Prefs> {
+  const row = await (await d1()).get<{ country: string; categories: string; places: string }>(
+    'SELECT country, categories, places FROM prefs WHERE user_id = ?', [userId]);
   if (!row) return DEFAULT_PREFS;
   return {
     country: row.country ?? DEFAULT_PREFS.country,
@@ -26,12 +26,12 @@ export function getPrefs(userId = 'local'): Prefs {
   };
 }
 
-export function savePrefs(p: Prefs, userId = 'local') {
-  db().prepare(
+export async function savePrefs(p: Prefs, userId = 'local') {
+  await (await d1()).run(
     `INSERT INTO prefs (user_id, country, categories, places) VALUES (?, ?, ?, ?)
      ON CONFLICT(user_id) DO UPDATE SET country=excluded.country,
        categories=excluded.categories, places=excluded.places`,
-  ).run(userId, p.country, JSON.stringify(p.categories), JSON.stringify(p.places));
+    [userId, p.country, JSON.stringify(p.categories), JSON.stringify(p.places)]);
 }
 
 const HALF_LIFE_H = 9;
@@ -51,15 +51,15 @@ function score(s: Story, prefs: Prefs): number {
  * Ranked feed with a reserved exploration budget: one slot in four goes to a
  * story outside the user's stated categories, chosen on merit within that set.
  */
-export function getFeed(limit = 30, userId = 'local'): Story[] {
-  const prefs = getPrefs(userId);
-  const rows = db().prepare(
+export async function getFeed(limit = 30, userId = 'local'): Promise<Story[]> {
+  const prefs = await getPrefs(userId);
+  const rows = await (await d1()).all<Story>(
     `SELECT id, headline, crux, category, place, country, importance, image_url,
             article_count, source_count, last_seen
        FROM clusters
       WHERE headline IS NOT NULL AND last_seen >= ?
       ORDER BY last_seen DESC LIMIT 400`,
-  ).all(Date.now() - 48 * 3_600_000) as unknown as Story[];
+    [Date.now() - 48 * 3_600_000]);
 
   const scored = rows.map((s) => ({ s, k: score(s, prefs) })).sort((a, b) => b.k - a.k);
   const known = scored.filter(({ s }) => prefs.categories.includes(s.category));
@@ -77,26 +77,25 @@ export function getFeed(limit = 30, userId = 'local'): Story[] {
   return out;
 }
 
-export function getStory(id: string) {
-  const d = db();
-  const cluster = d.prepare('SELECT * FROM clusters WHERE id = ?').get(id) as unknown as Story | undefined;
+export async function getStory(id: string) {
+  const d = await d1();
+  const cluster = await d.get<Story>('SELECT * FROM clusters WHERE id = ?', [id]);
   if (!cluster) return null;
-  const articles = d.prepare(
+  const articles = await d.all<{ title: string; url: string; published_at: number; source: string; homepage: string }>(
     `SELECT a.title, a.url, a.published_at, s.name AS source, s.homepage
        FROM articles a JOIN sources s ON s.id = a.source_id
-      WHERE a.cluster_id = ? ORDER BY a.published_at ASC`,
-  ).all(id) as unknown as { title: string; url: string; published_at: number; source: string; homepage: string }[];
+      WHERE a.cluster_id = ? ORDER BY a.published_at ASC`, [id]);
 
-  const related = d.prepare(
+  const related = await d.all<{ id: string; headline: string; source_count: number; last_seen: number }>(
     `SELECT id, headline, source_count, last_seen FROM clusters
       WHERE category = ? AND id != ? AND headline IS NOT NULL
-      ORDER BY last_seen DESC LIMIT 3`,
-  ).all(cluster.category, id) as unknown as { id: string; headline: string; source_count: number; last_seen: number }[];
+      ORDER BY last_seen DESC LIMIT 3`, [cluster.category, id]);
 
   return { cluster, articles, related };
 }
 
-export function logEvent(clusterId: string, kind: string, dwellMs?: number, userId = 'local') {
-  db().prepare('INSERT INTO events (user_id, cluster_id, kind, dwell_ms, ts) VALUES (?, ?, ?, ?, ?)')
-    .run(userId, clusterId, kind, dwellMs ?? null, Date.now());
+export async function logEvent(clusterId: string, kind: string, dwellMs?: number, userId = 'local') {
+  await (await d1()).run(
+    'INSERT INTO events (user_id, cluster_id, kind, dwell_ms, ts) VALUES (?, ?, ?, ?, ?)',
+    [userId, clusterId, kind, dwellMs ?? null, Date.now()]);
 }

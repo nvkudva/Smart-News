@@ -8,8 +8,9 @@ import { TabBar } from '@/components/TabBar';
 export const dynamic = 'force-dynamic';
 
 /** Full-screen vertical stack. CSS scroll-snap does the paging — no JS needed. */
-export default function Reels() {
-  const stories = getReels(20);
+export default async function Reels() {
+  const stories = await getReels(20);
+  const savedFlags = await Promise.all(stories.map((s) => isSaved(s.id)));
 
   return (
     <>
@@ -32,7 +33,7 @@ export default function Reels() {
             <h2>{s.headline}</h2>
             <p>{s.crux}</p>
             <div className="reel__actions">
-              <SaveButton clusterId={s.id} initial={isSaved(s.id)} />
+              <SaveButton clusterId={s.id} initial={savedFlags[i]} />
               <Link href={`/story/${encodeURIComponent(s.id)}`} className="savebtn">
                 {s.source_count} sources · Read
               </Link>

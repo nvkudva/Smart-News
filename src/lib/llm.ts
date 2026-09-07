@@ -45,11 +45,10 @@ export type LlmConfig = {
 };
 
 const DEFAULTS: Record<Provider, { model: string; baseUrl?: string; rpm: number; keyEnv: string }> = {
-  // Workers AI. qwen3-30b-a3b measured cheapest per summary on real clusters
-  // (41.7 neurons vs 49.6 for llama-3.1-8b and 75.7 for gpt-oss-20b) at equal
-  // quality, because gpt-oss charges 4x more per input token and our prompts
-  // are input-heavy: ~3,450 tokens of article text against ~500 of output.
-  cloudflare: { model: '@cf/qwen/qwen3-30b-a3b-fp8', rpm: 100, keyEnv: 'CLOUDFLARE_API_TOKEN' },
+  // Workers AI. llama-3.2-3b measured cheapest per summary on real clusters —
+  // 17.8 neurons, ~562/day inside the free allowance — at 4/4 quality. It does
+  // not reason at all, so none of the no-think handling applies to it.
+  cloudflare: { model: '@cf/meta/llama-3.2-3b-instruct', rpm: 100, keyEnv: 'CLOUDFLARE_API_TOKEN' },
   gemini:   { model: 'gemini-2.5-flash', rpm: 8,  keyEnv: 'GEMINI_API_KEY' },
   deepseek: { model: 'deepseek-v4-flash', baseUrl: 'https://api.deepseek.com/v1', rpm: 45, keyEnv: 'DEEPSEEK_API_KEY' },
   openai:   { model: 'gpt-4o-mini',   baseUrl: 'https://api.openai.com/v1',   rpm: 45, keyEnv: 'OPENAI_API_KEY' },

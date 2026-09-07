@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function StoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const decoded = decodeURIComponent(id);
-  const story = getStory(decoded);
+  const story = await getStory(decoded);
   if (!story) notFound();
   const { cluster, articles, related } = story;
 
@@ -52,7 +52,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
               {paragraphs.map((group, i) => <p key={i}>{group.join(' ')}</p>)}
             </div>
 
-            <SaveButton clusterId={cluster.id} initial={isSaved(cluster.id)} />
+            <SaveButton clusterId={cluster.id} initial={await isSaved(cluster.id)} />
           </div>
 
           <div className="detail__side">

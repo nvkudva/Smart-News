@@ -108,11 +108,37 @@ what a corroboration-ranked product should be sceptical of anyway.
 A cluster that fails three times is given up on, so a story the model always
 chokes on cannot be retried forever at cost.
 
+## Deployed
+
+**https://smartnews.nvkudva.workers.dev** — Cloudflare Workers via
+`@opennextjs/cloudflare`, reading a D1 database.
+
+The split matters: the **site** is hosted and always up, but the **pipeline
+that fetches news runs on a Mac**. Full-text extraction uses jsdom and
+Readability, which need a real DOM that the Workers runtime does not have, and
+dropping to RSS excerpts would make every summary thinner. So:
+
+```bash
+npm run cycle     # on the Mac: fetch, cluster, summarise into local SQLite
+npm run sync      # push finished rows up to D1
+npm run deploy    # only when the code changes
+```
+
+While the Mac is asleep the site stays up and fully browsable — it just stops
+gaining new stories until the next cycle runs. Moving ingest somewhere always-on
+(a small VM, a scheduled CI job) removes that, and needs a home for the working
+database, which is the only reason it is not done here.
+
+`sync` sends articles without their bodies. Bodies exist to be fed to the model;
+the site only ever shows a title, a link and an outlet name.
+
 ## Storage
 
-`node:sqlite`, no service to run, database at `data/smartnews.db`. The schema in
-`src/lib/db.ts` is plain SQL and ports to Postgres when this needs to leave one
-machine. `events` is written from day one so personalisation has history to
+Two stores, deliberately. The pipeline works against **`node:sqlite`** at
+`data/smartnews.db` — a cluster run issues thousands of statements, and over
+HTTP each would be a round trip. The site reads **D1** through `src/lib/d1.ts`,
+which uses the Workers binding when it really is on Workers and the D1 REST API
+otherwise, so `next dev` reads exactly the rows production does. `events` is written from day one so personalisation has history to
 learn from later.
 
 ## Not built yet

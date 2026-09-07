@@ -7,9 +7,8 @@ import { ago } from '@/components/StoryCard';
 
 export const dynamic = 'force-dynamic';
 
-export default function Profile() {
-  const prefs = getPrefs();
-  const stats = getStats();
+export default async function Profile() {
+  const [prefs, stats] = await Promise.all([getPrefs(), getStats()]);
 
   return (
     <>
