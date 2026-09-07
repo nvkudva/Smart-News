@@ -80,6 +80,13 @@ function migrate(d: DatabaseSync) {
       ts         INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS events_user ON events(user_id, ts DESC);
+
+    CREATE TABLE IF NOT EXISTS saved (
+      user_id    TEXT NOT NULL,
+      cluster_id TEXT NOT NULL,
+      saved_at   INTEGER NOT NULL,
+      PRIMARY KEY (user_id, cluster_id)
+    );
   `);
 
   // Added after the first backfill; existing databases predate the column.

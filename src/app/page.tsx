@@ -1,5 +1,5 @@
 import { getFeed, getPrefs } from '@/lib/feed';
-import { StoryCard } from '@/components/StoryCard';
+import { StoryCard, variantFor } from '@/components/StoryCard';
 import { TabBar } from '@/components/TabBar';
 import { Pin } from '@/components/icons';
 
@@ -36,8 +36,8 @@ export default function Home() {
             <p>Run <code>npm run ingest</code> then <code>npm run pipeline</code> to fill the feed.</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            {stories.map((s, i) => <StoryCard key={s.id} story={s} lead={i === 0} />)}
+          <div className="feed">
+            {stories.map((s, i) => <StoryCard key={s.id} story={s} variant={variantFor(s, i)} />)}
           </div>
         )}
       </main>
