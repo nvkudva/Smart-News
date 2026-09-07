@@ -2,6 +2,7 @@ import { getFeed, getPrefs } from '@/lib/feed';
 import { StoryCard, variantFor } from '@/components/StoryCard';
 import { TabBar } from '@/components/TabBar';
 import { Pin } from '@/components/icons';
+import { Logo } from '@/components/Logo';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,10 @@ export default function Home() {
       <main className="shell">
         <header style={{ padding: '28px 4px 14px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--kicker)' }}>{today}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, color: 'var(--kicker)' }}>
+              <span className="masthead-mark"><Logo size={18} tone="ink" tight /></span>
+              {today}
+            </div>
             <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.05, fontWeight: 700, letterSpacing: '-0.028em' }}>Today</h1>
           </div>
           <div style={{

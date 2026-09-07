@@ -36,5 +36,13 @@
   "allowScripts": {
     "esbuild@0.28.2": true,
     "fsevents@2.3.3": true
-  }
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions",
+    "iOS >= 16",
+    "Android >= 10"
+  ]
 }

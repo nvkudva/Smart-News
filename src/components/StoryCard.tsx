@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Story } from '@/lib/feed';
-import { Photo, Pin, Spark } from './icons';
+import { Photo } from './icons';
+import { ExplorationDot } from './ExplorationDot';
 
 export function ago(ts: number): string {
   const m = Math.max(1, Math.round((Date.now() - ts) / 60000));
@@ -32,12 +33,10 @@ function Plate({ kind, src }: { kind: 'hero' | 'thumb'; src: string | null }) {
 }
 
 function Kicker({ story }: { story: Story }) {
-  const explore = story.exploration === 1;
   return (
-    <div className={`kicker ${explore ? 'kicker--new' : ''}`}>
-      {explore && <Spark />}
-      <span>{explore ? 'New to you' : story.category}</span>
-      {story.place && <><span className="sep">·</span><span>{story.place}</span></>}
+    <div className="kicker">
+      <span>{story.category}</span>
+      {story.place && <><span className="sep">·</span><span className="kicker__place">{story.place}</span></>}
     </div>
   );
 }
@@ -65,18 +64,23 @@ export function StoryCard({ story, variant = 'row' }: { story: Story; variant?: 
   ].filter(Boolean).join(' ');
 
   return (
-    <Link href={`/story/${encodeURIComponent(story.id)}`} className={className}>
-      {variant === 'row' ? (
-        <>
-          <div className="card__body">{body}</div>
-          <Plate kind="thumb" src={story.image_url} />
-        </>
-      ) : (
-        <>
-          {!textOnly && <Plate kind="hero" src={story.image_url} />}
-          {body}
-        </>
-      )}
-    </Link>
+    <div className="cardwrap">
+      <Link href={`/story/${encodeURIComponent(story.id)}`} className={className}>
+        {variant === 'row' ? (
+          <>
+            <div className="card__body">{body}</div>
+            <Plate kind="thumb" src={story.image_url} />
+          </>
+        ) : (
+          <>
+            {!textOnly && <Plate kind="hero" src={story.image_url} />}
+            {body}
+          </>
+        )}
+      </Link>
+      {/* Outside the Link on purpose: a button nested in an anchor is invalid,
+          and tapping the marker must explain rather than navigate. */}
+      {story.exploration === 1 && <ExplorationDot />}
+    </div>
   );
 }

@@ -9,11 +9,11 @@
   --kicker:        oklch(0.58 0.03 258);
   --kicker-near:   oklch(0.56 0.09 252);
   --kicker-new:    oklch(0.56 0.09 68);
-  --accent:        oklch(0.56 0.155 272);
+  --accent:        oklch(0.52 0.13 252);
   --glass:         rgba(255, 255, 255, 0.58);
   --glass-edge:    rgba(255, 255, 255, 0.78);
   --glass-warm:    linear-gradient(140deg, rgba(255,252,244,0.74), rgba(255,247,238,0.52));
-  --plate:         linear-gradient(150deg, oklch(0.87 0.045 250), oklch(0.90 0.035 322));
+  --plate:         linear-gradient(150deg, oklch(0.87 0.045 250), oklch(0.90 0.030 300));
   --shadow:        0 1px 2px rgba(30,38,60,0.04), 0 10px 26px -10px rgba(30,38,60,0.14);
   --rule:          oklch(0.90 0.008 258);
   --rail:          0px;
@@ -41,12 +41,10 @@ body {
   display: flex; flex-direction: column; gap: 7px;
   border-radius: 22px; padding: 15px 16px 14px;
   background: var(--glass); border: 1px solid var(--glass-edge);
-  backdrop-filter: blur(30px) saturate(185%);
-  -webkit-backdrop-filter: blur(30px) saturate(185%);
+  -webkit-backdrop-filter: blur(30px) saturate(185%); backdrop-filter: blur(30px) saturate(185%);
   box-shadow: var(--shadow);
   color: inherit; text-decoration: none;
 }
-.card--explore { background: var(--glass-warm); border-color: rgba(255,255,255,0.85); }
 .card--row { flex-direction: row; gap: 13px; align-items: flex-start; }
 .card--row .card__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
 
@@ -75,31 +73,40 @@ body {
 .plate--thumb { width: 76px; height: 76px; border-radius: 14px; flex: 0 0 auto; }
 
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; height: 76px; z-index: 20;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  height: calc(76px + env(safe-area-inset-bottom));
   display: flex; align-items: flex-start; justify-content: space-between;
-  padding: 13px 20px 0; overflow: visible;
+  padding: 13px 20px env(safe-area-inset-bottom); overflow: visible;
   background: rgba(255,255,255,0.86); border-top: 1px solid var(--glass-edge);
-  backdrop-filter: blur(34px) saturate(190%); -webkit-backdrop-filter: blur(34px) saturate(190%);
+  -webkit-backdrop-filter: blur(34px) saturate(190%); backdrop-filter: blur(34px) saturate(190%);
 }
 .tabbar > .inner { max-width: 430px; width: 100%; margin: 0 auto; display: flex; align-items: flex-start; justify-content: space-between; }
 .tab { width: 52px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ink-3); text-decoration: none; }
-.tab[data-active="true"] { color: oklch(0.42 0.10 252); }
+.tab[data-active="true"] { color: var(--accent); }
 .tab span { font-size: 9.5px; font-weight: 600; }
 
 .reelsbtn {
   width: 56px; height: 56px; margin-top: -24px; flex: 0 0 auto; border-radius: 50%;
-  background: linear-gradient(158deg, oklch(0.74 0.115 268) 0%, oklch(0.61 0.155 272) 46%, oklch(0.53 0.145 305) 100%);
-  border: 1px solid rgba(255,255,255,0.34);
-  backdrop-filter: blur(18px) saturate(180%); -webkit-backdrop-filter: blur(18px) saturate(180%);
-  box-shadow: 0 10px 26px -8px oklch(0.56 0.16 278 / .55), 0 2px 6px rgba(30,38,60,.20),
-              inset 0 1.5px 0 rgba(255,255,255,.50), inset 0 -11px 18px -11px rgba(20,12,40,.50);
+  background: linear-gradient(180deg, oklch(0.32 0.016 258), oklch(0.22 0.014 258));
+  border: 1px solid rgba(255,255,255,0.14);
+  /* the 3px white ring is what separates the disc from the bar now that the
+     coloured glow is gone; an opaque fill cannot blur, so no backdrop-filter */
+  box-shadow: 0 1px 2px rgba(30,38,60,.10), 0 10px 24px -8px rgba(24,30,48,.38),
+              0 0 0 3px rgba(255,255,255,.72), inset 0 1px 0 rgba(255,255,255,.16);
   display: flex; align-items: center; justify-content: center; color: #fff;
+  transition: transform .18s cubic-bezier(.32,.72,0,1), box-shadow .18s;
 }
+.reelsbtn:active {
+  transform: scale(.955);
+  box-shadow: 0 1px 2px rgba(30,38,60,.10), 0 5px 12px -6px rgba(24,30,48,.34),
+              0 0 0 3px rgba(255,255,255,.72);
+}
+.reelsbtn svg { transform: translateY(-1px); }
 
 .panel {
   border-radius: 24px; padding: 19px;
   background: rgba(255,255,255,0.60); border: 1px solid rgba(255,255,255,0.80);
-  backdrop-filter: blur(30px) saturate(185%); -webkit-backdrop-filter: blur(30px) saturate(185%);
+  -webkit-backdrop-filter: blur(30px) saturate(185%); backdrop-filter: blur(30px) saturate(185%);
   box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 14px;
 }
@@ -142,12 +149,10 @@ body {
     gap: 14px;
     align-items: start;            /* else glass cards stretch and read as empty */
   }
-  .card--lead { grid-column: span 2; }
+  .cardwrap:has(.card--lead) { grid-column: span 2; }
 
   .plate--hero { aspect-ratio: 16 / 9; height: auto; }
 
-  /* Warm glass alone stops registering once the page is wide; add an edge. */
-  .card--explore { box-shadow: var(--shadow), inset 3px 0 0 var(--kicker-new); }
 
   /* The tab bar becomes a floating dock rather than a full-width band. */
   .tabbar {
@@ -180,8 +185,7 @@ body {
      flattens to grey in Safari. The wash is already blurred 110px, so a flat
      translucent fill is visually identical and costs nothing. Real glass is
      kept only where it sits over scrolling content: rail, header pill, panel. */
-  .card { background: rgba(255, 255, 255, 0.62); backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .card--explore { background: linear-gradient(140deg, rgba(255,252,244,0.80), rgba(255,247,238,0.62)); }
+  .card { background: rgba(255, 255, 255, 0.62); -webkit-backdrop-filter: none; backdrop-filter: none; }
 
   /* Bottom dock → left rail. */
   .tabbar {
@@ -197,8 +201,8 @@ body {
     gap: 4px; max-width: none;
   }
   .railhead {
-    display: flex; align-items: center; gap: 10px;
-    padding: 2px 10px 22px; font-weight: 800; font-size: 19px; letter-spacing: -0.048em;
+    display: flex; align-items: center; gap: 9px;
+    padding: 2px 10px 22px; font-weight: 700; font-size: 19px; letter-spacing: -0.02em;
     color: var(--ink);
   }
   .tab {
@@ -209,8 +213,15 @@ body {
   .tab[data-active="true"] { background: rgba(255, 255, 255, 0.72); }
   .reelsbtn {
     width: 100%; height: 44px; margin: 10px 0 4px; border-radius: 12px;
-    gap: 10px; color: #fff; font-size: 14.5px; font-weight: 650;
+    gap: 12px; padding: 0 10px; justify-content: flex-start;
+    font-size: 14.5px; font-weight: 650; color: #fff;
+    background: linear-gradient(180deg, oklch(0.31 0.016 258), oklch(0.23 0.014 258));
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 1px 2px rgba(30,38,60,.08), 0 6px 16px -10px rgba(24,30,48,.36),
+                inset 0 1px 0 rgba(255,255,255,.14);
+    transform: none;
   }
+  .reelsbtn svg { transform: none; width: 20px; height: 16px; }
 
   /* Detail: prose column + a rail of short-line content beside it. */
 }
@@ -221,14 +232,14 @@ body {
   .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   /* At three columns a two-wide lead strands a ragged hole beside it, so it
      takes the whole row instead. Four columns has room for two cards beside. */
-  .card--lead { grid-column: span 3; }
+  .cardwrap:has(.card--lead) { grid-column: span 3; }
 }
 
 @media (min-width: 1440px) {
   :root { --rail: 260px; }
   .shell { max-width: 1400px; }
   .feed { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
-  .card--lead { grid-column: span 2; }
+  .cardwrap:has(.card--lead) { grid-column: span 2; }
 }
 
 .reelsbtn__label { display: none; }
@@ -239,7 +250,7 @@ body {
   height: 38px; padding: 0 14px; border-radius: 12px; cursor: pointer;
   font: inherit; font-size: 13.5px; font-weight: 600;
   background: rgba(255,255,255,0.62); border: 1px solid var(--glass-edge);
-  backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
   color: var(--ink-2);
 }
 .savebtn[data-saved="true"] { background: var(--accent); border-color: transparent; color: #fff; }
@@ -365,7 +376,7 @@ body {
 .relrow {
   border-radius: 17px; padding: 13px 15px; text-decoration: none; color: inherit;
   background: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.72);
-  backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
   display: flex; flex-direction: column; gap: 4px;
 }
 .relrow__t { font-size: 14.5px; font-weight: 620; line-height: 1.3; letter-spacing: -0.012em; }
@@ -387,3 +398,40 @@ body {
   .detail__side { position: sticky; top: 32px; }
   .detail h1 { font-size: 40px !important; max-width: 14em; }
 }
+
+/* ── Exploration marker ────────────────────────────────────────────────────
+   A recommended-outside-your-interests story used to be a warm-tinted card,
+   which read as an ad. It is now a dot that explains itself when tapped. */
+.cardwrap { position: relative; display: flex; }
+.cardwrap > .card { flex: 1 1 auto; min-width: 0; }
+
+.card--explore .foot .kicker { padding-left: 16px; }
+
+.expdot { position: absolute; left: 0; bottom: 0; z-index: 2; }
+.expdot__hit {
+  position: absolute; left: 4px; bottom: 4px;
+  width: 34px; height: 34px; padding: 0; border: none; background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;   /* 34px hit area, 8px ink */
+}
+.expdot__dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.75);
+}
+.expdot__hit[aria-expanded="true"] .expdot__dot { box-shadow: 0 0 0 4px oklch(0.52 0.13 252 / 0.22); }
+.expdot__tip {
+  position: absolute; left: 8px; bottom: 40px; width: 232px; z-index: 3;
+  padding: 11px 13px; border-radius: 14px;
+  font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
+  background: rgba(255, 255, 255, 0.94); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 10px 30px -10px rgba(30, 38, 60, 0.28);
+}
+
+/* At a ~267px track the kicker and the source count cannot both fit, and the
+   result ellipses mid-word, which reads as broken markup rather than
+   truncation. Drop the place — the category is the part that orients. */
+@media (min-width: 1440px) {
+  .kicker__place, .kicker .sep { display: none; }
+}
+.masthead-mark { display: flex; }
+@media (min-width: 700px) { .masthead-mark { display: none; } }
