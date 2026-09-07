@@ -5,8 +5,11 @@ marketing. The unit that matters is **one summary** = one cluster of up to six
 articles turned into a headline, a 4–6 sentence crux, a category, a place and an
 importance score.
 
-**Measured cost of one summary: 1,116 input tokens, 196 output tokens.**
-(Average over 720 real clusters; 4,047 prompt chars at ~3.6 chars/token.)
+**Measured cost of one summary: ~3,450 input tokens, 100–830 output.**
+Averaged over the multi-source clusters actually summarised. An earlier figure
+of 1,116 input tokens averaged over *all* clusters including single-source
+singletons, which are never summarised under `SUMMARISE_MIN_SOURCES=2` — the
+real prompts are three times bigger, and cost scales with them.
 
 Two workload sizes, from 39 feeds:
 
@@ -74,20 +77,31 @@ published per million tokens, so cost per summary is exact:
 | llama-3.3-70b-instruct-fp8-fast | 69.9 | 143 |
 | qwen3.8-27b | 102.6 | 97 |
 
-**`@cf/openai/gpt-oss-20b` is the pick, not the cheapest model.** Tested on real
-clusters, three summaries each:
+**`@cf/qwen/qwen3-30b-a3b-fp8` is the pick.** Measured on real clusters, neurons
+read from the API's own `usage.neurons` rather than estimated:
 
-| Model | Result |
-|---|---|
-| `@cf/openai/gpt-oss-20b` | 3/3, 3–5s, quality matching DeepSeek |
-| `@cf/meta/llama-3.1-8b-instruct-fp8` | **1/3** — valid JSON, missing fields; 9–15s |
-| `@cf/qwen/qwen3-30b-a3b-fp8` | **0/3** — a reasoning model: `content` is null and the answer goes to `message.reasoning` |
-| `@cf/mistralai/mistral-small-3.1-24b-instruct` | 0/3 — unparseable |
+| Model | Quality | in / out tokens | Neurons each | Free/day |
+|---|---|---|---|---|
+| **`@cf/qwen/qwen3-30b-a3b-fp8`** | 3/3, ~5s | 3520 / 834 | **41.7** | **239** |
+| `@cf/meta/llama-3.1-8b-instruct-fp8` | 3/3 | 3407 / 101 | 49.6 | 201 |
+| `@cf/openai/gpt-oss-20b` | 3/3, ~6s | 3427 / 491 | 75.7 | 132 |
 
-So the neuron table below is necessary but not sufficient: qwen3-30b looks like
-the bargain and cannot do the job at all. At 25.6 neurons a summary gpt-oss-20b
-gives **~390/day free**, against a ~152/day workload — about 39% of the
-allowance, with headroom for more feeds.
+Against a ~152/day workload, only the first two fit inside the free tier.
+gpt-oss-20b loses despite writing the fewest tokens of the three that reason,
+because it charges **4x more per input token** (18,182 vs 4,625 neurons/M) and
+these prompts are input-heavy — ~3,450 tokens of article text against ~500 of
+output.
+
+Two traps worth knowing:
+
+- **Reasoning models need output headroom.** qwen3 spends most of its budget in
+  `message.reasoning` before emitting any `content`. A probe with
+  `max_tokens: 80` returns `finish_reason: "length"` and a null `content`,
+  which looks exactly like a broken model. Use `LLM_MAX_TOKENS` to raise it.
+- **Do not paste JSON Schema into the prompt.** In `json_object` mode a smaller
+  model may echo the schema back — qwen returned
+  `{"type":"object","properties":{…}}` on two runs in three. `llm.ts` now sends
+  a filled-in example shape instead, which took qwen from 2/3 to 3/3.
 
 ```bash
 LLM_PROVIDER=cloudflare          # account id and token are read from env

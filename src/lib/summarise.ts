@@ -130,7 +130,11 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
     const s = config ? await summariseCluster(members) : extractive(members);
     if (!s) { skipped++; return; }
     const category = (CATEGORIES as readonly string[]).includes(s.category) ? s.category : 'World';
-    save.run(s.headline, s.crux, category, s.place ?? null, s.country ?? null,
+    // Models hand back "USA" or "United States" as often as "US"; the feed
+    // compares this against the reader's two-letter home country.
+    const cc = typeof s.country === 'string' && /^[A-Za-z]{2}$/.test(s.country.trim())
+      ? s.country.trim().toUpperCase() : null;
+    save.run(s.headline, s.crux, category, s.place ?? null, cc,
              Math.max(1, Math.min(5, Math.round(s.importance) || 3)), Date.now(), t.article_count, t.id);
     resetAttempts.run(t.id);
     done++;

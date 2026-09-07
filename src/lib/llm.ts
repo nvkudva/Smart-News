@@ -12,6 +12,8 @@ import { GoogleGenAI } from '@google/genai';
  *                 (CLOUDFLARE_API_TOKEN / GEMINI_API_KEY / DEEPSEEK_API_KEY /
  *                 OPENAI_API_KEY). Cloudflare also needs CLOUDFLARE_ACCOUNT_ID.
  *   LLM_RPM       requests per minute to pace at (free tiers are strict)
+ *   LLM_MAX_TOKENS output budget. Reasoning models spend most of it thinking
+ *                 before emitting any content, so 2048 is not enough for them.
  *   LLM_JSON_MODE how to ask for JSON on the OpenAI-compatible path:
  *                 schema (default) | object | text. LM Studio and OpenAI want
  *                 json_schema; DeepSeek and most gateways want json_object;
@@ -39,10 +41,11 @@ export type LlmConfig = {
 };
 
 const DEFAULTS: Record<Provider, { model: string; baseUrl?: string; rpm: number; keyEnv: string }> = {
-  // Workers AI. gpt-oss-20b over llama-3.1-8b: the 8b returned unusable JSON on
-  // 2 of 3 real clusters, and qwen3-30b is a reasoning model that leaves
-  // `content` null and puts everything in `reasoning`.
-  cloudflare: { model: '@cf/openai/gpt-oss-20b', rpm: 100, keyEnv: 'CLOUDFLARE_API_TOKEN' },
+  // Workers AI. qwen3-30b-a3b measured cheapest per summary on real clusters
+  // (41.7 neurons vs 49.6 for llama-3.1-8b and 75.7 for gpt-oss-20b) at equal
+  // quality, because gpt-oss charges 4x more per input token and our prompts
+  // are input-heavy: ~3,450 tokens of article text against ~500 of output.
+  cloudflare: { model: '@cf/qwen/qwen3-30b-a3b-fp8', rpm: 100, keyEnv: 'CLOUDFLARE_API_TOKEN' },
   gemini:   { model: 'gemini-2.5-flash', rpm: 8,  keyEnv: 'GEMINI_API_KEY' },
   deepseek: { model: 'deepseek-v4-flash', baseUrl: 'https://api.deepseek.com/v1', rpm: 45, keyEnv: 'DEEPSEEK_API_KEY' },
   openai:   { model: 'gpt-4o-mini',   baseUrl: 'https://api.openai.com/v1',   rpm: 45, keyEnv: 'OPENAI_API_KEY' },
@@ -114,6 +117,7 @@ function backoffMs(message: string, attempt: number): number {
 }
 
 const MAX_RETRIES = 4;
+const MAX_TOKENS = Number(process.env.LLM_MAX_TOKENS ?? 2048);
 
 // -------------------------------------------------------------- back ends ---
 
@@ -137,6 +141,25 @@ function toOpenAiSchema(s: JsonSchema): Record<string, unknown> {
     out.additionalProperties = false;
   }
   return out;
+}
+
+/**
+ * A readable shape hint rather than raw JSON Schema. Pasting the schema into
+ * the prompt invites smaller models to echo it back — Qwen returned
+ * `{"type":"object","properties":{...}}` on two runs in three — whereas an
+ * example-shaped object gets filled in.
+ */
+function describeShape(s: JsonSchema, indent = ''): string {
+  if (s.enum) return `one of ${s.enum.map((e) => JSON.stringify(e)).join(' | ')}`;
+  if (s.type === 'object' && s.properties) {
+    const inner = Object.entries(s.properties)
+      .map(([k, v]) => `${indent}  ${JSON.stringify(k)}: ${describeShape(v, `${indent}  `)}` +
+                       (v.nullable ? ' | null' : ''))
+      .join(',\n');
+    return `{\n${inner}\n${indent}}`;
+  }
+  if (s.type === 'array' && s.items) return `[${describeShape(s.items, indent)}]`;
+  return s.type;
 }
 
 /** Gemini's responseSchema wants SCREAMING type names and no `required` on leaves. */
@@ -167,7 +190,7 @@ async function callGemini(c: LlmConfig, system: string, user: string, schema: Js
       responseMimeType: 'application/json',
       responseSchema: toGeminiSchema(schema) as never,
       temperature: 0.2,
-      maxOutputTokens: 2048,
+      maxOutputTokens: MAX_TOKENS,
     },
   });
   return res.text ?? '';
@@ -189,10 +212,10 @@ async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, 
     body: JSON.stringify({
       model: c.model,
       temperature: 0.2,
-      max_tokens: 2048,
+      max_tokens: MAX_TOKENS,
       ...responseFormat,
       messages: [
-        { role: 'system', content: `${system}\n\nReply with JSON matching this schema:\n${JSON.stringify(schema)}` },
+        { role: 'system', content: `${system}\n\nReply with ONE JSON object of exactly this shape, filled in — do not repeat the shape itself:\n${describeShape(schema)}` },
         { role: 'user', content: user },
       ],
     }),
@@ -231,10 +254,19 @@ export async function completeJson<T>(
 
   if (!text.trim()) { bump('empty'); return null; }
   const slice = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  let parsed: unknown;
   try {
-    return JSON.parse(slice) as T;
+    parsed = JSON.parse(slice);
   } catch {
     bump('bad_json');
     return null;
   }
+
+  // Belt and braces for the same echo: if a model hands back the schema with
+  // the values filled into `properties`, take what is inside.
+  const obj = parsed as Record<string, unknown>;
+  if (obj && obj.type === 'object' && obj.properties && typeof obj.properties === 'object') {
+    return obj.properties as T;
+  }
+  return parsed as T;
 }
