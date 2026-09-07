@@ -45,6 +45,33 @@ Together, vLLM, Ollama, LM Studio — by pointing `LLM_BASE_URL` at it.
 | `LLM_BASE_URL` | With `provider=openai`, any OpenAI-compatible endpoint     |
 | `LLM_API_KEY`  | Overrides `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `OPENAI_API_KEY` |
 | `LLM_RPM`      | Requests per minute to pace at — free tiers are strict     |
+| `LLM_JSON_MODE`| `schema` (default) · `object` (DeepSeek) · `text`          |
+| `LLM_CONCURRENCY` | In-flight requests; pacing still applies               |
+
+### Running it for nothing, locally
+
+LM Studio (or any OpenAI-compatible local server) needs no key and has no caps:
+
+```bash
+LLM_PROVIDER=openai
+LLM_BASE_URL=http://localhost:1234/v1
+LLM_API_KEY=lm-studio
+LLM_MODEL=ornith-1.5-9b-mlx
+LLM_RPM=600
+LLM_CONCURRENCY=2
+```
+
+Measured on an M3 Max: a 9B does a cluster in ~10s, a 27B in ~35s, and both
+write summaries indistinguishable from DeepSeek's for this task. A full cycle
+summarised 12 clusters with zero failures. Nothing about reading six short
+articles and writing five sentences needs a frontier model.
+
+`LLM_JSON_MODE` exists because structured output is where these servers differ:
+LM Studio and OpenAI want `json_schema` and reject `["string","null"]` union
+types, DeepSeek wants `json_object`, and `text` is the escape hatch for servers
+with neither.
+
+### Hosted free tiers
 
 **DeepSeek is the default, and Gemini's free tier is not usable here.** AI
 Studio's free quota is `GenerateRequestsPerDayPerProjectPerModel` = **20

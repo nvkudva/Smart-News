@@ -10,6 +10,11 @@ import { GoogleGenAI } from '@google/genai';
  *                 (OpenRouter, Together, vLLM, Ollama, LM Studio, …)
  *   LLM_API_KEY   falls back to GEMINI_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY
  *   LLM_RPM       requests per minute to pace at (free tiers are strict)
+ *   LLM_JSON_MODE how to ask for JSON on the OpenAI-compatible path:
+ *                 schema (default) | object | text. LM Studio and OpenAI want
+ *                 json_schema; DeepSeek and most gateways want json_object;
+ *                 text puts the schema in the prompt only, for servers with
+ *                 no structured-output support at all.
  */
 
 export type JsonSchema = {
@@ -24,9 +29,11 @@ export type JsonSchema = {
 
 export type Provider = 'gemini' | 'deepseek' | 'openai';
 
+export type JsonMode = 'schema' | 'object' | 'text';
+
 export type LlmConfig = {
   provider: Provider; model: string; apiKey: string;
-  baseUrl?: string; rpm: number;
+  baseUrl?: string; rpm: number; jsonMode: JsonMode;
 };
 
 const DEFAULTS: Record<Provider, { model: string; baseUrl?: string; rpm: number; keyEnv: string }> = {
@@ -47,11 +54,14 @@ export function llmConfig(): LlmConfig | null {
     apiKey,
     baseUrl: process.env.LLM_BASE_URL ?? d.baseUrl,
     rpm: Number(process.env.LLM_RPM ?? process.env.GEMINI_RPM ?? d.rpm),
+    jsonMode: (process.env.LLM_JSON_MODE ?? (provider === 'deepseek' ? 'object' : 'schema')) as JsonMode,
   };
 }
 
 export function describe(c: LlmConfig): string {
-  return c.provider === 'gemini' ? `gemini/${c.model}` : `${c.provider}/${c.model} @ ${c.baseUrl}`;
+  return c.provider === 'gemini'
+    ? `gemini/${c.model}`
+    : `${c.provider}/${c.model} @ ${c.baseUrl} (json:${c.jsonMode})`;
 }
 
 // ---------------------------------------------------------------- pacing ---
@@ -90,6 +100,28 @@ const MAX_RETRIES = 4;
 
 // -------------------------------------------------------------- back ends ---
 
+/**
+ * Plain JSON Schema for the OpenAI-compatible path. A nullable field becomes an
+ * *optional* one rather than a `["string","null"]` union: LM Studio's grammar
+ * builder rejects union types outright, and callers already treat absent as null.
+ */
+function toOpenAiSchema(s: JsonSchema): Record<string, unknown> {
+  const out: Record<string, unknown> = { type: s.type };
+  if (s.enum) out.enum = [...s.enum];
+  if (s.description) out.description = s.description;
+  if (s.items) out.items = toOpenAiSchema(s.items);
+  if (s.properties) {
+    out.properties = Object.fromEntries(
+      Object.entries(s.properties).map(([k, v]) => [k, toOpenAiSchema(v)]),
+    );
+    out.required = Object.entries(s.properties)
+      .filter(([, v]) => !v.nullable)
+      .map(([k]) => k);
+    out.additionalProperties = false;
+  }
+  return out;
+}
+
 /** Gemini's responseSchema wants SCREAMING type names and no `required` on leaves. */
 function toGeminiSchema(s: JsonSchema): Record<string, unknown> {
   const out: Record<string, unknown> = { type: s.type.toUpperCase() };
@@ -125,8 +157,14 @@ async function callGemini(c: LlmConfig, system: string, user: string, schema: Js
 }
 
 async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, schema: JsonSchema): Promise<string> {
-  // json_object is the one JSON mode every OpenAI-compatible server implements;
-  // the schema rides along in the prompt so smaller models still comply.
+  const responseFormat =
+    c.jsonMode === 'schema'
+      ? { response_format: { type: 'json_schema',
+            json_schema: { name: 'result', strict: false, schema: toOpenAiSchema(schema) } } }
+      : c.jsonMode === 'object'
+        ? { response_format: { type: 'json_object' } }
+        : {};
+
   const res = await fetch(`${c.baseUrl!.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.apiKey}` },
@@ -135,7 +173,7 @@ async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, 
       model: c.model,
       temperature: 0.2,
       max_tokens: 2048,
-      response_format: { type: 'json_object' },
+      ...responseFormat,
       messages: [
         { role: 'system', content: `${system}\n\nReply with JSON matching this schema:\n${JSON.stringify(schema)}` },
         { role: 'user', content: user },
