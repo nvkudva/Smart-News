@@ -45,8 +45,8 @@ body {
   box-shadow: var(--shadow);
   color: inherit; text-decoration: none;
 }
-.card--row { flex-direction: row; gap: 13px; align-items: flex-start; }
-.card--row .card__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.card--compact { flex-direction: row; gap: 13px; align-items: flex-start; }
+.card--compact .card__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
 
 .kicker {
   display: flex; align-items: center; gap: 5px;
@@ -63,7 +63,7 @@ body {
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .card p  { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); text-wrap: pretty;
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
-.card--row p { -webkit-line-clamp: 4; }
+.card--compact p { -webkit-line-clamp: 3; }
 .foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .foot .meta { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
 
@@ -442,9 +442,24 @@ body {
    crux are clamped to a fixed number of lines, the footer is pinned to the
    bottom, and the hero flexes into whatever space is left. */
 @media (min-width: 560px) {
-  .feed { align-items: stretch; }
-  .cardwrap { height: var(--card-h); }
+  .feed {
+    align-items: stretch;
+    /* Row height is half a 1x card, so a 1x spans two rows and two 0.5x cards
+       stack into exactly its height, gap included. That shared rhythm is what
+       lets the three sizes mix without knocking rows out of alignment. */
+    grid-auto-rows: calc((var(--card-h) - var(--gap)) / 2);
+  }
+  .cardwrap { height: auto; }
   .cardwrap > .card { height: 100%; }
+
+  .cardwrap:has(.card--stack)   { grid-row: span 2; }
+  .cardwrap:has(.card--lead)    { grid-row: span 2; }
+  .cardwrap:has(.card--compact) { grid-row: span 1; }
+
+  .card--compact h2 { font-size: 15.5px; -webkit-line-clamp: 2; }
+  .card--compact p  { font-size: 12.5px; -webkit-line-clamp: 2; }
+  .card--compact .plate--thumb { width: 68px; height: 68px; }
+  .card--compact:not(:has(.plate--thumb)) p { -webkit-line-clamp: 4; }
 
   .card--stack .plate--hero,
   .card--lead  .plate--hero { flex: 1 1 auto; min-height: 110px; aspect-ratio: auto; }
@@ -459,6 +474,6 @@ body {
   .foot { margin-top: auto; }
 }
 
-:root { --card-h: 400px; }
-@media (min-width: 1024px) { :root { --card-h: 396px; } }
-@media (min-width: 1440px) { :root { --card-h: 372px; } }
+:root { --card-h: 400px; --gap: 14px; }
+@media (min-width: 1024px) { :root { --card-h: 396px; --gap: 16px; } }
+@media (min-width: 1440px) { :root { --card-h: 372px; --gap: 18px; } }
