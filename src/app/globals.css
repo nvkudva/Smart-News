@@ -16,6 +16,7 @@
   --plate:         linear-gradient(150deg, oklch(0.87 0.045 250), oklch(0.90 0.035 322));
   --shadow:        0 1px 2px rgba(30,38,60,0.04), 0 10px 26px -10px rgba(30,38,60,0.14);
   --rule:          oklch(0.90 0.008 258);
+  --rail:          0px;
 }
 
 html { background: var(--ground); }
@@ -34,7 +35,7 @@ body {
 .wash i:nth-child(2) { top: 24%; right: -90px; width: 300px; height: 300px; background: oklch(0.89 0.062 335); opacity: .50; }
 .wash i:nth-child(3) { bottom: 8%; left: -40px; width: 320px; height: 320px; background: oklch(0.91 0.055 85); opacity: .55; }
 
-.shell { max-width: 430px; margin: 0 auto; padding: 0 16px 96px; }
+.shell { width: 100%; margin: 0 auto; padding: 0 16px 96px; }
 
 .card {
   display: flex; flex-direction: column; gap: 7px;
@@ -123,6 +124,8 @@ body {
 .card--stack { flex-direction: column; }
 .card--stack .plate--hero { aspect-ratio: 16 / 9; height: auto; }
 .card--lead  .plate--hero { aspect-ratio: 21 / 9; height: auto; }
+.card--lead h2 { max-width: 24ch; }
+.card--lead p { max-width: 68ch; }
 
 /* No image: drop the plate rather than show a grey rectangle 350px wide. */
 .card--text h2 { font-size: 19.5px; -webkit-line-clamp: 3; }
@@ -130,8 +133,8 @@ body {
 
 .railhead { display: none; }
 
-@media (min-width: 640px) {
-  .shell { max-width: 720px; padding-bottom: 110px; }
+@media (min-width: 560px) {
+  .shell { max-width: 760px; padding-bottom: 110px; }
 
   .feed {
     display: grid;
@@ -167,13 +170,10 @@ body {
   }
 }
 
-@media (min-width: 1024px) {
-  .shell {
-    max-width: 1080px;
-    margin-left: 232px; margin-right: auto;
-    padding: 0 28px 48px;
-  }
-  .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (min-width: 700px) {
+  :root { --rail: 200px; }
+  body { padding-left: var(--rail); }
+  .shell { width: auto; max-width: 1080px; margin: 0 auto; padding: 0 24px 48px; }
   .plate--thumb { width: 84px; height: 84px; }
 
   /* Thirty live backdrop-filters over a fixed wash stalls the compositor and
@@ -186,7 +186,7 @@ body {
   /* Bottom dock → left rail. */
   .tabbar {
     left: 0; top: 0; bottom: 0; right: auto; transform: none;
-    width: 232px; height: auto; border-radius: 0;
+    width: var(--rail); height: auto; border-radius: 0;
     flex-direction: column; align-items: stretch; justify-content: flex-start;
     padding: 24px 16px; gap: 4px;
     border: none; border-right: 1px solid var(--glass-edge);
@@ -213,21 +213,26 @@ body {
   }
 
   /* Detail: prose column + a rail of short-line content beside it. */
-  .detail { display: grid; grid-template-columns: minmax(0, 600px) 320px; gap: 32px; align-items: start; }
-  .detail__main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
-  .detail__side { position: sticky; top: 32px; display: flex; flex-direction: column; gap: 22px; }
-  .detail h1 { font-size: 40px !important; max-width: 14em; }
-  .detail .panel p { font-size: 16.5px; line-height: 1.62; max-width: 62ch; }
+}
+
+@media (min-width: 1024px) {
+  :root { --rail: 232px; }
+  .shell { max-width: 1200px; padding: 0 28px 48px; }
+  .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  /* At three columns a two-wide lead strands a ragged hole beside it, so it
+     takes the whole row instead. Four columns has room for two cards beside. */
+  .card--lead { grid-column: span 3; }
 }
 
 @media (min-width: 1440px) {
-  .shell { max-width: 1400px; margin-left: 260px; }
+  :root { --rail: 260px; }
+  .shell { max-width: 1400px; }
   .feed { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
-  .tabbar { width: 260px; }
+  .card--lead { grid-column: span 2; }
 }
 
 .reelsbtn__label { display: none; }
-@media (min-width: 1024px) { .reelsbtn__label { display: inline; } }
+@media (min-width: 700px) { .reelsbtn__label { display: inline; } }
 
 .savebtn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -259,6 +264,10 @@ body {
 .chip[data-on="true"] { background: var(--ink); border-color: transparent; color: oklch(0.97 0.005 250); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
+@media (pointer: coarse) {
+  .chip, .savebtn { min-height: 44px; }
+}
+
 .field { display: flex; flex-direction: column; gap: 7px; }
 .field label { font-size: 12.5px; font-weight: 650; color: var(--ink-2); }
 .field input[type="text"] {
@@ -273,6 +282,7 @@ body {
 .pagehead { padding: 28px 4px 18px; }
 .pagehead h1 { margin: 0; font-size: 30px; line-height: 1.05; font-weight: 700; letter-spacing: -0.028em; }
 .pagehead p  { margin: 6px 0 0; font-size: 13.5px; color: var(--ink-2); }
+@media (min-width: 700px) { .pagehead h1 { font-size: 36px; } }
 @media (min-width: 1024px) { .pagehead h1 { font-size: 40px; } }
 
 /* ── Reels ─────────────────────────────────────────────────────────────── */
@@ -335,7 +345,7 @@ body {
 /* ── Story detail ──────────────────────────────────────────────────────── */
 .detail { display: flex; flex-direction: column; gap: 22px; }
 .plate--detail { height: 208px; border-radius: 22px; }
-@media (min-width: 640px) { .plate--detail { aspect-ratio: 16 / 9; height: auto; max-height: 380px; } }
+@media (min-width: 560px) { .plate--detail { aspect-ratio: 16 / 9; height: auto; max-height: 380px; } }
 .relrow {
   border-radius: 17px; padding: 13px 15px; text-decoration: none; color: inherit;
   background: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.72);
@@ -343,3 +353,21 @@ body {
   display: flex; flex-direction: column; gap: 4px;
 }
 .relrow__t { font-size: 14.5px; font-weight: 620; line-height: 1.3; letter-spacing: -0.012em; }
+
+/* Detail layout lives at the end of the file on purpose: the base `.detail`
+   rule above is equal specificity, so these must come after it to win. */
+@media (min-width: 700px) {
+  .detail__main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .detail__side { display: flex; flex-direction: column; gap: 22px; }
+  .detail h1 { font-size: 31px !important; max-width: 18em; }
+  .detail .panel p { font-size: 16.5px; line-height: 1.62; max-width: 62ch; }
+}
+
+@media (min-width: 1024px) {
+  .detail {
+    display: grid; grid-template-columns: minmax(0, 600px) 320px;
+    gap: 32px; align-items: start;
+  }
+  .detail__side { position: sticky; top: 32px; }
+  .detail h1 { font-size: 40px !important; max-width: 14em; }
+}
