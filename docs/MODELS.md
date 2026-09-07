@@ -95,7 +95,25 @@ sources disagree, say so" are exactly what a 3B model is weakest at. Switch to
 `@cf/meta/llama-3.2-3b-instruct` if the feed list grows enough to make 324/day
 tight; it more than doubles the headroom.
 
-qwen's cost varies with how long it reasons (31–42 neurons across runs).
+**Turn reasoning off — it is pure cost here.** Reasoning tokens bill as output,
+and for summarising they buy nothing. Measured on four real clusters:
+
+| qwen3-30b | output tokens | neurons | free/day |
+|---|---|---|---|
+| thinking (default for the model) | 548 | 32.1 | 311 |
+| **`/no_think`** | **160** | **20.2** | **494** |
+
+Same 4/4 quality, and it actually followed the sentence-case instruction better
+without thinking. `llm.ts` does this by default; `LLM_REASONING=on` restores it.
+
+Each family needs a different switch, and two plausible ones are traps:
+`reasoning_effort` makes qwen think *more* (445 and 695 output tokens for
+"low"), and `chat_template_kwargs.enable_thinking:false` suppresses the content
+along with the reasoning, returning nothing. `/no_think` in the system prompt is
+the one that works for qwen; `reasoning_effort: low` is right for gpt-oss
+(207 → 114 tokens).
+
+qwen's cost varies with how long it reasons (31–42 neurons across runs when thinking).
 gpt-oss-20b costs most despite writing few tokens, because it charges **4x more
 per input token** (18,182 vs 4,625 neurons/M) and these prompts are
 input-heavy: ~3,300 tokens of article text against ~100–500 of output.
@@ -105,6 +123,18 @@ comes back on every Workers AI response. Deriving it from the published rates
 reproduced the measured figure exactly for qwen and gpt-oss, but was 2.8x low
 for `llama-3.1-8b-instruct-fp8` — the table prices the `-fast` variant, which
 is a different model from the one that name resolves to.
+
+### Variants and flags
+
+There is no per-call speed/quality switch. `-fast`, `-fp8` and `-flash` are
+baked into the model name, and in this account no family exposes more than one
+variant — `llama-3.3-70b-instruct-fp8-fast` and `glm-5.3-flash` are simply
+their own models. The `-flash` GLM models need a paid Workers plan
+(`require_workers_paid=true`), so they are not an option on the free tier.
+
+The models API does report `reasoning=true`, `context_window`, and real dollar
+prices per model, which is worth reading rather than guessing:
+`GET /accounts/<id>/ai/models/search?task=Text%20Generation`.
 
 Two traps worth knowing:
 

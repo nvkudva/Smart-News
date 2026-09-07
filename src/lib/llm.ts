@@ -14,6 +14,10 @@ import { GoogleGenAI } from '@google/genai';
  *   LLM_RPM       requests per minute to pace at (free tiers are strict)
  *   LLM_MAX_TOKENS output budget. Reasoning models spend most of it thinking
  *                 before emitting any content, so 2048 is not enough for them.
+ *   LLM_REASONING off (default) | on. Reasoning tokens bill as output, and for
+ *                 summarising they buy nothing: measured on real clusters,
+ *                 turning it off cut qwen3-30b from 32.1 to 20.2 neurons a
+ *                 summary at identical quality.
  *   LLM_JSON_MODE how to ask for JSON on the OpenAI-compatible path:
  *                 schema (default) | object | text. LM Studio and OpenAI want
  *                 json_schema; DeepSeek and most gateways want json_object;
@@ -37,7 +41,7 @@ export type JsonMode = 'schema' | 'object' | 'text';
 
 export type LlmConfig = {
   provider: Provider; model: string; apiKey: string;
-  baseUrl?: string; rpm: number; jsonMode: JsonMode;
+  baseUrl?: string; rpm: number; jsonMode: JsonMode; reasoning: boolean;
 };
 
 const DEFAULTS: Record<Provider, { model: string; baseUrl?: string; rpm: number; keyEnv: string }> = {
@@ -75,12 +79,13 @@ export function llmConfig(): LlmConfig | null {
     // DeepSeek rejects json_schema outright; both are reliable with json_object.
     jsonMode: (process.env.LLM_JSON_MODE
       ?? (provider === 'deepseek' || provider === 'cloudflare' ? 'object' : 'schema')) as JsonMode,
+    reasoning: process.env.LLM_REASONING === 'on',
   };
 }
 
 export function describe(c: LlmConfig): string {
   if (c.provider === 'gemini') return `gemini/${c.model}`;
-  if (c.provider === 'cloudflare') return `cloudflare/${c.model}`;
+  if (c.provider === 'cloudflare') return `cloudflare/${c.model}${c.reasoning ? '' : ' (no-think)'}`;
   return `${c.provider}/${c.model} @ ${c.baseUrl} (json:${c.jsonMode})`;
 }
 
@@ -196,7 +201,21 @@ async function callGemini(c: LlmConfig, system: string, user: string, schema: Js
   return res.text ?? '';
 }
 
+/**
+ * Each family switches thinking off differently, and getting it wrong is worse
+ * than not trying: on qwen, `reasoning_effort` makes it think MORE, and
+ * `chat_template_kwargs.enable_thinking` suppresses the content along with the
+ * reasoning. `/no_think` in the system prompt is the one that works.
+ */
+function quietReasoning(model: string): { suffix: string; body: Record<string, unknown> } {
+  const m = model.toLowerCase();
+  if (m.includes('qwen3') || m.includes('qwq')) return { suffix: ' /no_think', body: {} };
+  if (m.includes('gpt-oss')) return { suffix: '', body: { reasoning_effort: 'low' } };
+  return { suffix: '', body: {} };
+}
+
 async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, schema: JsonSchema): Promise<string> {
+  const quiet = c.reasoning ? { suffix: '', body: {} } : quietReasoning(c.model);
   const responseFormat =
     c.jsonMode === 'schema'
       ? { response_format: { type: 'json_schema',
@@ -214,8 +233,9 @@ async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, 
       temperature: 0.2,
       max_tokens: MAX_TOKENS,
       ...responseFormat,
+      ...quiet.body,
       messages: [
-        { role: 'system', content: `${system}\n\nReply with ONE JSON object of exactly this shape, filled in — do not repeat the shape itself:\n${describeShape(schema)}` },
+        { role: 'system', content: `${system}\n\nReply with ONE JSON object of exactly this shape, filled in — do not repeat the shape itself:\n${describeShape(schema)}${quiet.suffix}` },
         { role: 'user', content: user },
       ],
     }),
