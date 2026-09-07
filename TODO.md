@@ -1,2 +1,3 @@
 - [ ] Runtime model switch: DB-backed active model + fallback order, /admin page to select and test, per-model health with last error, auto-failover on unavailable/rate_limit only (never on auth)
 - [ ] Cloudflare deploy: port src/lib/db.ts from node:sqlite to D1 (same SQL, different client), replace jsdom+Readability full-text extraction with HTMLRewriter or keep ingest on a Node host, and move the 15-min cycle from launchd to a Workers Cron Trigger
+- [ ] Work through FEATURES.md — 5 features and 5 fixes left over from the PM/design/architect review; items 1 (first-run assumes Bengaluru) and 6 (reels N+1 saved lookups) are the highest value
