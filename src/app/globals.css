@@ -16,7 +16,6 @@
   --plate:         linear-gradient(150deg, oklch(0.87 0.045 250), oklch(0.90 0.030 300));
   --shadow:        0 1px 2px rgba(30,38,60,0.04), 0 10px 26px -10px rgba(30,38,60,0.14);
   --rule:          oklch(0.90 0.008 258);
-  --rail:          0px;
   --ring:          oklch(0.48 0.15 252);
 }
 
@@ -153,8 +152,6 @@ body {
 .card--text h2 { font-size: 19.5px; -webkit-line-clamp: 3; }
 .card--text p  { -webkit-line-clamp: 6; }
 
-.railhead { display: none; }
-
 @media (min-width: 560px) {
   .shell { max-width: 760px; padding-bottom: 110px; }
 
@@ -191,59 +188,18 @@ body {
 }
 
 @media (min-width: 700px) {
-  :root { --rail: 200px; }
-  body { padding-left: var(--rail); }
-  .shell { width: auto; max-width: 1080px; margin: 0 auto; padding: 0 24px 48px; }
+  .shell { max-width: 1080px; padding: 0 24px 110px; }
   .plate--thumb { width: 84px; height: 84px; }
 
   /* Thirty live backdrop-filters over a fixed wash stalls the compositor and
      flattens to grey in Safari. The wash is already blurred 110px, so a flat
      translucent fill is visually identical and costs nothing. Real glass is
-     kept only where it sits over scrolling content: rail, header pill, panel. */
+     kept only where it sits over scrolling content: the bar, header pill, panel. */
   .card { background: rgba(255, 255, 255, 0.62); -webkit-backdrop-filter: none; backdrop-filter: none; }
-
-  /* Bottom dock → left rail. */
-  .tabbar {
-    left: 0; top: 0; bottom: 0; right: auto; transform: none;
-    width: var(--rail); height: auto; border-radius: 0;
-    flex-direction: column; align-items: stretch; justify-content: flex-start;
-    padding: 24px 16px; gap: 4px;
-    border: none; border-right: 1px solid var(--glass-edge);
-    box-shadow: none;
-  }
-  .tabbar > .inner {
-    flex-direction: column; align-items: stretch; justify-content: flex-start;
-    gap: 4px; max-width: none;
-  }
-  .railhead {
-    display: flex; align-items: center; gap: 9px;
-    padding: 2px 10px 22px; font-weight: 700; font-size: 19px; letter-spacing: -0.02em;
-    color: var(--ink);
-  }
-  .tab {
-    width: 100%; height: 44px; flex-direction: row; justify-content: flex-start;
-    gap: 12px; padding: 0 10px; border-radius: 11px;
-  }
-  .tab span { font-size: 14.5px; font-weight: 600; }
-  .tab[data-active="true"], .tab[aria-current="page"] { background: rgba(255, 255, 255, 0.72); }
-  .reelsbtn {
-    width: 100%; height: 44px; margin: 10px 0 4px; border-radius: 12px;
-    gap: 12px; padding: 0 10px; justify-content: flex-start;
-    font-size: 14.5px; font-weight: 650; color: #fff;
-    background: linear-gradient(180deg, oklch(0.31 0.016 258), oklch(0.23 0.014 258));
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 1px 2px rgba(30,38,60,.08), 0 6px 16px -10px rgba(24,30,48,.36),
-                inset 0 1px 0 rgba(255,255,255,.14);
-    transform: none;
-  }
-  .reelsbtn svg { transform: none; width: 20px; height: 16px; }
-
-  /* Detail: prose column + a rail of short-line content beside it. */
 }
 
 @media (min-width: 1024px) {
-  :root { --rail: 232px; }
-  .shell { max-width: 1200px; padding: 0 28px 48px; }
+  .shell { max-width: 1200px; padding: 0 28px 110px; }
   .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   /* At three columns a two-wide lead strands a ragged hole beside it, so it
      takes the whole row instead. Four columns has room for two cards beside. */
@@ -251,14 +207,14 @@ body {
 }
 
 @media (min-width: 1440px) {
-  :root { --rail: 260px; }
   .shell { max-width: 1400px; }
   .feed { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
   .cardwrap:has(.card--lead) { grid-column: span 2; }
 }
 
+/* The disc keeps its raised-icon form at every width, so the label never has a
+   line to sit on; aria-label on the link is what carries the name. */
 .reelsbtn__label { display: none; }
-@media (min-width: 700px) { .reelsbtn__label { display: inline; } }
 
 .savebtn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -363,15 +319,9 @@ body {
 }
 .reel .savebtn[data-saved="true"] { background: var(--accent); border-color: transparent; }
 
-@media (min-width: 700px) {
-  /* Start after the rail so the navigation is never covered. */
-  .reels { left: var(--rail); }
-  .reels__close { left: calc(var(--rail) + 14px); }
-}
-
-/* The side-by-side split needs real width. With a 232px rail eating into it,
-   1024 leaves the text column at ~290px and the headline wraps to five lines,
-   so the stacked layout holds until there is room to do it properly. */
+/* The side-by-side split needs real width: at 1024 the text column still lands
+   near 290px and the headline wraps to five lines, so the stacked layout holds
+   until there is room to do it properly. */
 @media (min-width: 1280px) {
   .reel__photo { inset: 0 0 0 38%; }
   .reel__scrim {
@@ -479,8 +429,8 @@ body {
 
   .card--compact h2 { font-size: 15.5px; -webkit-line-clamp: 2; }
   .card--compact p  { font-size: 12.5px; -webkit-line-clamp: 3; }
-  /* Fluid width, because the rail leaves tracks as narrow as 235px at three
-     columns; a fixed thumb there left the summary ~15 characters a line.
+  /* Fluid width, because three columns leaves tracks as narrow as 235px and a
+     fixed thumb there left the summary ~15 characters a line.
      Height comes from the row it shares with the summary. */
   .card--compact .plate--thumb { width: clamp(54px, 24%, 78px); }
   .card--compact:not(:has(.plate--thumb)) p { -webkit-line-clamp: 4; }
@@ -512,6 +462,8 @@ body {
 .tile:focus-visible,
 .chip:focus-visible,
 .tab:focus-visible,
+.catlink:focus-visible,
+.subpill:focus-visible,
 .relrow:focus-visible,
 .savebtn:focus-visible,
 .btn:focus-visible,
@@ -690,17 +642,170 @@ body {
    is invisible against dark ink. */
 .chip[data-on="true"] .localhead__pin { color: inherit; }
 
-@media (min-width: 700px) {
-  /* The rail is a single column; the grouping that centres the disc on a phone
-     would otherwise nest two more flex boxes inside it. */
-  .tabgroup { display: contents; }
+/* ─────────────────────────────────────────────────────────────────────────
+   Category and sub-category strips
 
-  /* display:contents keeps the phone rule .tabgroup .tab matching, and it
-     out-specifies the rail's own .tab, so the tabs need it undone here. */
-  .tabgroup .tab { width: 100%; max-width: none; flex: 0 0 auto; }
+   The bar at the bottom carries the six destinations at every width; moving
+   between categories is these two strips' job. Both are scrollers on a phone
+   and static wrapped rows once there is room for the whole set.
+
+   Neither may widen the document. Full bleed is negative inline margins
+   cancelled by equal inline padding — the box then measures exactly the
+   shell's own width, never the viewport's, so a vertical scrollbar cannot
+   push it past the edge the way a 100vw would.
+   ───────────────────────────────────────────────────────────────────────── */
+.catstrip,
+.substrip {
+  margin-inline: -16px;
+  padding-inline: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  /* both engines; the strip is the one place a visible bar would sit over glass */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* Only the far edge fades. A symmetric mask dims the first pill before
+     anything has been scrolled, which reads as a rendering fault rather than
+     as "there is more this way". */
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 30px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 30px), transparent 100%);
+}
+.catstrip::-webkit-scrollbar,
+.substrip::-webkit-scrollbar { display: none; }
+
+.catstrip { padding-block: 10px 2px; }
+.substrip { padding-block: 2px 6px; }
+
+.catstrip__row,
+.substrip__row {
+  display: flex; flex-wrap: nowrap; width: max-content; align-items: center;
+}
+.catstrip__row { gap: 7px; }
+.substrip__row { gap: 6px; }
+.catstrip__row > *,
+.substrip__row > * { flex: 0 0 auto; scroll-snap-align: start; }
+
+.catlink {
+  display: inline-flex; align-items: center; min-height: 36px;
+  padding: 0 14px; border-radius: 13px;
+  font-size: 13.5px; font-weight: 600; letter-spacing: -0.008em;
+  white-space: nowrap; text-decoration: none; color: var(--ink-2);
+  background: var(--glass); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+}
+.catlink[aria-current="page"],
+.catlink[data-active="true"] {
+  color: oklch(0.97 0.005 250);
+  background: linear-gradient(180deg, oklch(0.32 0.016 258), oklch(0.22 0.014 258));
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 1px 2px rgba(30,38,60,.08), 0 6px 16px -10px rgba(24,30,48,.36),
+              inset 0 1px 0 rgba(255,255,255,.16);
 }
 
+/* One step quieter than .catlink: the sub-strip is a refinement of a choice the
+   reader has already made, so idle pills carry no border and no fill. */
+.subpill {
+  display: inline-flex; align-items: center; min-height: 30px;
+  padding: 0 11px; border-radius: 11px;
+  font-size: 13px; font-weight: 600;
+  white-space: nowrap; text-decoration: none; color: var(--ink-3);
+  background: none; border: 1px solid transparent;
+}
+.subpill[aria-current="page"],
+.subpill[data-active="true"] {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.62);
+  border-color: var(--glass-edge);
+}
+
+.cathead { margin: 12px 0 8px; }
+.cathead__title {
+  margin: 0; font-size: 25px; line-height: 1.12; font-weight: 700;
+  letter-spacing: -0.026em; color: var(--ink); text-wrap: balance;
+}
+.cathead__meta { margin: 5px 0 0; font-size: 13px; color: var(--kicker); }
+
+@media (min-width: 700px) {
+  /* Room for the whole set. A wrapped row cannot hide a category past an edge,
+     so the scroller — and the mask that advertised it — comes off. */
+  .catstrip,
+  .substrip {
+    overflow: visible; margin-inline: 0; padding-inline: 0;
+    -webkit-mask-image: none; mask-image: none;
+  }
+  .catstrip__row,
+  .substrip__row { flex-wrap: wrap; width: auto; }
+  .catstrip { padding-block: 16px 4px; }
+  .substrip { padding-block: 0 10px; }
+
+  .cathead { margin: 18px 0 10px; }
+  .cathead__title { font-size: clamp(30px, 3vw, 40px); letter-spacing: -0.028em; }
+
+  /* On a desktop the subs are a row of links under the title, not pills: the
+     underline marks the current one without repeating the catlink's weight. */
+  .substrip__row { gap: 4px 18px; }
+  .subpill {
+    min-height: 28px; padding: 0 1px; border-radius: 0;
+    border: none; font-size: 13.5px;
+  }
+  .subpill[aria-current="page"],
+  .subpill[data-active="true"] {
+    background: none; border: none;
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+}
+
+/* Chips rendered as <button>: .chip was written for <label> and <a>, neither
+   of which needs a font reset. */
+button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+
 /* ─────────────────────────────────────────────────────────────────────────
+   Coverage split — how many outlets on each side ran a story.
+
+   Three hues that read as distinct without borrowing party colours: the sides
+   are a spectrum, not teams, and painting left blue and right red would import
+   a claim the ratings do not make. Same oklch lightness across the three so no
+   segment reads as louder than another, and all three clear 4.5:1 on the label.
+   ───────────────────────────────────────────────────────────────────────── */
+.split {
+  display: flex; gap: 3px; height: 8px; border-radius: 4px; overflow: hidden;
+  background: rgba(255,255,255,0.5);
+}
+.split__seg { display: block; border-radius: 4px; min-width: 6px; }
+.split__seg[data-side="left"],   .split__dot[data-side="left"]   { background: oklch(0.62 0.115 268); }
+.split__seg[data-side="centre"], .split__dot[data-side="centre"] { background: oklch(0.62 0.055 196); }
+.split__seg[data-side="right"],  .split__dot[data-side="right"]  { background: oklch(0.62 0.105 52); }
+
+.split__keys { display: flex; flex-wrap: wrap; gap: 12px; }
+.split__key {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--ink-2);
+}
+/* A side that ran nothing still gets a row — its absence is the information. */
+.split__key[data-on="false"] { opacity: .45; }
+.split__dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+
+.blindspot {
+  font-size: 12.5px; line-height: 1.5; color: oklch(0.38 0.014 258);
+  padding: 9px 11px; border-radius: 12px;
+  background: rgba(255,255,255,0.55); border: 1px solid var(--glass-edge);
+}
+.blindspot strong { color: var(--ink); }
+
+.framing { display: flex; flex-direction: column; gap: 4px; }
+.framing__side {
+  align-self: flex-start; font-size: 10px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 8px; color: oklch(0.97 0.005 250);
+}
+.framing__side[data-side="left"]   { background: oklch(0.52 0.115 268); }
+.framing__side[data-side="centre"] { background: oklch(0.48 0.045 196); }
+.framing__side[data-side="right"]  { background: oklch(0.50 0.105 52); }
+.framing p { font-size: 13px; line-height: 1.55; color: oklch(0.36 0.014 258); }
+
+/* ── restored: see commit d624723 ── */
    Navigation placement override — html[data-nav]
 
    The bar's form is a media query by default. A reader who prefers the other
