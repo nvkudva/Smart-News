@@ -10,6 +10,18 @@ export function ago(ts: number): string {
   return h < 48 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
 }
 
+/**
+ * last_seen moves every time another article joins the cluster, so on its own it
+ * dates a three-day-old running story as breaking. Age is when the story broke;
+ * a cluster still gathering coverage a shift later says so instead.
+ */
+export function storyAge(s: { first_seen: number; last_seen: number }): string {
+  const age = ago(s.first_seen);
+  return s.last_seen - s.first_seen > 6 * 3_600_000
+    ? `${age} · developing · updated ${ago(s.last_seen)}`
+    : age;
+}
+
 export type Variant = 'lead' | 'stack' | 'compact';
 
 /**
@@ -45,7 +57,7 @@ function Kicker({ story }: { story: Story }) {
 }
 
 export function StoryCard({ story, variant = 'compact' }: { story: Story; variant?: Variant }) {
-  const meta = `${story.source_count} source${story.source_count === 1 ? '' : 's'} · ${ago(story.last_seen)}`;
+  const meta = `${story.source_count} source${story.source_count === 1 ? '' : 's'} · ${storyAge(story)}`;
   // A grey placeholder is fine at 76px and dreadful at 350px, so wide cards
   // without a photo drop the plate and take the room back as text.
   const textOnly = !story.image_url && variant !== 'compact';

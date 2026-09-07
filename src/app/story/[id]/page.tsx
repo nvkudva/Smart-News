@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getStory } from '@/lib/feed';
 import { isSaved } from '@/lib/library';
-import { ago } from '@/components/StoryCard';
+import { ago, storyAge } from '@/components/StoryCard';
 import { Back, Photo } from '@/components/icons';
 import { SaveButton } from '@/components/SaveButton';
 import { TabBar } from '@/components/TabBar';
@@ -13,6 +13,10 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const decoded = decodeURIComponent(id);
   const story = await getStory(decoded);
+  // A dead story link has to answer 404, not 200. Next commits the status the
+  // moment the body starts streaming, and a Suspense fallback anywhere above
+  // this call starts it first -- so no loading.tsx may sit on this route or any
+  // of its ancestors, root included.
   if (!story) notFound();
   const { cluster, articles, related } = story;
 
@@ -36,7 +40,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
               <div className="kicker">
                 {cluster.place && <><span>{cluster.place}</span><span className="sep">·</span></>}
-                <span>{ago(cluster.last_seen)}</span>
+                <span>{storyAge(cluster)}</span>
               </div>
               <h1 style={{ margin: 0, fontSize: 27, lineHeight: 1.16, fontWeight: 700, letterSpacing: '-0.026em', textWrap: 'pretty' }}>
                 {cluster.headline}

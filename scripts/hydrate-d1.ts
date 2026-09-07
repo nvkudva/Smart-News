@@ -22,9 +22,11 @@ const PAGE = 400;
 async function pull<T>(table: string, cols: string, where: string, params: unknown[]): Promise<T[]> {
   const d = await d1();
   const out: T[] = [];
+  const key = cols.split(',')[0].trim();          // every table's primary key comes first
   for (let offset = 0; ; offset += PAGE) {
     const page = await d.all<T>(
-      `SELECT ${cols} FROM ${table} ${where} LIMIT ${PAGE} OFFSET ${offset}`, params);
+      // Without an ORDER BY, LIMIT/OFFSET may skip or repeat rows between pages.
+      `SELECT ${cols} FROM ${table} ${where} ORDER BY ${key} LIMIT ${PAGE} OFFSET ${offset}`, params);
     out.push(...page);
     process.stdout.write(`\r  ${table}: ${out.length}`);
     if (page.length < PAGE) break;
@@ -43,7 +45,7 @@ async function main() {
   const path = process.env.SMARTNEWS_DB ?? 'data/smartnews.db';
   if (process.env.HYDRATE_FRESH !== '0') {
     mkdirSync(dirname(path), { recursive: true });
-    for (const suffix of ['', '-wal', '-shm']) rmSync(path + suffix, { force: true });
+    for (const suffix of ['', '-wal', '-shm', '.t0']) rmSync(path + suffix, { force: true });
   }
 
   const local = db();                 // creates the schema

@@ -102,14 +102,21 @@ async function takeSlot(rpm: number) {
   if (at > now) await sleep(at - now);
 }
 
-export type LlmError = 'rate_limit' | 'unavailable' | 'auth' | 'empty' | 'bad_json' | 'other';
+export type LlmError = 'rate_limit' | 'unavailable' | 'transport' | 'auth' | 'empty' | 'bad_json' | 'other';
 export const errorTally = new Map<LlmError, number>();
 const bump = (k: LlmError) => errorTally.set(k, (errorTally.get(k) ?? 0) + 1);
 
-function classify(status: number | undefined): LlmError {
+function classify(err: unknown): LlmError {
+  const status = (err as { status?: number }).status;
   if (status === 429) return 'rate_limit';
   if (status === 401 || status === 403) return 'auth';
   if (status === 500 || status === 502 || status === 503 || status === 504) return 'unavailable';
+  // A failure with no status never reached the model: fetch rejects with a
+  // TypeError on DNS/connection trouble, and AbortSignal.timeout with an
+  // Abort/TimeoutError. Treating those as unknown made a network blip look
+  // like a permanently broken cluster.
+  const name = (err as { name?: string }).name;
+  if (name === 'AbortError' || name === 'TimeoutError' || name === 'TypeError') return 'transport';
   return 'other';
 }
 
@@ -250,10 +257,21 @@ async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, 
 
 // ------------------------------------------------------------------- api ---
 
+/**
+ * Not every failure means the same thing to a caller keeping a retry budget.
+ * `transport` is a call that never reached a verdict — the model said nothing,
+ * so nothing has been learnt about the input and no attempt should be spent.
+ * `content` is a model that answered with something unusable. `auth` is fatal
+ * for the whole run: every later call would fail identically.
+ */
+export type LlmOutcome<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: 'transport' | 'auth' | 'content' | 'unconfigured'; kind?: LlmError };
+
 export async function completeJson<T>(
   system: string, user: string, schema: JsonSchema, config = llmConfig(),
-): Promise<T | null> {
-  if (!config) return null;
+): Promise<LlmOutcome<T>> {
+  if (!config) return { ok: false, reason: 'unconfigured' };
 
   let text = '';
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -264,28 +282,31 @@ export async function completeJson<T>(
         : await callOpenAiCompatible(config, system, user, schema);
       break;
     } catch (err) {
-      const status = (err as { status?: number }).status;
-      const kind = classify(status);
-      if (kind === 'auth' || kind === 'other' || attempt === MAX_RETRIES) { bump(kind); return null; }
+      const kind = classify(err);
+      if (kind === 'auth') { bump(kind); return { ok: false, reason: 'auth', kind }; }
+      if (kind === 'other' || attempt === MAX_RETRIES) {
+        bump(kind);
+        return { ok: false, reason: 'transport', kind };
+      }
       await sleep(backoffMs(String((err as Error).message ?? ''), attempt));
     }
   }
 
-  if (!text.trim()) { bump('empty'); return null; }
+  if (!text.trim()) { bump('empty'); return { ok: false, reason: 'content', kind: 'empty' }; }
   const slice = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
   let parsed: unknown;
   try {
     parsed = JSON.parse(slice);
   } catch {
     bump('bad_json');
-    return null;
+    return { ok: false, reason: 'content', kind: 'bad_json' };
   }
 
   // Belt and braces for the same echo: if a model hands back the schema with
   // the values filled into `properties`, take what is inside.
   const obj = parsed as Record<string, unknown>;
   if (obj && obj.type === 'object' && obj.properties && typeof obj.properties === 'object') {
-    return obj.properties as T;
+    return { ok: true, value: obj.properties as T };
   }
-  return parsed as T;
+  return { ok: true, value: parsed as T };
 }

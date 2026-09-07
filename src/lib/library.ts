@@ -2,7 +2,7 @@ import { d1 } from './d1';
 import type { Story } from './feed';
 
 const SELECT_COLS = `id, headline, crux, category, place, country, importance, image_url,
-                     article_count, source_count, last_seen, 0 AS exploration`;
+                     article_count, source_count, first_seen, last_seen, 0 AS exploration`;
 const SELECT = `SELECT ${SELECT_COLS} FROM clusters`;
 
 // ---------------------------------------------------------------- saved ---
@@ -26,7 +26,7 @@ export async function toggleSaved(clusterId: string, userId = 'local'): Promise<
 export async function getSaved(userId = 'local'): Promise<(Story & { saved_at: number })[]> {
   return (await d1()).all<Story & { saved_at: number }>(
     `SELECT c.id, c.headline, c.crux, c.category, c.place, c.country, c.importance,
-            c.image_url, c.article_count, c.source_count, c.last_seen,
+            c.image_url, c.article_count, c.source_count, c.first_seen, c.last_seen,
             0 AS exploration, s.saved_at
        FROM clusters c
        JOIN saved s ON s.cluster_id = c.id

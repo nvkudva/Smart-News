@@ -1,6 +1,6 @@
 import pLimit from 'p-limit';
 import { CATEGORIES, db } from './db';
-import { completeJson, describe, llmConfig, type JsonSchema } from './llm';
+import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } from './llm';
 
 const MAX_ARTICLES = 6;
 const MAX_ATTEMPTS = 3;
@@ -40,14 +40,14 @@ const SCHEMA: JsonSchema = {
   required: ['headline', 'crux', 'category', 'importance'],
 };
 
-export async function summariseCluster(members: Member[]): Promise<Summary | null> {
+export async function summariseCluster(members: Member[]): Promise<LlmOutcome<Summary>> {
   // One article per source, longest body first: diverse and substantive.
   const bySource = new Map<string, Member>();
   for (const m of [...members].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))) {
     if (!bySource.has(m.source_id)) bySource.set(m.source_id, m);
   }
   const picked = [...bySource.values()].slice(0, MAX_ARTICLES);
-  if (!picked.length) return null;
+  if (!picked.length) return { ok: false, reason: 'content' };
 
   const corpus = picked.map((m, i) =>
     `<article n="${i + 1}" source="${m.name}">\n<title>${m.title}</title>\n` +
@@ -59,11 +59,14 @@ export async function summariseCluster(members: Member[]): Promise<Summary | nul
     SCHEMA,
   );
 
+  if (!out.ok) return out;
+
   // Valid JSON is not the same as a usable summary. Smaller models routinely
   // return an object that parses but omits fields; without this the undefined
   // goes straight into the database as the story's headline.
-  if (!out || typeof out.headline !== 'string' || typeof out.crux !== 'string') return null;
-  if (!out.headline.trim() || out.crux.trim().length < 40) return null;
+  const s = out.value;
+  if (typeof s.headline !== 'string' || typeof s.crux !== 'string') return { ok: false, reason: 'content' };
+  if (!s.headline.trim() || s.crux.trim().length < 40) return { ok: false, reason: 'content' };
   return out;
 }
 
@@ -72,19 +75,22 @@ export async function summariseCluster(members: Member[]): Promise<Summary | nul
  * before anyone signs up for anything. It quotes one source verbatim rather than
  * synthesising across them — which is exactly what the product exists not to do.
  */
-function extractive(members: Member[]): Summary | null {
+function extractive(members: Member[]): LlmOutcome<Summary> {
   const best = [...members].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))[0];
-  if (!best) return null;
+  if (!best) return { ok: false, reason: 'content' };
   const text = (best.body ?? best.lead ?? '').replace(/\s+/g, ' ').trim();
   const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z"'“])/).slice(0, 5).join(' ');
-  if (!sentences) return null;
+  if (!sentences) return { ok: false, reason: 'content' };
   return {
-    headline: best.title.replace(/\s*[|–-]\s*[^|–-]{0,24}$/, '').slice(0, 90),
-    crux: sentences.slice(0, 620),
-    category: 'World',
-    place: null,
-    country: null,
-    importance: Math.min(5, 1 + Math.round(Math.log2(members.length + 1))),
+    ok: true,
+    value: {
+      headline: best.title.replace(/\s*[|–-]\s*[^|–-]{0,24}$/, '').slice(0, 90),
+      crux: sentences.slice(0, 620),
+      category: 'World',
+      place: null,
+      country: null,
+      importance: Math.min(5, 1 + Math.round(Math.log2(members.length + 1))),
+    },
   };
 }
 
@@ -95,6 +101,14 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   // A story only one outlet ran is exactly what a corroboration-ranked feed
   // should be sceptical of, so it is also the cheapest thing to not summarise.
   const minSources = Number(process.env.SUMMARISE_MIN_SOURCES ?? 2);
+  // New articles are new input, so the old verdict no longer applies: a cluster
+  // that has grown since the attempt that used up its budget gets a fresh one,
+  // otherwise a run of bad luck excludes it from the feed permanently.
+  d.prepare(
+    `UPDATE clusters SET attempts = 0
+      WHERE attempts > 0 AND article_count > summarised_n
+        AND (summarised_at IS NULL OR article_count >= summarised_n * 1.4)`,
+  ).run();
   // Give up after MAX_ATTEMPTS: without this a cluster the model always chokes
   // on gets retried on every scheduled cycle, forever, at cost.
   const targets = d.prepare(
@@ -120,15 +134,33 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   // Requests are paced to LLM_RPM inside llm.ts; concurrency only hides latency,
   // so it wants to be roughly rpm * seconds-per-call / 60 to actually reach that rate.
   const limiter = pLimit(Number(process.env.LLM_CONCURRENCY ?? 3));
-  let done = 0, skipped = 0;
+  let done = 0, skipped = 0, stalled = 0;
+  let authFailure = false;
 
-  const bumpAttempt = d.prepare('UPDATE clusters SET attempts = attempts + 1 WHERE id = ?');
+  // summarised_n doubles as "how many articles we last judged": a spent attempt
+  // records the count it was spent on, so the reset above can tell growth from
+  // a cluster that has not changed since it failed.
+  const bumpAttempt = d.prepare(
+    `UPDATE clusters
+        SET attempts = attempts + 1,
+            summarised_n = CASE WHEN summarised_at IS NULL THEN article_count ELSE summarised_n END
+      WHERE id = ?`,
+  );
 
   await Promise.all(targets.map((t) => limiter(async () => {
-    bumpAttempt.run(t.id);
+    if (authFailure) return;
     const members = membersOf.all(t.id) as unknown as Member[];
-    const s = config ? await summariseCluster(members) : extractive(members);
-    if (!s) { skipped++; return; }
+    const r = config ? await summariseCluster(members) : extractive(members);
+    if (!r.ok) {
+      // Only the model's own failure to produce a usable summary spends an
+      // attempt. A call that never got an answer says nothing about this
+      // cluster, and three of those used to blacklist it for good.
+      if (r.reason === 'auth') { authFailure = true; return; }
+      if (r.reason === 'content') bumpAttempt.run(t.id); else stalled++;
+      skipped++;
+      return;
+    }
+    const s = r.value;
     const category = (CATEGORIES as readonly string[]).includes(s.category) ? s.category : 'World';
     // Models hand back "USA" or "United States" as often as "US"; the feed
     // compares this against the reader's two-letter home country.
@@ -140,6 +172,16 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
     done++;
     process.stdout.write(`  ✓ ${String(members.length).padStart(2)} src  ${s.headline.slice(0, 66)}\n`);
   })));
+
+  if (authFailure) {
+    throw new Error(
+      `LLM rejected our credentials (${config ? describe(config) : 'no provider'}) — aborting the run. ` +
+      'Check the provider API key; no cluster has spent a retry.',
+    );
+  }
+  if (stalled) {
+    process.stdout.write(`  ! ${stalled} cluster(s) unreachable — retry budget untouched\n`);
+  }
 
   return { done, skipped, using: config ? describe(config) : 'extractive placeholder (no API key)' };
 }

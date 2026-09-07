@@ -4,7 +4,7 @@ export type Story = {
   id: string; headline: string; crux: string; category: string;
   place: string | null; country: string | null; importance: number;
   image_url: string | null; article_count: number; source_count: number;
-  last_seen: number; exploration: 0 | 1;
+  first_seen: number; last_seen: number; exploration: 0 | 1;
 };
 
 export type Prefs = { country: string; categories: string[]; places: string[] };
@@ -55,7 +55,7 @@ export async function getFeed(limit = 30, userId = 'local'): Promise<Story[]> {
   const prefs = await getPrefs(userId);
   const rows = await (await d1()).all<Story>(
     `SELECT id, headline, crux, category, place, country, importance, image_url,
-            article_count, source_count, last_seen
+            article_count, source_count, first_seen, last_seen
        FROM clusters
       WHERE headline IS NOT NULL AND last_seen >= ?
       ORDER BY last_seen DESC LIMIT 400`,
@@ -65,13 +65,24 @@ export async function getFeed(limit = 30, userId = 'local'): Promise<Story[]> {
   const known = scored.filter(({ s }) => prefs.categories.includes(s.category));
   const novel = scored.filter(({ s }) => !prefs.categories.includes(s.category));
 
+  // With no stated interests nothing is "outside" them: every story would fall
+  // into novel and the marker would make a claim that is false on every card.
+  if (known.length === 0) return scored.slice(0, limit).map(({ s }) => ({ ...s, exploration: 0 }));
+
+  const budget = Math.ceil(limit / 4);
   const out: Story[] = [];
-  let ki = 0, ni = 0;
+  let ki = 0, ni = 0, spent = 0;
   while (out.length < limit && (ki < known.length || ni < novel.length)) {
-    const wantNovel = out.length > 0 && out.length % 4 === 3 && ni < novel.length;
-    if (wantNovel) out.push({ ...novel[ni++].s, exploration: 1 });
+    const wantNovel = out.length > 0 && out.length % 4 === 3 && ni < novel.length && spent < budget;
+    if (wantNovel) { out.push({ ...novel[ni++].s, exploration: 1 }); spent++; }
     else if (ki < known.length) out.push({ ...known[ki++].s, exploration: 0 });
-    else if (ni < novel.length) out.push({ ...novel[ni++].s, exploration: 1 });
+    else if (ni < novel.length) {
+      // Padding past the known set: these are off-interest too, but the reserve
+      // is one slot in four, so stamp only while the budget lasts.
+      const e: 0 | 1 = spent < budget ? 1 : 0;
+      spent += e;
+      out.push({ ...novel[ni++].s, exploration: e });
+    }
     else break;
   }
   return out;

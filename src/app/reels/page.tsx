@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Back, Photo } from '@/components/icons';
 import { SaveButton } from '@/components/SaveButton';
-import { ago } from '@/components/StoryCard';
+import { storyAge } from '@/components/StoryCard';
 import { getReels, isSaved } from '@/lib/library';
 import { TabBar } from '@/components/TabBar';
 
@@ -28,7 +28,13 @@ export default async function Reels() {
             <div className="kicker" style={{ color: 'rgba(255,255,255,0.82)' }}>
               <span>{s.category}</span>
               {s.place && <><span className="sep">·</span><span>{s.place}</span></>}
-              <span className="sep">·</span><span>{ago(s.last_seen)}</span>
+              {/* A developing story's age carries two more segments. Kept as one
+                  span they cannot wrap, so the row shrank every span and clipped
+                  the category and place as well. */}
+              {storyAge(s).split(' · ').flatMap((part, j) => [
+                <span className="sep" key={`sep${j}`}>·</span>,
+                <span key={part}>{part}</span>,
+              ])}
             </div>
             <h2>{s.headline}</h2>
             <p>{s.crux}</p>

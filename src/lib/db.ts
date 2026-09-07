@@ -63,6 +63,8 @@ function migrate(d: DatabaseSync) {
       attempts       INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS clusters_last_seen ON clusters(last_seen DESC);
+    CREATE INDEX IF NOT EXISTS clusters_category  ON clusters(category, last_seen DESC);
+    CREATE INDEX IF NOT EXISTS clusters_country   ON clusters(country, last_seen DESC);
 
     CREATE TABLE IF NOT EXISTS prefs (
       user_id     TEXT PRIMARY KEY,
