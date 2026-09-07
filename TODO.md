@@ -1,0 +1,1 @@
+- [ ] Runtime model switch: DB-backed active model + fallback order, /admin page to select and test, per-model health with last error, auto-failover on unavailable/rate_limit only (never on auth)
