@@ -46,10 +46,12 @@ body {
   color: inherit; text-decoration: none;
 }
 .card--compact { flex-direction: column; gap: 7px; }
-.card__mid { display: flex; gap: 12px; align-items: flex-start; flex: 1 1 auto; min-height: 0; }
+.card__mid { display: flex; gap: 12px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
 .card__mid p { flex: 1 1 auto; min-width: 0; }
 .card__mid .plate--thumb { flex: 0 0 auto; }
-.card--compact .plate--thumb { width: clamp(54px, 24%, 78px); height: auto; aspect-ratio: 1; }
+.card--compact .plate--thumb {
+  width: clamp(54px, 24%, 78px); height: auto; aspect-ratio: auto; align-self: stretch;
+}
 
 .kicker {
   display: flex; align-items: center; gap: 5px;
@@ -461,9 +463,10 @@ body {
 
   .card--compact h2 { font-size: 15.5px; -webkit-line-clamp: 2; }
   .card--compact p  { font-size: 12.5px; -webkit-line-clamp: 2; }
-  /* Fluid, because the rail leaves tracks as narrow as 235px at three
-     columns; a fixed thumb there left the summary ~15 characters a line. */
-  .card--compact .plate--thumb { width: clamp(54px, 24%, 78px); height: auto; aspect-ratio: 1; }
+  /* Fluid width, because the rail leaves tracks as narrow as 235px at three
+     columns; a fixed thumb there left the summary ~15 characters a line.
+     Height comes from the row it shares with the summary. */
+  .card--compact .plate--thumb { width: clamp(54px, 24%, 78px); }
   .card--compact:not(:has(.plate--thumb)) p { -webkit-line-clamp: 4; }
 
   .card--stack .plate--hero,
