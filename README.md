@@ -1,156 +1,72 @@
-# smartnews
+# Smart-News
 
-World news, clustered from many sources and summarised into one neutral paragraph.
+A world-news reader that clusters the same story across many outlets and has a model write one neutral summary of it. For anyone who would rather read one corroborated account than six versions of the same wire copy.
+
+The npm package and the deployed Worker are both named `smartnews`; the repo is `Smart-News`.
+
+[Live site](https://smartnews.nvkudva.workers.dev) - [Model and provider notes](docs/MODELS.md)
+
+## Requirements
+
+- Node 22 or newer. The pipeline uses the built-in `node:sqlite` module; CI runs Node 26.
+- A Cloudflare account with a D1 database. The web app never reads local SQLite — it reads D1, through the Workers binding on Workers and the D1 REST API everywhere else. `npm run dev` therefore needs `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_D1_ID`.
+- One LLM key, for summaries: a Cloudflare API token (Workers AI), or a Gemini, DeepSeek or OpenAI key. Any OpenAI-compatible server — LM Studio, Ollama, vLLM, OpenRouter — works via `LLM_BASE_URL` and needs no hosted key.
+- Ingest and clustering run without any key. Without one, summarisation falls back to quoting the longest single source verbatim.
 
 ## Run it
 
 ```bash
+git clone https://github.com/nvkudva/Smart-News.git
+cd Smart-News
 npm install
-cp .env.local.example .env.local   # add a model key
-npm run ingest                     # pull ~39 RSS feeds, extract full text
-npm run pipeline 60                # cluster, then summarise the top 60 clusters
-npm run dev                        # http://localhost:3000
+cp .env.local.example .env.local    # fill in the variables below
+npm run ingest                      # pull the RSS feeds, extract full text
+npm run pipeline 60                 # cluster, then summarise the top 60 clusters
+npm run dev                         # http://localhost:3000
 ```
 
-`ingest` is safe to re-run: it skips URLs already stored. `pipeline` only
-summarises clusters that are new, or that have grown 40% since last time.
+`npm run ingest` prints a per-feed article count; `npm run dev` should serve a ranked feed of clustered stories at `http://localhost:3000`. `ingest` is safe to re-run — it skips URLs already stored — and `pipeline` only summarises clusters that are new or have grown 40%.
 
-## How a story is made
+## Configuration
 
-1. **Ingest** — `scripts/ingest.ts` reads the feeds in `src/lib/sources.ts`,
-   normalises URLs (strips `utm_*` and friends), and pulls the full article text
-   with Readability. Summaries come from that text, not from the RSS one-liner.
-2. **Cluster** — `src/lib/cluster.ts` builds a TF-IDF vector per article
-   (headline weighted 3×, body excluded — it is mostly boilerplate) and does
-   single-link agglomeration inside a 48-hour window. Similarity threshold
-   `0.19`, tuned against real feeds: `0.16` merged a liquor-poisoning story into
-   a building collapse, `0.30` split one German election across six clusters.
-3. **Summarise** — `src/lib/summarise.ts` picks up to six articles, one per
-   source, longest first, and asks the model for a headline, a 4–6 sentence
-   crux, a category, a place and an importance score. The prompt requires
-   attribution ("the health ministry says") rather than assertion.
-4. **Rank** — `src/lib/feed.ts` scores on recency × corroboration × importance ×
-   interest, and reserves every fourth slot for a story *outside* the user's
-   stated categories. That exploration budget is the point, not a garnish.
+| Variable | Required | What it is |
+|---|---|---|
+| `LLM_PROVIDER` | No | `cloudflare` (the default when unset), `gemini`, `deepseek` or `openai`. The shipped `.env.local.example` sets `gemini`, so edit or delete that line to get the code default. |
+| `LLM_API_KEY` | One key | Overrides the per-provider key below. |
+| `CLOUDFLARE_API_TOKEN` | For `cloudflare` | Workers AI key, and the D1 REST credential. |
+| `CLOUDFLARE_ACCOUNT_ID` | For `cloudflare` | Required by the Workers AI base URL and by the D1 REST client. |
+| `CLOUDFLARE_D1_ID` | For `npm run dev` | D1 database id the site and the sync scripts read. |
+| `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `OPENAI_API_KEY` | Per provider | Key for the chosen hosted provider. |
+| `LLM_BASE_URL` | No | With `LLM_PROVIDER=openai`, any OpenAI-compatible endpoint. |
+| `LLM_MODEL` | No | Model id. Each provider has a working default. |
+| `LLM_RPM`, `LLM_CONCURRENCY` | No | Request pacing. Free tiers are strict. |
+| `LLM_JSON_MODE` | No | `schema`, `object` or `text` — servers disagree on structured output. |
+| `SUMMARISE_MIN_SOURCES` | No | Default 2. The cost dial: how many independent outlets a cluster needs before it is summarised. |
+| `SMARTNEWS_DB` | No | Local SQLite path. Defaults to `data/smartnews.db`. |
 
-## Choosing a model
+## How it works
 
-Set these in `.env.local`. Any OpenAI-compatible server works — OpenRouter,
-Together, vLLM, Ollama, LM Studio — by pointing `LLM_BASE_URL` at it.
+`scripts/ingest.ts` reads the feed list in `src/lib/sources.ts`, normalises URLs, and pulls full article text with jsdom and Readability — summaries come from the article, not the RSS blurb. `src/lib/cluster.ts` builds a TF-IDF vector per article (title weighted 3x) and does single-link agglomeration inside a 48-hour window. `src/lib/summarise.ts` takes up to six articles, one per source, and asks the model in `src/lib/llm.ts` for a headline, a short crux, a category, a place and an importance score. `src/lib/feed.ts` ranks on recency, corroboration, importance and stated interest, reserving every fourth slot for a story outside your chosen categories.
 
-| Variable       | Meaning                                                    |
-|----------------|------------------------------------------------------------|
-| `LLM_PROVIDER` | `gemini` (default), `deepseek`, or `openai`                |
-| `LLM_MODEL`    | Model id; each provider has a working default              |
-| `LLM_BASE_URL` | With `provider=openai`, any OpenAI-compatible endpoint     |
-| `LLM_API_KEY`  | Overrides `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `OPENAI_API_KEY` |
-| `LLM_RPM`      | Requests per minute to pace at — free tiers are strict     |
-| `LLM_JSON_MODE`| `schema` (default) · `object` (DeepSeek) · `text`          |
-| `LLM_CONCURRENCY` | In-flight requests; pacing still applies               |
+The pipeline and the site use different stores. The pipeline writes local SQLite because a cluster run issues thousands of statements; the site reads D1 through `src/lib/d1.ts`. `scripts/hydrate-d1.ts` pulls the working window down and `scripts/sync-d1.ts` pushes results back, which is why `.github/workflows/cycle.yml` can run `hydrate` → `cycle` → `sync` every 15 minutes on a runner with no persistent disk.
 
-### Running it for nothing, locally
+`deploy/install-schedule.sh` installs the same 15-minute cycle as a launchd agent. It is macOS only — on Linux, or anywhere else, use the GitHub Actions workflow instead. Do not run both against one D1: two concurrent cycles clobber each other's cluster assignments.
 
-LM Studio (or any OpenAI-compatible local server) needs no key and has no caps:
+## Status
 
-```bash
-LLM_PROVIDER=openai
-LLM_BASE_URL=http://localhost:1234/v1
-LLM_API_KEY=lm-studio
-LLM_MODEL=ornith-1.5-9b-mlx
-LLM_RPM=600
-LLM_CONCURRENCY=2
-```
+Ingest, clustering, summarisation, the D1 sync, the ranked feed, story pages and saved stories all work, and the scheduled Actions cycle runs against the live site.
 
-Measured on an M3 Max: a 9B does a cluster in ~10s, a 27B in ~35s, and both
-write summaries indistinguishable from DeepSeek's for this task. A full cycle
-summarised 12 clusters with zero failures. Nothing about reading six short
-articles and writing five sentences needs a frontier model.
+Known gaps, from the code review in `REVIEW.md` (7 September 2026):
 
-`LLM_JSON_MODE` exists because structured output is where these servers differ:
-LM Studio and OpenAI want `json_schema` and reject `["string","null"]` union
-types, DeepSeek wants `json_object`, and `text` is the escape hatch for servers
-with neither.
+- **The deployed site has no authentication.** Every write is keyed `user_id = 'local'`, so any visitor overwrites the one shared preferences row and the one shared saved list.
+- **Scraped article bodies are interpolated into the prompt unescaped.** A hostile page can steer the headline and summary the front page shows.
+- `scripts/sync-d1.ts` `reap()` deletes D1 clusters missing from a freshly hydrated local file, guarded only by a 10% heuristic. A short hydrate can delete real rows irrecoverably.
+- Nothing prunes D1 outside the 5-day window, so storage grows without limit.
+- There are no tests and no lint config. `npm run build:check` is the only typecheck and no workflow runs it.
+- Reels, theme variants, GPS-local news, the left/centre/right coverage breakdown and the credibility signal are not built. `sources.bias` is declared in the schema and read by nothing.
 
-### Hosted free tiers
+Provider cost and quality figures are in [docs/MODELS.md](docs/MODELS.md); treat any number there as a single measurement on one machine, not a guarantee.
 
-**DeepSeek is the default, and Gemini's free tier is not usable here.** AI
-Studio's free quota is `GenerateRequestsPerDayPerProjectPerModel` = **20
-requests per day**, not per minute — against the ~150/day this feed needs. Use
-Gemini only with billing enabled on the Google Cloud project.
+## License
 
-Measured on DeepSeek `v4-flash`: 662 summaries in 16 minutes for about $0.55,
-and a steady-state cycle of ~16 summaries in 63 seconds. `llm.ts` paces to
-`LLM_RPM` and honours whatever retry delay the API returns rather than fighting
-the quota.
-
-With no key at all the pipeline falls back to quoting the longest single source
-verbatim, so the app is runnable before you sign up for anything. That fallback
-is a placeholder, not the product — it does exactly the source-framing thing
-this app exists to avoid.
-
-## Running it on a schedule
-
-`npm run cycle` is one pass: ingest, re-cluster, summarise what changed. It
-takes about a minute.
-
-```bash
-sh deploy/install-schedule.sh    # launchd agent, every 15 minutes
-```
-
-Fifteen minutes, not five: the feeds produce ~31 articles/hour, so a 5-minute
-cycle mostly fetches nothing while hitting 39 publishers 288 times a day each.
-
-`SUMMARISE_MIN_SOURCES` (default 2) is the cost dial. Every cluster is ~1,170
-summaries/day; two-or-more independent sources is ~150/day, roughly $3.60/month
-on DeepSeek — and it is the better feed, since a story only one outlet ran is
-what a corroboration-ranked product should be sceptical of anyway.
-
-A cluster that fails three times is given up on, so a story the model always
-chokes on cannot be retried forever at cost.
-
-## Deployed
-
-**https://smartnews.nvkudva.workers.dev** — Cloudflare Workers via
-`@opennextjs/cloudflare`, reading a D1 database.
-
-The split matters: the **site** is hosted and always up, but the **pipeline
-that fetches news runs on a Mac**. Full-text extraction uses jsdom and
-Readability, which need a real DOM that the Workers runtime does not have, and
-dropping to RSS excerpts would make every summary thinner. So:
-
-The pipeline runs on **GitHub Actions**, every 15 minutes
-(`.github/workflows/cycle.yml`). Actions minutes are free and unlimited for
-public repositories, so this costs nothing and needs no machine of yours to be
-awake.
-
-```bash
-npm run hydrate   # rebuild the local working store from D1
-npm run cycle 40  # fetch, cluster, summarise
-npm run sync      # push results back to D1
-npm run deploy    # only when the code changes
-```
-
-That is exactly what CI runs, so the same three commands reproduce a cycle
-locally. A runner has no disk that survives between runs, so D1 is the durable
-copy and the local SQLite file is scratch. The pipeline stays on SQLite because
-a cluster run issues thousands of statements; over HTTP each would be a round
-trip.
-
-Two things to know about scheduled Actions: runs are delayed when GitHub is
-busy (harmless here), and GitHub disables cron on a public repo after ~60 days
-with no commits.
-
-## Storage
-
-Two stores, deliberately. The pipeline works against **`node:sqlite`** at
-`data/smartnews.db` — a cluster run issues thousands of statements, and over
-HTTP each would be a round trip. The site reads **D1** through `src/lib/d1.ts`,
-which uses the Workers binding when it really is on Workers and the D1 REST API
-otherwise, so `next dev` reads exactly the rows production does. `events` is written from day one so personalisation has history to
-learn from later.
-
-## Not built yet
-
-Reels, themes B and C, GPS-precise local news, left/centre/right coverage
-breakdown, and the credibility signal. Designs for all of them are on the
-canvas; `clusters` already carries the columns the first two need.
+No licence file yet — all rights reserved.
