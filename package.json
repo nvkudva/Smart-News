@@ -8,7 +8,8 @@
     "start": "next start",
     "ingest": "tsx scripts/ingest.ts",
     "pipeline": "tsx scripts/pipeline.ts",
-    "build:check": "tsc --noEmit"
+    "build:check": "tsc --noEmit",
+    "cycle": "tsx scripts/cycle.ts"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",

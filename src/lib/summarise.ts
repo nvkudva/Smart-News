@@ -3,6 +3,7 @@ import { CATEGORIES, db } from './db';
 import { completeJson, describe, llmConfig, type JsonSchema } from './llm';
 
 const MAX_ARTICLES = 6;
+const MAX_ATTEMPTS = 3;
 const MAX_CHARS_EACH = 2600;
 
 type Member = { source_id: string; name: string; title: string; lead: string | null; body: string | null };
@@ -84,12 +85,19 @@ function extractive(members: Member[]): Summary | null {
 export async function summarisePending(limit = 30): Promise<{ done: number; skipped: number; using: string }> {
   const d = db();
   const config = llmConfig();
+  // A story only one outlet ran is exactly what a corroboration-ranked feed
+  // should be sceptical of, so it is also the cheapest thing to not summarise.
+  const minSources = Number(process.env.SUMMARISE_MIN_SOURCES ?? 2);
+  // Give up after MAX_ATTEMPTS: without this a cluster the model always chokes
+  // on gets retried on every scheduled cycle, forever, at cost.
   const targets = d.prepare(
     `SELECT id, article_count FROM clusters
-      WHERE summarised_at IS NULL OR article_count >= summarised_n * 1.4
+      WHERE source_count >= ?
+        AND attempts < ?
+        AND (summarised_at IS NULL OR article_count >= summarised_n * 1.4)
       ORDER BY source_count DESC, article_count DESC
       LIMIT ?`,
-  ).all(limit) as unknown as { id: string; article_count: number }[];
+  ).all(minSources, MAX_ATTEMPTS, limit) as unknown as { id: string; article_count: number }[];
 
   const membersOf = d.prepare(
     `SELECT a.source_id, s.name, a.title, a.lead, a.body
@@ -100,17 +108,24 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
     `UPDATE clusters SET headline=?, crux=?, category=?, place=?, country=?, importance=?,
             summarised_at=?, summarised_n=? WHERE id=?`,
   );
+  const resetAttempts = d.prepare('UPDATE clusters SET attempts = 0 WHERE id = ?');
 
-  const limiter = pLimit(3);  // requests are paced inside llm.ts; overlap just hides latency
+  // Requests are paced to LLM_RPM inside llm.ts; concurrency only hides latency,
+  // so it wants to be roughly rpm * seconds-per-call / 60 to actually reach that rate.
+  const limiter = pLimit(Number(process.env.LLM_CONCURRENCY ?? 3));
   let done = 0, skipped = 0;
 
+  const bumpAttempt = d.prepare('UPDATE clusters SET attempts = attempts + 1 WHERE id = ?');
+
   await Promise.all(targets.map((t) => limiter(async () => {
+    bumpAttempt.run(t.id);
     const members = membersOf.all(t.id) as unknown as Member[];
     const s = config ? await summariseCluster(members) : extractive(members);
     if (!s) { skipped++; return; }
     const category = (CATEGORIES as readonly string[]).includes(s.category) ? s.category : 'World';
     save.run(s.headline, s.crux, category, s.place ?? null, s.country ?? null,
              Math.max(1, Math.min(5, Math.round(s.importance) || 3)), Date.now(), t.article_count, t.id);
+    resetAttempts.run(t.id);
     done++;
     process.stdout.write(`  ✓ ${String(members.length).padStart(2)} src  ${s.headline.slice(0, 66)}\n`);
   })));

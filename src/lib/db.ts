@@ -59,7 +59,8 @@ function migrate(d: DatabaseSync) {
       first_seen     INTEGER NOT NULL,
       last_seen      INTEGER NOT NULL,
       summarised_at  INTEGER,
-      summarised_n   INTEGER DEFAULT 0
+      summarised_n   INTEGER DEFAULT 0,
+      attempts       INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS clusters_last_seen ON clusters(last_seen DESC);
 
@@ -80,6 +81,12 @@ function migrate(d: DatabaseSync) {
     );
     CREATE INDEX IF NOT EXISTS events_user ON events(user_id, ts DESC);
   `);
+
+  // Added after the first backfill; existing databases predate the column.
+  const cols = d.prepare('PRAGMA table_info(clusters)').all() as unknown as { name: string }[];
+  if (!cols.some((c) => c.name === 'attempts')) {
+    d.exec('ALTER TABLE clusters ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0');
+  }
 }
 
 export const CATEGORIES = [

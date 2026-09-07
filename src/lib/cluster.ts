@@ -74,9 +74,15 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
   let assigned = 0;
   for (const g of groups) {
     const members = g.members.map((i) => rows[i]);
-    // Cluster identity is its earliest article, so ids survive across runs.
-    const seed = members[0];
-    const id = `c_${seed.id}`;
+    // Identity must survive re-runs: reuse whichever id the members already
+    // carry (most common wins when two clusters merge), and only mint a new one
+    // for a genuinely new story. Deriving it from the earliest article instead
+    // loses the id — and the paid-for summary — the moment a backdated article
+    // joins and becomes the new earliest.
+    const tally = new Map<string, number>();
+    for (const m of members) if (m.cluster_id) tally.set(m.cluster_id, (tally.get(m.cluster_id) ?? 0) + 1);
+    const inherited = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const id = inherited ?? `c_${members[0].id}`;
     const sources = new Set(members.map((m) => m.source_id));
     const hashes = new Set(members.map((m) => m.content_hash ?? m.id));
     const image = members.find((m) => m.image_url)?.image_url ?? null;

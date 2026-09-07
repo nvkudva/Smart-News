@@ -46,15 +46,40 @@ Together, vLLM, Ollama, LM Studio — by pointing `LLM_BASE_URL` at it.
 | `LLM_API_KEY`  | Overrides `GEMINI_API_KEY` / `DEEPSEEK_API_KEY` / `OPENAI_API_KEY` |
 | `LLM_RPM`      | Requests per minute to pace at — free tiers are strict     |
 
-Google AI Studio's free tier allows 5 requests/minute on `gemini-3.8-flash` and
-20 on `gemini-2.5-flash`, so a large batch takes a while. `llm.ts` paces to
-`LLM_RPM` and honours the retry delay the API returns; it does not fight the
-quota. DeepSeek has no such cap and is the cheaper way to backfill in bulk.
+**DeepSeek is the default, and Gemini's free tier is not usable here.** AI
+Studio's free quota is `GenerateRequestsPerDayPerProjectPerModel` = **20
+requests per day**, not per minute — against the ~150/day this feed needs. Use
+Gemini only with billing enabled on the Google Cloud project.
+
+Measured on DeepSeek `v4-flash`: 662 summaries in 16 minutes for about $0.55,
+and a steady-state cycle of ~16 summaries in 63 seconds. `llm.ts` paces to
+`LLM_RPM` and honours whatever retry delay the API returns rather than fighting
+the quota.
 
 With no key at all the pipeline falls back to quoting the longest single source
 verbatim, so the app is runnable before you sign up for anything. That fallback
 is a placeholder, not the product — it does exactly the source-framing thing
 this app exists to avoid.
+
+## Running it on a schedule
+
+`npm run cycle` is one pass: ingest, re-cluster, summarise what changed. It
+takes about a minute.
+
+```bash
+sh deploy/install-schedule.sh    # launchd agent, every 15 minutes
+```
+
+Fifteen minutes, not five: the feeds produce ~31 articles/hour, so a 5-minute
+cycle mostly fetches nothing while hitting 39 publishers 288 times a day each.
+
+`SUMMARISE_MIN_SOURCES` (default 2) is the cost dial. Every cluster is ~1,170
+summaries/day; two-or-more independent sources is ~150/day, roughly $3.60/month
+on DeepSeek — and it is the better feed, since a story only one outlet ran is
+what a corroboration-ranked product should be sceptical of anyway.
+
+A cluster that fails three times is given up on, so a story the model always
+chokes on cannot be retried forever at cost.
 
 ## Storage
 
