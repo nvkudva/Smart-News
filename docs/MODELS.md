@@ -21,9 +21,9 @@ Two workload sizes, from 39 feeds:
 
 | Option | Ceiling | Cost | Account? | Verdict |
 |---|---|---|---|---|
+| **Cloudflare Workers AI** | ~390/day free | free | **yes**, key in use | **Current default** |
 | **LM Studio / Ollama, local** | ~360/hour, uncapped | free | installed | Best if the machine is on |
-| **Cloudflare Workers AI** | ~900/day free | free → $1/mo | — | Best hosted free tier |
-| **DeepSeek** | uncapped | ~$3.60/mo | **yes**, key in use | Current default; no caps, no fuss |
+| **DeepSeek** | uncapped | ~$3.60/mo | **yes** | Fallback; no caps, no fuss |
 | Groq (GroqCloud) | ~150/day | free | **yes** | Token cap bites before the request cap |
 | OpenRouter `:free` | 50/day → 1,000/day | free / $10 once | **yes** | Fine after the one-time top-up |
 | Google AI Studio | **20/day** | free | **yes**, key in use | Unusable — see below |
@@ -74,17 +74,31 @@ published per million tokens, so cost per summary is exact:
 | llama-3.3-70b-instruct-fp8-fast | 69.9 | 143 |
 | qwen3.8-27b | 102.6 | 97 |
 
-`qwen3-30b-a3b-fp8` is the pick: a 30B MoE priced like a 3B because only ~3B
-parameters are active per token. At `MIN_SOURCES=2` that is 1,692 neurons/day —
-**17% of the free allowance**. Summarising every cluster is 130% of free, about
-**$1/month**.
+**`@cf/openai/gpt-oss-20b` is the pick, not the cheapest model.** Tested on real
+clusters, three summaries each:
+
+| Model | Result |
+|---|---|
+| `@cf/openai/gpt-oss-20b` | 3/3, 3–5s, quality matching DeepSeek |
+| `@cf/meta/llama-3.1-8b-instruct-fp8` | **1/3** — valid JSON, missing fields; 9–15s |
+| `@cf/qwen/qwen3-30b-a3b-fp8` | **0/3** — a reasoning model: `content` is null and the answer goes to `message.reasoning` |
+| `@cf/mistralai/mistral-small-3.1-24b-instruct` | 0/3 — unparseable |
+
+So the neuron table below is necessary but not sufficient: qwen3-30b looks like
+the bargain and cannot do the job at all. At 25.6 neurons a summary gpt-oss-20b
+gives **~390/day free**, against a ~152/day workload — about 39% of the
+allowance, with headroom for more feeds.
 
 ```bash
-LLM_PROVIDER=openai
-LLM_BASE_URL=https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/v1
-LLM_API_KEY=<cloudflare-api-token>
-LLM_MODEL=@cf/qwen/qwen3-30b-a3b-fp8
+LLM_PROVIDER=cloudflare          # account id and token are read from env
+CLOUDFLARE_ACCOUNT_ID=<id>
+CLOUDFLARE_API_TOKEN=<token>
+LLM_MODEL=@cf/openai/gpt-oss-20b
+LLM_RPM=100
 ```
+
+Workers AI accepts `response_format` but does not enforce a schema, so the
+provider defaults to `LLM_JSON_MODE=object`.
 
 **Deploying the whole app to Workers is a port, not a config change.** Two
 blockers: `node:sqlite` on a local file has no equivalent (it becomes D1 — same
@@ -92,7 +106,7 @@ SQL, different client), and jsdom + Readability need a real DOM that the Workers
 runtime does not have (it becomes `HTMLRewriter`, or ingest stays on Node).
 Pointing only `LLM_BASE_URL` at Workers AI needs neither.
 
-## DeepSeek — current default, key configured
+## DeepSeek — fallback, key configured
 
 No rate cap worth worrying about. Measured: **662 summaries in 16 minutes**, and
 a steady-state cycle of 16 summaries in 63 seconds.

@@ -53,11 +53,18 @@ export async function summariseCluster(members: Member[]): Promise<Summary | nul
     `<article n="${i + 1}" source="${m.name}">\n<title>${m.title}</title>\n` +
     `${(m.body ?? m.lead ?? '').slice(0, MAX_CHARS_EACH)}\n</article>`).join('\n\n');
 
-  return completeJson<Summary>(
+  const out = await completeJson<Summary>(
     SYSTEM,
     `${members.length} articles cover this one event. Here are ${picked.length} of them.\n\n${corpus}`,
     SCHEMA,
   );
+
+  // Valid JSON is not the same as a usable summary. Smaller models routinely
+  // return an object that parses but omits fields; without this the undefined
+  // goes straight into the database as the story's headline.
+  if (!out || typeof out.headline !== 'string' || typeof out.crux !== 'string') return null;
+  if (!out.headline.trim() || out.crux.trim().length < 40) return null;
+  return out;
 }
 
 /**

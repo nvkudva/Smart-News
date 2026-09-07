@@ -4,11 +4,13 @@ import { GoogleGenAI } from '@google/genai';
  * One JSON-returning completion call, over three interchangeable back ends.
  * Everything provider-specific lives here; callers pass a plain JSON Schema.
  *
- *   LLM_PROVIDER  gemini (default) | deepseek | openai
+ *   LLM_PROVIDER  cloudflare (default) | gemini | deepseek | openai
  *   LLM_MODEL     model id; each provider has a sane default
  *   LLM_BASE_URL  for provider=openai — any OpenAI-compatible endpoint
  *                 (OpenRouter, Together, vLLM, Ollama, LM Studio, …)
- *   LLM_API_KEY   falls back to GEMINI_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY
+ *   LLM_API_KEY   falls back to the provider's own key env var
+ *                 (CLOUDFLARE_API_TOKEN / GEMINI_API_KEY / DEEPSEEK_API_KEY /
+ *                 OPENAI_API_KEY). Cloudflare also needs CLOUDFLARE_ACCOUNT_ID.
  *   LLM_RPM       requests per minute to pace at (free tiers are strict)
  *   LLM_JSON_MODE how to ask for JSON on the OpenAI-compatible path:
  *                 schema (default) | object | text. LM Studio and OpenAI want
@@ -27,7 +29,7 @@ export type JsonSchema = {
   description?: string;
 };
 
-export type Provider = 'gemini' | 'deepseek' | 'openai';
+export type Provider = 'cloudflare' | 'gemini' | 'deepseek' | 'openai';
 
 export type JsonMode = 'schema' | 'object' | 'text';
 
@@ -37,31 +39,46 @@ export type LlmConfig = {
 };
 
 const DEFAULTS: Record<Provider, { model: string; baseUrl?: string; rpm: number; keyEnv: string }> = {
+  // Workers AI. gpt-oss-20b over llama-3.1-8b: the 8b returned unusable JSON on
+  // 2 of 3 real clusters, and qwen3-30b is a reasoning model that leaves
+  // `content` null and puts everything in `reasoning`.
+  cloudflare: { model: '@cf/openai/gpt-oss-20b', rpm: 100, keyEnv: 'CLOUDFLARE_API_TOKEN' },
   gemini:   { model: 'gemini-2.5-flash', rpm: 8,  keyEnv: 'GEMINI_API_KEY' },
   deepseek: { model: 'deepseek-v4-flash', baseUrl: 'https://api.deepseek.com/v1', rpm: 45, keyEnv: 'DEEPSEEK_API_KEY' },
   openai:   { model: 'gpt-4o-mini',   baseUrl: 'https://api.openai.com/v1',   rpm: 45, keyEnv: 'OPENAI_API_KEY' },
 };
 
 export function llmConfig(): LlmConfig | null {
-  const provider = (process.env.LLM_PROVIDER ?? 'gemini').toLowerCase() as Provider;
+  const provider = (process.env.LLM_PROVIDER ?? 'cloudflare').toLowerCase() as Provider;
   const d = DEFAULTS[provider];
-  if (!d) throw new Error(`Unknown LLM_PROVIDER "${provider}" — use gemini, deepseek or openai.`);
+  if (!d) throw new Error(`Unknown LLM_PROVIDER "${provider}" — use cloudflare, gemini, deepseek or openai.`);
   const apiKey = process.env.LLM_API_KEY ?? process.env[d.keyEnv] ?? '';
   if (!apiKey) return null;
+
+  let baseUrl = process.env.LLM_BASE_URL ?? d.baseUrl;
+  if (provider === 'cloudflare' && !process.env.LLM_BASE_URL) {
+    const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+    if (!account) throw new Error('LLM_PROVIDER=cloudflare needs CLOUDFLARE_ACCOUNT_ID.');
+    baseUrl = `https://api.cloudflare.com/client/v4/accounts/${account}/ai/v1`;
+  }
+
   return {
     provider,
     model: process.env.LLM_MODEL ?? process.env.GEMINI_MODEL ?? d.model,
     apiKey,
-    baseUrl: process.env.LLM_BASE_URL ?? d.baseUrl,
+    baseUrl,
     rpm: Number(process.env.LLM_RPM ?? process.env.GEMINI_RPM ?? d.rpm),
-    jsonMode: (process.env.LLM_JSON_MODE ?? (provider === 'deepseek' ? 'object' : 'schema')) as JsonMode,
+    // Workers AI accepts a response_format but does not enforce a schema, and
+    // DeepSeek rejects json_schema outright; both are reliable with json_object.
+    jsonMode: (process.env.LLM_JSON_MODE
+      ?? (provider === 'deepseek' || provider === 'cloudflare' ? 'object' : 'schema')) as JsonMode,
   };
 }
 
 export function describe(c: LlmConfig): string {
-  return c.provider === 'gemini'
-    ? `gemini/${c.model}`
-    : `${c.provider}/${c.model} @ ${c.baseUrl} (json:${c.jsonMode})`;
+  if (c.provider === 'gemini') return `gemini/${c.model}`;
+  if (c.provider === 'cloudflare') return `cloudflare/${c.model}`;
+  return `${c.provider}/${c.model} @ ${c.baseUrl} (json:${c.jsonMode})`;
 }
 
 // ---------------------------------------------------------------- pacing ---
