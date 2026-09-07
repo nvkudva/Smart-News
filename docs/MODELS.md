@@ -82,15 +82,29 @@ read from the API's own `usage.neurons` rather than estimated:
 
 | Model | Quality | in / out tokens | Neurons each | Free/day |
 |---|---|---|---|---|
-| **`@cf/qwen/qwen3-30b-a3b-fp8`** | 3/3, ~5s | 3520 / 834 | **41.7** | **239** |
+| `@cf/meta/llama-3.2-3b-instruct` | 3/3 | 3201 / 98 | **17.8** | **562** |
+| **`@cf/qwen/qwen3-30b-a3b-fp8`** | 3/3, ~5s | 3283 / 514 | 31–42 | 239–324 |
 | `@cf/meta/llama-3.1-8b-instruct-fp8` | 3/3 | 3407 / 101 | 49.6 | 201 |
 | `@cf/openai/gpt-oss-20b` | 3/3, ~6s | 3427 / 491 | 75.7 | 132 |
+| `@cf/meta/llama-3.3-70b-instruct-fp8-fast` | 3/3 but headlines come back all-lowercase | — | — | — |
 
-Against a ~152/day workload, only the first two fit inside the free tier.
-gpt-oss-20b loses despite writing the fewest tokens of the three that reason,
-because it charges **4x more per input token** (18,182 vs 4,625 neurons/M) and
-these prompts are input-heavy — ~3,450 tokens of article text against ~500 of
-output.
+**qwen3-30b is the default even though llama-3.2-3b is cheaper.** At a ~152/day
+workload both sit inside the free allowance, so the ceiling is not the binding
+constraint and the larger model wins on judgement — attribution and "where
+sources disagree, say so" are exactly what a 3B model is weakest at. Switch to
+`@cf/meta/llama-3.2-3b-instruct` if the feed list grows enough to make 324/day
+tight; it more than doubles the headroom.
+
+qwen's cost varies with how long it reasons (31–42 neurons across runs).
+gpt-oss-20b costs most despite writing few tokens, because it charges **4x more
+per input token** (18,182 vs 4,625 neurons/M) and these prompts are
+input-heavy: ~3,300 tokens of article text against ~100–500 of output.
+
+**Read neuron cost from the API, not from the price table.** `usage.neurons`
+comes back on every Workers AI response. Deriving it from the published rates
+reproduced the measured figure exactly for qwen and gpt-oss, but was 2.8x low
+for `llama-3.1-8b-instruct-fp8` — the table prices the `-fast` variant, which
+is a different model from the one that name resolves to.
 
 Two traps worth knowing:
 
