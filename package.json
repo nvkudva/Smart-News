@@ -5,19 +5,35 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "ingest": "tsx scripts/ingest.ts",
+    "pipeline": "tsx scripts/pipeline.ts",
+    "build:check": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/genai": "^2.21.0",
+    "@mozilla/readability": "^0.6.0",
+    "@supabase/supabase-js": "^2.115.0",
+    "jsdom": "^30.0.1",
     "next": "16.3.4",
+    "p-limit": "^7.3.2",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^26.4.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   }
 }

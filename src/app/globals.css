@@ -1,26 +1,110 @@
 @import "tailwindcss";
 
+/* Theme A — Frosted Stack. Tokens mirror the design canvas exactly. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ground:        oklch(0.975 0.006 250);
+  --ink:           oklch(0.24 0.014 258);
+  --ink-2:         oklch(0.50 0.014 258);
+  --ink-3:         oklch(0.63 0.012 258);
+  --kicker:        oklch(0.58 0.03 258);
+  --kicker-near:   oklch(0.56 0.09 252);
+  --kicker-new:    oklch(0.56 0.09 68);
+  --accent:        oklch(0.56 0.155 272);
+  --glass:         rgba(255, 255, 255, 0.58);
+  --glass-edge:    rgba(255, 255, 255, 0.78);
+  --glass-warm:    linear-gradient(140deg, rgba(255,252,244,0.74), rgba(255,247,238,0.52));
+  --plate:         linear-gradient(150deg, oklch(0.87 0.045 250), oklch(0.90 0.035 322));
+  --shadow:        0 1px 2px rgba(30,38,60,0.04), 0 10px 26px -10px rgba(30,38,60,0.14);
+  --rule:          oklch(0.90 0.008 258);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html { background: var(--ground); }
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
 }
+
+/* the soft ambient wash the glass reads against */
+.wash { position: fixed; inset: -80px; z-index: -1; overflow: hidden; pointer-events: none; }
+.wash i { position: absolute; border-radius: 50%; filter: blur(72px); display: block; }
+.wash i:nth-child(1) { top: -40px; left: -60px; width: 340px; height: 340px; background: oklch(0.87 0.075 252); opacity: .55; }
+.wash i:nth-child(2) { top: 24%; right: -90px; width: 300px; height: 300px; background: oklch(0.89 0.062 335); opacity: .50; }
+.wash i:nth-child(3) { bottom: 8%; left: -40px; width: 320px; height: 320px; background: oklch(0.91 0.055 85); opacity: .55; }
+
+.shell { max-width: 430px; margin: 0 auto; padding: 0 16px 96px; }
+
+.card {
+  display: flex; flex-direction: column; gap: 7px;
+  border-radius: 22px; padding: 15px 16px 14px;
+  background: var(--glass); border: 1px solid var(--glass-edge);
+  backdrop-filter: blur(30px) saturate(185%);
+  -webkit-backdrop-filter: blur(30px) saturate(185%);
+  box-shadow: var(--shadow);
+  color: inherit; text-decoration: none;
+}
+.card--explore { background: var(--glass-warm); border-color: rgba(255,255,255,0.85); }
+.card--row { flex-direction: row; gap: 13px; align-items: flex-start; }
+.card--row .card__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+
+.kicker {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  font-weight: 650; color: var(--kicker);
+  min-width: 0; flex: 0 1 auto; white-space: nowrap; overflow: hidden;
+}
+.kicker > span { overflow: hidden; text-overflow: ellipsis; }
+.kicker--near { color: var(--kicker-near); }
+.kicker--new  { color: var(--kicker-new); }
+.kicker span.sep { opacity: .35; }
+
+.card h2 { margin: 0; font-size: 17.5px; line-height: 1.26; font-weight: 650; letter-spacing: -.016em; text-wrap: pretty;
+           display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.card p  { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); text-wrap: pretty;
+           display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
+.card--row p { -webkit-line-clamp: 4; }
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.foot .meta { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+
+.plate { background: var(--plate); border: 1px solid rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.plate img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.plate--hero  { height: 168px; border-radius: 15px; margin: -2px -2px 2px; }
+.plate--thumb { width: 76px; height: 76px; border-radius: 14px; flex: 0 0 auto; }
+
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 76px; z-index: 20;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 13px 20px 0; overflow: visible;
+  background: rgba(255,255,255,0.62); border-top: 1px solid var(--glass-edge);
+  backdrop-filter: blur(34px) saturate(190%); -webkit-backdrop-filter: blur(34px) saturate(190%);
+}
+.tabbar > .inner { max-width: 430px; width: 100%; margin: 0 auto; display: flex; align-items: flex-start; justify-content: space-between; }
+.tab { width: 52px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ink-3); text-decoration: none; }
+.tab[data-active="true"] { color: oklch(0.42 0.10 252); }
+.tab span { font-size: 9.5px; font-weight: 600; }
+
+.reelsbtn {
+  width: 56px; height: 56px; margin-top: -24px; flex: 0 0 auto; border-radius: 50%;
+  background: linear-gradient(158deg, oklch(0.74 0.115 268) 0%, oklch(0.61 0.155 272) 46%, oklch(0.53 0.145 305) 100%);
+  border: 1px solid rgba(255,255,255,0.34);
+  backdrop-filter: blur(18px) saturate(180%); -webkit-backdrop-filter: blur(18px) saturate(180%);
+  box-shadow: 0 10px 26px -8px oklch(0.56 0.16 278 / .55), 0 2px 6px rgba(30,38,60,.20),
+              inset 0 1.5px 0 rgba(255,255,255,.50), inset 0 -11px 18px -11px rgba(20,12,40,.50);
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+
+.panel {
+  border-radius: 24px; padding: 19px;
+  background: rgba(255,255,255,0.60); border: 1px solid rgba(255,255,255,0.80);
+  backdrop-filter: blur(30px) saturate(185%); -webkit-backdrop-filter: blur(30px) saturate(185%);
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.label { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: oklch(0.62 0.02 258); }
+.panel p { margin: 0; font-size: 15px; line-height: 1.58; color: oklch(0.30 0.014 258); text-wrap: pretty; }
+
+.sources { font-size: 11.5px; line-height: 1.62; color: oklch(0.58 0.014 258); }
+.sources a { color: var(--accent); text-decoration: none; }
+.sources a:hover { text-decoration: underline; }
