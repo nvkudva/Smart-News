@@ -3,6 +3,7 @@ import { Back, Photo } from '@/components/icons';
 import { SaveButton } from '@/components/SaveButton';
 import { ago } from '@/components/StoryCard';
 import { getReels, isSaved } from '@/lib/library';
+import { TabBar } from '@/components/TabBar';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,7 @@ export default function Reels() {
   const stories = getReels(20);
 
   return (
+    <>
     <div className="reels">
       <Link href="/" className="reels__close" aria-label="Back to feed"><Back /></Link>
 
@@ -39,5 +41,7 @@ export default function Reels() {
         </section>
       ))}
     </div>
+    <TabBar active="reels" />
+    </>
   );
 }

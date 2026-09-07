@@ -287,7 +287,9 @@ body {
 
 /* ── Reels ─────────────────────────────────────────────────────────────── */
 .reels {
-  position: fixed; inset: 0; z-index: 50; overflow-y: auto;
+  /* Below the tab bar's z-index, not above it: navigation stays reachable
+     from the reels stack the same as from every other route. */
+  position: fixed; inset: 0; z-index: 10; overflow-y: auto;
   scroll-snap-type: y mandatory; overscroll-behavior-y: contain;
   background: oklch(0.185 0.026 272);
 }
@@ -329,17 +331,31 @@ body {
 }
 .reel .savebtn[data-saved="true"] { background: var(--accent); border-color: transparent; }
 
-@media (min-width: 1024px) {
-  .reel__photo { inset: 0 0 0 34%; }
+@media (min-width: 700px) {
+  /* Start after the rail so the navigation is never covered. */
+  .reels { left: var(--rail); }
+  .reels__close { left: calc(var(--rail) + 14px); }
+}
+
+/* The side-by-side split needs real width. With a 232px rail eating into it,
+   1024 leaves the text column at ~290px and the headline wraps to five lines,
+   so the stacked layout holds until there is room to do it properly. */
+@media (min-width: 1280px) {
+  .reel__photo { inset: 0 0 0 38%; }
   .reel__scrim {
-    background: linear-gradient(to right, oklch(0.185 0.026 272) 0 34%,
-                oklch(0.185 0.026 272 / .92) 44%, oklch(0.185 0.026 272 / .55) 56%,
-                rgba(0,0,0,0) 74%);
+    background: linear-gradient(to right, oklch(0.185 0.026 272) 0 38%,
+                oklch(0.185 0.026 272 / .92) 48%, oklch(0.185 0.026 272 / .55) 60%,
+                rgba(0,0,0,0) 78%);
   }
   .reel { justify-content: center; }
-  .reel__body { padding: 0 48px 0 84px; max-width: 46%; gap: 14px; }
-  .reel__body h2 { font-size: 34px; }
+  .reel__body { padding: 0 40px 0 56px; max-width: 40%; gap: 14px; }
+  .reel__body h2 { font-size: 30px; }
   .reel__body p { -webkit-line-clamp: 8; font-size: 15.5px; }
+}
+
+@media (min-width: 1600px) {
+  .reel__body { max-width: 38%; padding: 0 48px 0 72px; }
+  .reel__body h2 { font-size: 36px; }
 }
 
 /* ── Story detail ──────────────────────────────────────────────────────── */
