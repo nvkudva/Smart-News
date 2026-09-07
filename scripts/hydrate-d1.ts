@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 config({ path: '.env.local', quiet: true });
 
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { d1 } from '../src/lib/d1';
 import { db } from '../src/lib/db';
@@ -19,10 +19,13 @@ import { db } from '../src/lib/db';
 const WINDOW_MS = 5 * 24 * 3_600_000;   // comfortably wider than the 48h clustering window
 const PAGE = 400;
 
-async function pull<T>(table: string, cols: string, where: string, params: unknown[]): Promise<T[]> {
+async function pull<T>(table: string, cols: string, where: string, params: unknown[],
+                       orderBy?: string): Promise<T[]> {
   const d = await d1();
   const out: T[] = [];
-  const key = cols.split(',')[0].trim();          // every table's primary key comes first
+  // Every table's primary key comes first, except where it is composite — then
+  // the caller passes the whole key, or paging silently skips and repeats rows.
+  const key = orderBy ?? cols.split(',')[0].trim();
   for (let offset = 0; ; offset += PAGE) {
     const page = await d.all<T>(
       // Without an ORDER BY, LIMIT/OFFSET may skip or repeat rows between pages.
@@ -35,6 +38,45 @@ async function pull<T>(table: string, cols: string, where: string, params: unkno
   return out;
 }
 
+/**
+ * The subset of `wanted` that D1 actually has.
+ *
+ * A column added to this repo reaches D1 only on the next `sync`, and hydrate
+ * runs first in the cycle — so selecting one D1 has not been ALTERed to yet
+ * fails the whole run. Missing columns come back as null, which is what a
+ * freshly ALTERed D1 column would hold anyway.
+ */
+async function columns(table: string, wanted: string[]): Promise<string[]> {
+  const d = await d1();
+  const have = new Set((await d.all<{ name: string }>(`PRAGMA table_info(${table})`)).map((c) => c.name));
+  const got = wanted.filter((c) => have.has(c));
+  if (!got.length) throw new Error(`D1 has no table ${table}`);
+  return got;
+}
+
+/**
+ * The gazetteer as the local file already holds it.
+ *
+ * places/place_aliases are built locally from data/gazetteer.seed.json and only
+ * reach D1 on a later sync, so between the two the wipe below is the only copy
+ * standing. Carry it across rather than dropping it.
+ */
+function localGazetteer(path: string, placeCols: string[], aliasCols: string[]) {
+  const empty = { places: [] as Record<string, unknown>[], aliases: [] as Record<string, unknown>[] };
+  if (!existsSync(path)) return empty;
+  const old = new DatabaseSync(path, { readOnly: true });
+  try {
+    return {
+      places: old.prepare(`SELECT ${placeCols.join(',')} FROM places`).all() as Record<string, unknown>[],
+      aliases: old.prepare(`SELECT ${aliasCols.join(',')} FROM place_aliases`).all() as Record<string, unknown>[],
+    };
+  } catch {
+    return empty;                     // an older file, from before the gazetteer shipped
+  } finally {
+    old.close();
+  }
+}
+
 function insertAll(local: ReturnType<typeof db>, table: string, cols: string[], rows: Record<string, unknown>[]) {
   const stmt = local.prepare(
     `INSERT OR REPLACE INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`);
@@ -43,38 +85,62 @@ function insertAll(local: ReturnType<typeof db>, table: string, cols: string[], 
 
 async function main() {
   const path = process.env.SMARTNEWS_DB ?? 'data/smartnews.db';
+  const since = Date.now() - WINDOW_MS;
+  console.log('Pulling from D1…');
+
+  const sources = await pull<Record<string, unknown>>('sources',
+    'id,name,feed_url,homepage,country,category,bias', '', []);
+
+  // Before clusters: a cluster's place_id is a foreign key into places, and the
+  // local store enforces them.
+  //
+  // Tolerated missing, because this runs first in the scheduled cycle and the
+  // gazetteer tables only appear in D1 on the first `sync` after they shipped.
+  // A cron that dies here would take the whole news pipeline with it.
+  const placeCols = ['id','kind','name','label','country','admin1_id','parent_id','lat','lon','population','updated_at'];
+  const aliasCols = ['alias','country','place_id','source','confidence','updated_at'];
+  let places: Record<string, unknown>[] = [];
+  let aliases: Record<string, unknown>[] = [];
+  try {
+    places = await pull<Record<string, unknown>>('places', placeCols.join(','), '', []);
+    aliases = await pull<Record<string, unknown>>('place_aliases', aliasCols.join(','), '', [],
+      'alias, country');
+  } catch (e) {
+    console.warn(`\n  ! gazetteer not in D1 yet (${(e as Error).message}) — run \`npm run gazetteer && npm run sync\``);
+  }
+
+  const clusterCols = ['id','headline','crux','category','place','country','place_id','importance','image_url',
+    'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'];
+  const clusters = await pull<Record<string, unknown>>('clusters',
+    (await columns('clusters', clusterCols)).join(','), 'WHERE last_seen >= ?', [since]);
+
+  const articleCols = ['id','source_id','url','title','lead','body','image_url','published_at','fetched_at',
+    'content_hash','cluster_id'];
+  const articles = await pull<Record<string, unknown>>('articles', articleCols.join(','),
+    'WHERE published_at >= ?', [since]);
+
+  const prefsCols = ['user_id','country','categories','places','place_ids','geo_consent','geo_place_id'];
+  const prefs = await pull<Record<string, unknown>>('prefs',
+    (await columns('prefs', prefsCols)).join(','), '', []);
+
+  // Only now, with the whole working set in hand, is the local file replaced —
+  // a D1 error above must never leave the machine with neither copy.
+  if (!places.length) ({ places, aliases } = localGazetteer(path, placeCols, aliasCols));
   if (process.env.HYDRATE_FRESH !== '0') {
     mkdirSync(dirname(path), { recursive: true });
     for (const suffix of ['', '-wal', '-shm', '.t0']) rmSync(path + suffix, { force: true });
   }
 
   const local = db();                 // creates the schema
-  const since = Date.now() - WINDOW_MS;
-  console.log('Pulling from D1…');
-
-  const sources = await pull<Record<string, unknown>>('sources',
-    'id,name,feed_url,homepage,country,category,bias', '', []);
   insertAll(local, 'sources', ['id','name','feed_url','homepage','country','category','bias'], sources);
+  insertAll(local, 'places', placeCols, places);
+  insertAll(local, 'place_aliases', aliasCols, aliases);
+  insertAll(local, 'clusters', clusterCols, clusters);
+  insertAll(local, 'articles', articleCols, articles);
+  insertAll(local, 'prefs', prefsCols, prefs);
 
-  const clusters = await pull<Record<string, unknown>>('clusters',
-    `id,headline,crux,category,place,country,importance,image_url,article_count,
-     source_count,first_seen,last_seen,summarised_at,summarised_n,attempts`,
-    'WHERE last_seen >= ?', [since]);
-  insertAll(local, 'clusters',
-    ['id','headline','crux','category','place','country','importance','image_url','article_count',
-     'source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'], clusters);
-
-  const articles = await pull<Record<string, unknown>>('articles',
-    'id,source_id,url,title,lead,body,image_url,published_at,fetched_at,content_hash,cluster_id',
-    'WHERE published_at >= ?', [since]);
-  insertAll(local, 'articles',
-    ['id','source_id','url','title','lead','body','image_url','published_at','fetched_at',
-     'content_hash','cluster_id'], articles);
-
-  const prefs = await pull<Record<string, unknown>>('prefs', 'user_id,country,categories,places', '', []);
-  insertAll(local, 'prefs', ['user_id','country','categories','places'], prefs);
-
-  console.log(`\nLocal store rebuilt: ${sources.length} sources, ${clusters.length} clusters, ${articles.length} articles`);
+  console.log(`\nLocal store rebuilt: ${sources.length} sources, ${clusters.length} clusters, ` +
+              `${articles.length} articles, ${places.length} places, ${aliases.length} aliases`);
 }
 
 main().then(() => process.exit(0));

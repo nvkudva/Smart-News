@@ -41,8 +41,14 @@ yarn-error.log*
 next-env.d.ts
 
 # local data + env
-data/
+# data/* (not data/) so the negation below can still be reached:
+# git never descends into a wholly excluded directory.
+data/*
 .env.local
+
+# ...but the gazetteer seed is the source of truth the D1 places table
+# is rebuilt from, so it has to be versioned
+!data/gazetteer.seed.json
 
 # ...but the template documenting every provider must be tracked
 !.env.local.example

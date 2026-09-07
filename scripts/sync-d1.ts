@@ -4,6 +4,7 @@ config({ path: '.env.local', quiet: true });
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { d1, type D1 } from '../src/lib/d1';
+import { applySchema } from './d1-schema';
 
 /**
  * Push the local pipeline's finished rows up to D1, which is what the deployed
@@ -15,34 +16,6 @@ import { d1, type D1 } from '../src/lib/d1';
  * set, and `hydrate` needs bodies to re-summarise a cluster that grew.
  */
 
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS sources (
-  id TEXT PRIMARY KEY, name TEXT NOT NULL, feed_url TEXT NOT NULL,
-  homepage TEXT, country TEXT, category TEXT, bias TEXT);
-CREATE TABLE IF NOT EXISTS clusters (
-  id TEXT PRIMARY KEY, headline TEXT, crux TEXT, category TEXT, place TEXT,
-  country TEXT, importance INTEGER DEFAULT 3, image_url TEXT,
-  article_count INTEGER NOT NULL DEFAULT 0, source_count INTEGER NOT NULL DEFAULT 0,
-  first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
-  summarised_at INTEGER, summarised_n INTEGER DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0);
-CREATE TABLE IF NOT EXISTS articles (
-  id TEXT PRIMARY KEY, source_id TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL,
-  lead TEXT, body TEXT, image_url TEXT, published_at INTEGER NOT NULL,
-  fetched_at INTEGER, content_hash TEXT, cluster_id TEXT);
-CREATE TABLE IF NOT EXISTS prefs (
-  user_id TEXT PRIMARY KEY, country TEXT, categories TEXT, places TEXT);
-CREATE TABLE IF NOT EXISTS saved (
-  user_id TEXT NOT NULL, cluster_id TEXT NOT NULL, saved_at INTEGER NOT NULL,
-  PRIMARY KEY (user_id, cluster_id));
-CREATE TABLE IF NOT EXISTS events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, cluster_id TEXT NOT NULL,
-  kind TEXT NOT NULL, dwell_ms INTEGER, ts INTEGER NOT NULL);
-CREATE INDEX IF NOT EXISTS clusters_last_seen ON clusters(last_seen DESC);
-CREATE INDEX IF NOT EXISTS clusters_category ON clusters(category, last_seen DESC);
-CREATE INDEX IF NOT EXISTS clusters_country ON clusters(country, last_seen DESC);
-CREATE INDEX IF NOT EXISTS articles_cluster ON articles(cluster_id);
-CREATE INDEX IF NOT EXISTS articles_published ON articles(published_at DESC);
-`;
 
 // Must match hydrate's WINDOW_MS: anything older is never read back down, so
 // pushing it is a write D1 bills for and nothing ever reads.
@@ -126,7 +99,7 @@ async function main() {
   const d = await d1();
 
   console.log('Schema…');
-  for (const stmt of SCHEMA.split(';').map((s) => s.trim()).filter(Boolean)) await d.run(stmt);
+  await applySchema(d, (s) => console.log(s));
 
   const since = Date.now() - WINDOW_MS;
   const all = <T,>(sql: string, ...p: unknown[]) => local.prepare(sql).all(...(p as never[])) as unknown as T[];
@@ -140,14 +113,22 @@ async function main() {
   await push('sources', ['id', 'name', 'feed_url', 'homepage', 'country', 'category'],
     all('SELECT id,name,feed_url,homepage,country,category FROM sources'));
 
-  const clusterCols = `id,headline,crux,category,place,country,importance,image_url,
+  // The gazetteer is a few hundred rows and only changes when someone edits the
+  // seed, so it goes up whole rather than carrying a changed-since column. It
+  // goes up before clusters, which point into it.
+  const placeCols = ['id','kind','name','label','country','admin1_id','parent_id','lat','lon','population','updated_at'];
+  await push('places', placeCols, all(`SELECT ${placeCols.join(',')} FROM places`));
+  const aliasCols = ['alias','country','place_id','source','confidence','updated_at'];
+  await push('place_aliases', aliasCols, all(`SELECT ${aliasCols.join(',')} FROM place_aliases`));
+
+  const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,
             article_count,source_count,first_seen,last_seen,summarised_at,summarised_n,attempts`;
   const clusters = t0
     ? all<Record<string, unknown>>(
         `SELECT ${clusterCols} FROM clusters WHERE last_seen >= ? AND ${TOUCHED}`, since, t0, t0, t0)
     : all<Record<string, unknown>>(`SELECT ${clusterCols} FROM clusters WHERE last_seen >= ?`, since);
   await push('clusters',
-    ['id','headline','crux','category','place','country','importance','image_url',
+    ['id','headline','crux','category','place','country','place_id','importance','image_url',
      'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'],
     clusters);
 
@@ -173,7 +154,9 @@ async function main() {
   const counts = await d.get<Record<string, number>>(
     `SELECT (SELECT COUNT(*) FROM sources) AS sources,
             (SELECT COUNT(*) FROM clusters) AS clusters,
-            (SELECT COUNT(*) FROM articles) AS articles`);
+            (SELECT COUNT(*) FROM articles) AS articles,
+            (SELECT COUNT(*) FROM places) AS places,
+            (SELECT COUNT(*) FROM place_aliases) AS aliases`);
   console.log('\nD1 now holds:', JSON.stringify(counts));
 }
 

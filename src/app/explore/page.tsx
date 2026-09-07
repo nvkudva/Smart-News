@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { StoryCard, variantFor } from '@/components/StoryCard';
 import { TabBar } from '@/components/TabBar';
-import { getByCategory, getByCountry, getCategoryFacets, getPlaceFacets } from '@/lib/library';
+import { getByCategory, getByCountry, getByPlace, getCategoryFacets, getPlaceFacets } from '@/lib/library';
+import { getPlaces } from '@/lib/places';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,12 +11,18 @@ const countryName = (code: string) => { try { return REGION.of(code) ?? code; } 
 
 export default async function Explore({
   searchParams,
-}: { searchParams: Promise<{ category?: string; country?: string }> }) {
-  const { category, country } = await searchParams;
+}: { searchParams: Promise<{ category?: string; country?: string; place?: string }> }) {
+  const { category, country, place } = await searchParams;
 
-  if (category || country) {
-    const stories = category ? await getByCategory(category) : await getByCountry(country!);
-    const title = category ?? countryName(country!);
+  if (category || country || place) {
+    // Place ids are opaque, so the heading comes from the gazetteer's own label
+    // rather than from anything read out of the id.
+    const [stories, title] = category
+      ? [await getByCategory(category), category]
+      : place
+        ? [await getByPlace(place), (await getPlaces([place]))[0]?.label ?? 'Place']
+        : [await getByCountry(country!), countryName(country!)];
+
     return (
       <>
         <main className="shell">
@@ -63,8 +70,8 @@ export default async function Explore({
             <div className="label">Places</div>
             <div className="chips">
               {places.map((p) => (
-                <Link key={p.country} href={`/explore?country=${encodeURIComponent(p.country)}`} className="chip">
-                  {countryName(p.country)}
+                <Link key={p.place_id} href={`/explore?place=${encodeURIComponent(p.place_id)}`} className="chip">
+                  {p.label}
                   <span style={{ opacity: 0.5, fontWeight: 500 }}>{p.stories}</span>
                 </Link>
               ))}

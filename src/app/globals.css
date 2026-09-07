@@ -575,3 +575,127 @@ body {
   }
   @keyframes skel-sweep { to { transform: translateX(100%); } }
 }
+
+/* ── Place: the pin, the picker, the consent block, the local header ───────
+   All of it borrows the existing glass, chip and field language; nothing here
+   introduces a new surface, only the parts those three controls were missing. */
+
+/* The masthead pin is now the way into /local, so it has to read as a control
+   and still survive a long canonical label ("Bengaluru, Karnataka, India"). */
+.pinchip {
+  display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto;
+  height: 30px; padding: 0 11px; border-radius: 15px; max-width: min(52vw, 22ch);
+  background: rgba(255,255,255,0.6); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  font-size: 12px; font-weight: 600; color: oklch(0.42 0.02 258); text-decoration: none;
+}
+.pinchip__i { display: flex; flex: 0 0 auto; color: var(--kicker-near); }
+.pinchip__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.picker__box { position: relative; }
+.picker__box input[type="text"] { width: 100%; }
+.picker__menu {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5;
+  margin: 0; padding: 5px; list-style: none; max-height: 264px; overflow-y: auto;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.94); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 10px 30px -10px rgba(30,38,60,0.28);
+}
+.picker__opt {
+  display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
+  padding: 8px 10px; border: none; border-radius: 10px;
+  background: none; color: inherit; font: inherit; cursor: pointer;
+}
+@media (hover: hover) { .picker__opt:hover { background: oklch(0.94 0.012 258); } }
+.picker__opt-n { font-size: 14px; font-weight: 620; }
+/* The label is the whole point of the menu: it is what tells Delhi from
+   New Delhi, and a city in Karnataka from one in Telangana. */
+.picker__opt-l { font-size: 11.5px; color: var(--ink-3); }
+.picker__empty { padding: 10px 11px; font-size: 12.5px; line-height: 1.45; color: var(--ink-3); }
+
+.chip__x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; margin-right: -5px; padding: 0;
+  border: none; border-radius: 50%; background: rgba(255,255,255,0.18);
+  color: inherit; font: inherit; font-size: 15px; line-height: 1; cursor: pointer;
+}
+.picker .chip { max-width: 100%; }
+
+.hint, .panel p.hint { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-3); }
+
+.geo__on { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.localhead { margin-top: 12px; }
+.localhead__pin { display: flex; color: var(--kicker-near); }
+
+.pinchip:focus-visible,
+.chip__x:focus-visible,
+.picker__opt:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) { .pinchip { min-height: 40px; border-radius: 20px; } }
+
+/* Six destinations, one centred disc. The tabs sit in two groups that each take
+   half the free width, so the reels button stays on the middle line however
+   many tabs flank it; each group spreads its own tabs inside its half. */
+.tabgroup {
+  display: flex; flex: 1 1 0; min-width: 0;
+  align-items: flex-start; justify-content: space-around;
+}
+.tabgroup .tab { width: auto; flex: 1 1 0; min-width: 0; max-width: 60px; }
+
+/* Consent is a switch, not a button: it has to read as a state the reader holds
+   rather than an action they fire, because that is what it is. */
+.switch {
+  display: flex; align-items: flex-start; gap: 11px; cursor: pointer;
+}
+.switch input {
+  position: absolute; width: 1px; height: 1px; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.switch__track {
+  position: relative; flex: 0 0 auto; width: 44px; height: 26px; margin-top: 1px;
+  border-radius: 13px; background: oklch(0.88 0.008 258);
+  border: 1px solid var(--glass-edge);
+  transition: background .18s cubic-bezier(.32,.72,0,1);
+}
+.switch__knob {
+  position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(30,38,60,.28);
+  transition: transform .18s cubic-bezier(.32,.72,0,1);
+}
+.switch input:checked + .switch__track { background: var(--accent); }
+.switch input:checked + .switch__track .switch__knob { transform: translateX(18px); }
+.switch input:focus-visible + .switch__track { outline: 2px solid var(--ring); outline-offset: 2px; }
+.switch input:disabled + .switch__track { opacity: .55; }
+.switch__text { font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+
+.geo__pin { display: flex; }
+
+/* A place the gazetteer never matched still works — it falls back to the old
+   substring test — but it cannot reach down a hierarchy it is not part of, so
+   it is drawn as an outline rather than as solid ink. */
+.chip[data-unmatched] {
+  background: none; border-style: dashed; border-color: oklch(0.82 0.01 258); color: var(--ink-3);
+}
+.chip__note {
+  font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 700;
+  opacity: .6;
+}
+/* Inside a filled chip the pin has to borrow the chip's own colour; the accent
+   is invisible against dark ink. */
+.chip[data-on="true"] .localhead__pin { color: inherit; }
+
+@media (min-width: 700px) {
+  /* The rail is a single column; the grouping that centres the disc on a phone
+     would otherwise nest two more flex boxes inside it. */
+  .tabgroup { display: contents; }
+
+  /* display:contents keeps the phone rule .tabgroup .tab matching, and it
+     out-specifies the rail's own .tab, so the tabs need it undone here. */
+  .tabgroup .tab { width: 100%; max-width: none; flex: 0 0 auto; }
+}

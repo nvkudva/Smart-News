@@ -17,6 +17,11 @@ export const Bookmark = ({ size = 21 }: P) => (
 export const Person = ({ size = 21 }: P) => (
   <svg {...base(size)}><circle cx="12" cy="8" r="3.6" /><path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6" /></svg>
 );
+/* Tab-weight sibling of Pin: same landmark, drawn at the 1.9 stroke the other
+   tab glyphs use so the bar reads as one set. */
+export const Near = ({ size = 21 }: P) => (
+  <svg {...base(size)}><path d="M19 10.5c0 5.4-7 11-7 11s-7-5.6-7-11a7 7 0 0 1 14 0Z" /><circle cx="12" cy="10.3" r="2.6" /></svg>
+);
 export const Reels = ({ size = 24 }: P) => (
   <svg {...base(size)}><rect x="6" y="9.5" width="12" height="11" rx="3" /><path d="M8.5 6.5h7" /><path d="m9.6 4 2.4-2 2.4 2" /></svg>
 );

@@ -18,6 +18,32 @@ export function db(): DatabaseSync {
 
 function migrate(d: DatabaseSync) {
   d.exec(`
+    CREATE TABLE IF NOT EXISTS places (
+      id          TEXT PRIMARY KEY,
+      kind        TEXT NOT NULL,
+      name        TEXT NOT NULL,
+      label       TEXT NOT NULL,
+      country     TEXT NOT NULL,
+      admin1_id   TEXT,
+      parent_id   TEXT,
+      lat         REAL,
+      lon         REAL,
+      population  INTEGER,
+      updated_at  INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS places_country ON places(country, kind);
+    CREATE INDEX IF NOT EXISTS places_admin1  ON places(admin1_id);
+
+    CREATE TABLE IF NOT EXISTS place_aliases (
+      alias       TEXT NOT NULL,
+      country     TEXT NOT NULL DEFAULT '',
+      place_id    TEXT NOT NULL,
+      source      TEXT NOT NULL,
+      confidence  REAL NOT NULL DEFAULT 1,
+      updated_at  INTEGER NOT NULL,
+      PRIMARY KEY (alias, country)
+    );
+
     CREATE TABLE IF NOT EXISTS sources (
       id          TEXT PRIMARY KEY,
       name        TEXT NOT NULL,
@@ -60,17 +86,21 @@ function migrate(d: DatabaseSync) {
       last_seen      INTEGER NOT NULL,
       summarised_at  INTEGER,
       summarised_n   INTEGER DEFAULT 0,
-      attempts       INTEGER NOT NULL DEFAULT 0
+      attempts       INTEGER NOT NULL DEFAULT 0,
+      place_id       TEXT REFERENCES places(id)
     );
     CREATE INDEX IF NOT EXISTS clusters_last_seen ON clusters(last_seen DESC);
     CREATE INDEX IF NOT EXISTS clusters_category  ON clusters(category, last_seen DESC);
     CREATE INDEX IF NOT EXISTS clusters_country   ON clusters(country, last_seen DESC);
 
     CREATE TABLE IF NOT EXISTS prefs (
-      user_id     TEXT PRIMARY KEY,
-      country     TEXT,
-      categories  TEXT,
-      places      TEXT
+      user_id      TEXT PRIMARY KEY,
+      country      TEXT,
+      categories   TEXT,
+      places       TEXT,
+      place_ids    TEXT,
+      geo_consent  INTEGER NOT NULL DEFAULT 0,
+      geo_place_id TEXT
     );
 
     CREATE TABLE IF NOT EXISTS events (
@@ -91,11 +121,22 @@ function migrate(d: DatabaseSync) {
     );
   `);
 
-  // Added after the first backfill; existing databases predate the column.
-  const cols = d.prepare('PRAGMA table_info(clusters)').all() as unknown as { name: string }[];
-  if (!cols.some((c) => c.name === 'attempts')) {
-    d.exec('ALTER TABLE clusters ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0');
-  }
+  // Columns added after the tables first shipped; existing files predate them.
+  // CREATE TABLE IF NOT EXISTS is a no-op on a table that already exists, so
+  // every later column needs its own guarded ALTER.
+  const add = (table: string, column: string, ddl: string) => {
+    const cols = d.prepare(`PRAGMA table_info(${table})`).all() as unknown as { name: string }[];
+    if (!cols.some((c) => c.name === column)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  };
+  add('clusters', 'attempts', 'attempts INTEGER NOT NULL DEFAULT 0');
+  add('clusters', 'place_id', 'place_id TEXT REFERENCES places(id)');
+  add('prefs', 'place_ids', 'place_ids TEXT');
+  add('prefs', 'geo_consent', 'geo_consent INTEGER NOT NULL DEFAULT 0');
+  add('prefs', 'geo_place_id', 'geo_place_id TEXT');
+
+  // After the ALTER, not with the other indexes: on a database that predates
+  // place_id the column does not exist yet when the CREATE TABLE block runs.
+  d.exec('CREATE INDEX IF NOT EXISTS clusters_place ON clusters(place_id, last_seen DESC)');
 }
 
 export const CATEGORIES = [

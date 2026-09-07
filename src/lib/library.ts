@@ -1,9 +1,11 @@
 import { d1 } from './d1';
-import type { Story } from './feed';
+import { storyCols, storyFrom, type Story } from './feed';
+import { expandPlaceIds, placesReady, type PlaceKind } from './places';
 
-const SELECT_COLS = `id, headline, crux, category, place, country, importance, image_url,
-                     article_count, source_count, first_seen, last_seen, 0 AS exploration`;
-const SELECT = `SELECT ${SELECT_COLS} FROM clusters`;
+// Shape shared with the feed, so an unmigrated store degrades identically here.
+const cols = (ready: boolean) => `${storyCols(ready)},
+                     0 AS exploration, NULL AS exploration_kind`;
+const select = (ready: boolean) => `SELECT ${cols(ready)} ${storyFrom(ready)}`;
 
 // ---------------------------------------------------------------- saved ---
 
@@ -24,14 +26,13 @@ export async function toggleSaved(clusterId: string, userId = 'local'): Promise<
 }
 
 export async function getSaved(userId = 'local'): Promise<(Story & { saved_at: number })[]> {
+  const ready = await placesReady();
   return (await d1()).all<Story & { saved_at: number }>(
-    `SELECT c.id, c.headline, c.crux, c.category, c.place, c.country, c.importance,
-            c.image_url, c.article_count, c.source_count, c.first_seen, c.last_seen,
-            0 AS exploration, s.saved_at
-       FROM clusters c
-       JOIN saved s ON s.cluster_id = c.id
-      WHERE s.user_id = ?
-      ORDER BY s.saved_at DESC`, [userId]);
+    `SELECT ${cols(ready)}, sv.saved_at
+       ${storyFrom(ready)}
+       JOIN saved sv ON sv.cluster_id = c.id
+      WHERE sv.user_id = ?
+      ORDER BY sv.saved_at DESC`, [userId]);
 }
 
 // -------------------------------------------------------------- explore ---
@@ -47,45 +48,68 @@ export async function getCategoryFacets(): Promise<CategoryFacet[]> {
       GROUP BY category ORDER BY stories DESC`, [since]);
 
   // One query for every category's lead story, rather than one round trip each.
+  const ready = await placesReady();
   const leads = await d.all<Story & { rn: number }>(
     `SELECT * FROM (
-       SELECT ${SELECT_COLS}, ROW_NUMBER() OVER (
-         PARTITION BY category ORDER BY importance DESC, source_count DESC, last_seen DESC) AS rn
-         FROM clusters WHERE headline IS NOT NULL AND last_seen >= ?
+       SELECT ${cols(ready)}, ROW_NUMBER() OVER (
+         PARTITION BY c.category ORDER BY c.importance DESC, c.source_count DESC, c.last_seen DESC) AS rn
+         ${storyFrom(ready)} WHERE c.headline IS NOT NULL AND c.last_seen >= ?
      ) WHERE rn = 1`, [since]);
   const leadBy = new Map(leads.map((l) => [l.category, l]));
 
   return rows.map((r) => ({ ...r, lead: leadBy.get(r.category) ?? null }));
 }
 
-export type PlaceFacet = { country: string; place: string | null; stories: number };
+export type PlaceFacet = { place_id: string; label: string; kind: PlaceKind; country: string; stories: number };
 
+/** Grouped by the canonical place, so "Delhi" and "New Delhi" are one facet.
+ *  A cluster the gazetteer could not resolve simply does not appear. */
 export async function getPlaceFacets(limit = 18): Promise<PlaceFacet[]> {
+  if (!(await placesReady())) return [];   // no gazetteer, no place facets — the category ones still stand
   return (await d1()).all<PlaceFacet>(
-    `SELECT country, MIN(place) AS place, COUNT(*) AS stories
-       FROM clusters WHERE headline IS NOT NULL AND country IS NOT NULL AND last_seen >= ?
-      GROUP BY country ORDER BY stories DESC LIMIT ?`, [Date.now() - 48 * 3_600_000, limit]);
+    `SELECT p.id AS place_id, p.label, p.kind, p.country, COUNT(*) AS stories
+       FROM clusters c JOIN places p ON p.id = c.place_id
+      WHERE c.headline IS NOT NULL AND c.last_seen >= ?
+      GROUP BY p.id, p.label, p.kind, p.country
+      ORDER BY stories DESC LIMIT ?`, [Date.now() - 48 * 3_600_000, limit]);
+}
+
+/** A place and everything under it: asking for Karnataka gets Bengaluru too.
+ *  D1 caps a statement at ~90 bound parameters and a subtree can be longer, so
+ *  the ids are inlined; they are the gazetteer's own slugs, quoted anyway. */
+export async function getByPlace(placeId: string, limit = 40): Promise<Story[]> {
+  // Empty also when the gazetteer has not been synced, which is why the query
+  // below can assume the place columns exist.
+  const ids = await expandPlaceIds([placeId]);
+  if (!ids.length) return [];
+  const list = ids.map((id) => `'${id.replace(/'/g, "''")}'`).join(',');
+  return (await d1()).all<Story>(
+    `${select(true)} WHERE c.headline IS NOT NULL AND c.place_id IN (${list})
+       ORDER BY c.last_seen DESC LIMIT ?`, [limit]);
 }
 
 export async function getByCategory(category: string, limit = 40): Promise<Story[]> {
+  const ready = await placesReady();
   return (await d1()).all<Story>(
-    `${SELECT} WHERE headline IS NOT NULL AND category = ?
-       ORDER BY last_seen DESC LIMIT ?`, [category, limit]);
+    `${select(ready)} WHERE c.headline IS NOT NULL AND c.category = ?
+       ORDER BY c.last_seen DESC LIMIT ?`, [category, limit]);
 }
 
 export async function getByCountry(country: string, limit = 40): Promise<Story[]> {
+  const ready = await placesReady();
   return (await d1()).all<Story>(
-    `${SELECT} WHERE headline IS NOT NULL AND country = ?
-       ORDER BY last_seen DESC LIMIT ?`, [country, limit]);
+    `${select(ready)} WHERE c.headline IS NOT NULL AND c.country = ?
+       ORDER BY c.last_seen DESC LIMIT ?`, [country, limit]);
 }
 
 // ----------------------------------------------------------------- reels ---
 
 /** Reels wants the biggest stories, image-first, newest — not the ranked feed. */
 export async function getReels(limit = 20): Promise<Story[]> {
+  const ready = await placesReady();
   return (await d1()).all<Story>(
-    `${SELECT} WHERE headline IS NOT NULL AND last_seen >= ?
-       ORDER BY (image_url IS NOT NULL) DESC, importance DESC, source_count DESC, last_seen DESC
+    `${select(ready)} WHERE c.headline IS NOT NULL AND c.last_seen >= ?
+       ORDER BY (c.image_url IS NOT NULL) DESC, c.importance DESC, c.source_count DESC, c.last_seen DESC
        LIMIT ?`, [Date.now() - 48 * 3_600_000, limit]);
 }
 

@@ -1,6 +1,7 @@
 import pLimit from 'p-limit';
 import { CATEGORIES, db } from './db';
 import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } from './llm';
+import { resolvePlaceLocal } from './places-local';
 
 const MAX_ARTICLES = 6;
 const MAX_ATTEMPTS = 3;
@@ -126,8 +127,8 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
       WHERE a.cluster_id = ?`,
   );
   const save = d.prepare(
-    `UPDATE clusters SET headline=?, crux=?, category=?, place=?, country=?, importance=?,
-            summarised_at=?, summarised_n=? WHERE id=?`,
+    `UPDATE clusters SET headline=?, crux=?, category=?, place=?, country=?, place_id=?,
+            importance=?, summarised_at=?, summarised_n=? WHERE id=?`,
   );
   const resetAttempts = d.prepare('UPDATE clusters SET attempts = 0 WHERE id = ?');
 
@@ -166,7 +167,10 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
     // compares this against the reader's two-letter home country.
     const cc = typeof s.country === 'string' && /^[A-Za-z]{2}$/.test(s.country.trim())
       ? s.country.trim().toUpperCase() : null;
-    save.run(s.headline, s.crux, category, s.place ?? null, cc,
+    // The free text stays exactly as the model wrote it; place_id is the
+    // canonical row it points at, and is simply NULL when nothing matches.
+    const resolved = resolvePlaceLocal(d, s.place ?? null, cc);
+    save.run(s.headline, s.crux, category, s.place ?? null, resolved.country, resolved.place_id,
              Math.max(1, Math.min(5, Math.round(s.importance) || 3)), Date.now(), t.article_count, t.id);
     resetAttempts.run(t.id);
     done++;

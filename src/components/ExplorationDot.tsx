@@ -6,8 +6,12 @@ import { useEffect, useRef, useState } from 'react';
  * Marks a story the ranker put in the feed *because* it sits outside the
  * reader's stated interests. It has to be noticeable enough to explain a
  * surprise and quiet enough not to shout — a dot, not a coloured card.
+ *
+ * The reserve reaches two ways, and the reader is owed the right reason: a
+ * subject they did not ask for, or a place next to one they did.
  */
-export function ExplorationDot() {
+export function ExplorationDot({ kind = 'category' }: { kind?: 'category' | 'place' }) {
+  const near = kind === 'place';
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -25,7 +29,8 @@ export function ExplorationDot() {
       <button
         type="button"
         className="expdot__hit"
-        aria-label="Why am I seeing this?"
+        aria-label={near ? 'Why am I seeing this? Somewhere near you' : 'Why am I seeing this? Outside your usual interests'}
+        title={near ? 'Near a place you follow' : 'Outside your usual interests'}
         aria-expanded={open}
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((v) => !v); }}
       >
@@ -33,8 +38,9 @@ export function ExplorationDot() {
       </button>
       {open && (
         <span role="tooltip" className="expdot__tip">
-          Recommended — outside your usual interests. One slot in four is kept
-          for something you would not otherwise have seen.
+          {near
+            ? 'Recommended — near a place you follow, but not one of them. One slot in four is kept for something you would not otherwise have seen.'
+            : 'Recommended — outside your usual interests. One slot in four is kept for something you would not otherwise have seen.'}
         </span>
       )}
     </span>

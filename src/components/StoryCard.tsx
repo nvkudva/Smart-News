@@ -48,10 +48,13 @@ function Plate({ kind, src }: { kind: 'hero' | 'thumb'; src: string | null }) {
 }
 
 function Kicker({ story }: { story: Story }) {
+  // The canonical label says which Delhi and which Hyderabad; the raw string is
+  // all an unresolved cluster has, and it still reads exactly as it did before.
+  const place = story.place_id ? (story.place_label ?? story.place) : story.place;
   return (
     <div className="kicker">
       <span>{story.category}</span>
-      {story.place && <><span className="sep">·</span><span className="kicker__place">{story.place}</span></>}
+      {place && <><span className="sep">·</span><span className="kicker__place">{place}</span></>}
     </div>
   );
 }
@@ -97,7 +100,7 @@ export function StoryCard({ story, variant = 'compact' }: { story: Story; varian
       </Link>
       {/* Outside the Link on purpose: a button nested in an anchor is invalid,
           and tapping the marker must explain rather than navigate. */}
-      {story.exploration === 1 && <ExplorationDot />}
+      {story.exploration === 1 && <ExplorationDot kind={story.exploration_kind ?? 'category'} />}
     </div>
   );
 }
