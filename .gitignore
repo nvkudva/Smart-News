@@ -43,3 +43,6 @@ next-env.d.ts
 # local data + env
 data/
 .env.local
+
+# ...but the template documenting every provider must be tracked
+!.env.local.example
