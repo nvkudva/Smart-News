@@ -9,8 +9,9 @@ import { d1 } from '../src/lib/d1';
  * site reads. The pipeline itself stays on SQLite: a cluster run issues
  * thousands of statements, and over HTTP each one would be a round trip.
  *
- * Article bodies are deliberately not synced — they exist to be fed to the
- * model, and the site only ever shows the title, the link and the outlet.
+ * Article bodies ARE synced, even though the site never shows them: with the
+ * pipeline running on a stateless CI runner, D1 is the only copy of the working
+ * set, and `hydrate` needs bodies to re-summarise a cluster that grew.
  */
 
 const SCHEMA = `
@@ -76,19 +77,19 @@ async function main() {
   const clusters = all<Record<string, unknown>>(
     `SELECT id,headline,crux,category,place,country,importance,image_url,
             article_count,source_count,first_seen,last_seen,summarised_at,summarised_n,attempts
-       FROM clusters WHERE headline IS NOT NULL AND last_seen >= ?`, since);
+       FROM clusters WHERE last_seen >= ?`, since);
   await push('clusters',
     ['id','headline','crux','category','place','country','importance','image_url',
      'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'],
     clusters);
 
-  const ids = new Set(clusters.map((c) => c.id as string));
   const articles = all<Record<string, unknown>>(
-    `SELECT id,source_id,url,title,image_url,published_at,cluster_id
-       FROM articles WHERE cluster_id IS NOT NULL AND published_at >= ?`, since)
-    .filter((a) => ids.has(a.cluster_id as string));
+    `SELECT id,source_id,url,title,lead,body,image_url,published_at,fetched_at,
+            content_hash,cluster_id
+       FROM articles WHERE published_at >= ?`, since);
   await push('articles',
-    ['id','source_id','url','title','image_url','published_at','cluster_id'], articles);
+    ['id','source_id','url','title','lead','body','image_url','published_at',
+     'fetched_at','content_hash','cluster_id'], articles);
 
   const prefs = all<Record<string, unknown>>('SELECT user_id,country,categories,places FROM prefs');
   if (prefs.length) await push('prefs', ['user_id','country','categories','places'], prefs);

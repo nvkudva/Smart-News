@@ -118,19 +118,27 @@ that fetches news runs on a Mac**. Full-text extraction uses jsdom and
 Readability, which need a real DOM that the Workers runtime does not have, and
 dropping to RSS excerpts would make every summary thinner. So:
 
+The pipeline runs on **GitHub Actions**, every 15 minutes
+(`.github/workflows/cycle.yml`). Actions minutes are free and unlimited for
+public repositories, so this costs nothing and needs no machine of yours to be
+awake.
+
 ```bash
-npm run cycle     # on the Mac: fetch, cluster, summarise into local SQLite
-npm run sync      # push finished rows up to D1
+npm run hydrate   # rebuild the local working store from D1
+npm run cycle 40  # fetch, cluster, summarise
+npm run sync      # push results back to D1
 npm run deploy    # only when the code changes
 ```
 
-While the Mac is asleep the site stays up and fully browsable — it just stops
-gaining new stories until the next cycle runs. Moving ingest somewhere always-on
-(a small VM, a scheduled CI job) removes that, and needs a home for the working
-database, which is the only reason it is not done here.
+That is exactly what CI runs, so the same three commands reproduce a cycle
+locally. A runner has no disk that survives between runs, so D1 is the durable
+copy and the local SQLite file is scratch. The pipeline stays on SQLite because
+a cluster run issues thousands of statements; over HTTP each would be a round
+trip.
 
-`sync` sends articles without their bodies. Bodies exist to be fed to the model;
-the site only ever shows a title, a link and an outlet name.
+Two things to know about scheduled Actions: runs are delayed when GitHub is
+busy (harmless here), and GitHub disables cron on a public repo after ~60 days
+with no commits.
 
 ## Storage
 
