@@ -50,13 +50,9 @@ export function StoryCard({ story, variant = 'compact' }: { story: Story; varian
   // without a photo drop the plate and take the room back as text.
   const textOnly = !story.image_url && variant !== 'compact';
 
-  const body = (
-    <>
-      <h2>{story.headline}</h2>
-      <p>{story.crux}</p>
-      <div className="foot"><Kicker story={story} /><div className="meta">{meta}</div></div>
-    </>
-  );
+  const head = <h2>{story.headline}</h2>;
+  const crux = <p>{story.crux}</p>;
+  const foot = <div className="foot"><Kicker story={story} /><div className="meta">{meta}</div></div>;
 
   const className = [
     'card',
@@ -70,14 +66,20 @@ export function StoryCard({ story, variant = 'compact' }: { story: Story; varian
     <div className="cardwrap">
       <Link href={`/story/${encodeURIComponent(story.id)}`} className={className}>
         {variant === 'compact' ? (
+          /* Headline runs the full width; the thumbnail sits beside the summary,
+             which is the only block that can afford to be narrower. */
           <>
-            <div className="card__body">{body}</div>
-            {story.image_url && <Plate kind="thumb" src={story.image_url} />}
+            {head}
+            <div className="card__mid">
+              {crux}
+              {story.image_url && <Plate kind="thumb" src={story.image_url} />}
+            </div>
+            {foot}
           </>
         ) : (
           <>
             {!textOnly && <Plate kind="hero" src={story.image_url} />}
-            {body}
+            {head}{crux}{foot}
           </>
         )}
       </Link>
