@@ -50,34 +50,63 @@ says "in the last 48 hours" above a list that is not limited to 48 hours. Extrac
 the window to one constant, pass it everywhere, and add an "Earlier" toggle
 rather than a silent cut. `src/lib/library.ts`, `src/app/explore/page.tsx`.
 
+### 6. Categories stop at ten fixed buckets — there is no topic layer
+`CATEGORIES` in `src/lib/db.ts` is a hardcoded list of ten: World, India,
+Politics, Business, Technology, Science, Health, Sports, Entertainment, Climate.
+Every story is forced into one of them, and Explore can offer nothing below that
+level. "Technology" is 67 stories with no way to say *which* technology.
+
+Particle — the reference this app was modelled on — runs a second level under
+each category that is **derived from the stories rather than declared in
+advance**: under Technology it surfaces Data Centers, AI Agents, Machine
+Learning, Open Source, Graphics Processing Units; under Politics, Midterm
+Elections, Redistricting, Conventions. Those are not a fixed taxonomy someone
+maintains, they are what the week's coverage actually clustered into.
+
+We already have most of what this needs and throw it away. The summariser sees
+the full text of every article in a cluster and the entity extraction in
+`src/lib/text.ts` already pulls proper nouns for the clustering step. Ask the
+model for two or three topic tags per cluster alongside the category, store them
+in a `topics` table joined to clusters, and rank them by cluster count over the
+window. Then Explore gets a second row under each category, and a topic becomes
+something a reader can follow the way they follow a place.
+
+Worth doing after the place hierarchy lands, because it is the same shape of
+problem — free-text labels from a model that need canonicalising before they are
+useful — and the same table pattern will serve both.
+
+A smaller adjunct: Particle also has editor-curated lenses at `/featured/*`
+("Top News", "Iran War Headlines") over the same cluster pool. Cheap to add once
+topics exist, since a lens is just a saved query.
+
 ---
 
 ## Fixes
 
-### 6. Reels issues 20 saved-lookups per render
+### 7. Reels issues 20 saved-lookups per render
 `src/app/reels/page.tsx` does `Promise.all(stories.map((s) => isSaved(s.id)))` —
 twenty separate `SELECT 1` round trips to D1 per page view. Add
 `getSavedIds(ids)` returning a Set from one `WHERE cluster_id IN (…)`. Home also
 calls `getPrefs()` twice per render. Invisible at current volume, embarrassing at
 any other.
 
-### 7. hydrate pages without ORDER BY
+### 8. hydrate pages without ORDER BY
 `scripts/hydrate-d1.ts` pages with `LIMIT 400 OFFSET n` and no `ORDER BY`.
 SQLite gives no stable ordering across separate statements, so a row can be
 skipped or fetched twice. It has not bitten yet because the working set is small
 enough to fit in few pages — that is luck, not correctness.
 
-### 8. sync still pushes prefs, reverting the reader's own choices
+### 9. sync still pushes prefs, reverting the reader's own choices
 `scripts/sync-d1.ts` pushes the `prefs` table up from the local scratch store.
 The web app is the only legitimate writer of that table, so every cycle can
 overwrite a preference the reader just set. Delete the prefs push.
 
-### 9. The story page lights the wrong tab
+### 10. The story page lights the wrong tab
 `src/app/story/[id]/page.tsx` renders `<TabBar />` with no `active`, so the
 default `home` is highlighted while the reader is on a story. Needs a `story`
 variant that highlights nothing.
 
-### 10. Two smaller ones cut for lane boundaries
+### 11. Two smaller ones cut for lane boundaries
 The unbounded articles query in `getStory` has no `LIMIT` — a very large cluster
 would fetch every row. And `src/app/story/[id]/page.tsx` still carries inline
 `oklch()` values that were not included in the contrast pass, so they were never
