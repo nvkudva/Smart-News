@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
+import { NAV_BOOT } from '@/components/NavPlacement';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,8 +20,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
+        {/* next/script, not a bare <script>: React 19 hoists a script it finds
+            in the tree, which desynchronises the body's children from the
+            server HTML and leaves the whole page below the layout unhydrated.
+            beforeInteractive is also the only strategy that runs early enough
+            to place the rail before the bar is painted. */}
+        <Script id="nav-placement" strategy="beforeInteractive">{NAV_BOOT}</Script>
         <div className="wash" aria-hidden><i /><i /><i /></div>
         {children}
       </body>

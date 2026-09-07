@@ -699,3 +699,118 @@ body {
      out-specifies the rail's own .tab, so the tabs need it undone here. */
   .tabgroup .tab { width: 100%; max-width: none; flex: 0 0 auto; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Navigation placement override — html[data-nav]
+
+   The bar's form is a media query by default. A reader who prefers the other
+   one sets data-nav on <html> (see NavPlacement.tsx), and these blocks win by
+   specificity: an attribute on the root out-specifies the bare selectors the
+   media queries carry, in both directions, so no @media needs rewriting.
+
+   It is per-device on purpose — stored in localStorage, not in prefs — because
+   a phone and a laptop want different answers and a shared value makes them
+   fight. 'auto' removes the attribute and the media queries take over again.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Forced rail. Above 700px the natural --rail (200/232/260) already applies, so
+   only the widths that would otherwise show a bottom bar need a value here. */
+@media (max-width: 699.98px) { :root[data-nav="side"] { --rail: 200px; } }
+
+:root[data-nav="side"] body { padding-left: var(--rail); }
+:root[data-nav="side"] .shell { width: auto; margin: 0 auto; padding: 0 16px 48px; }
+:root[data-nav="side"] .tabbar {
+  left: 0; top: 0; bottom: 0; right: auto; transform: none;
+  width: var(--rail); height: auto; border-radius: 0;
+  flex-direction: column; align-items: stretch; justify-content: flex-start;
+  padding: 24px 16px; gap: 4px;
+  border: none; border-right: 1px solid var(--glass-edge);
+  box-shadow: none;
+}
+:root[data-nav="side"] .tabbar > .inner {
+  flex-direction: column; align-items: stretch; justify-content: flex-start;
+  gap: 4px; max-width: none;
+}
+:root[data-nav="side"] .railhead {
+  display: flex; align-items: center; gap: 9px;
+  padding: 2px 10px 22px; font-weight: 700; font-size: 19px; letter-spacing: -0.02em;
+  color: var(--ink);
+}
+:root[data-nav="side"] .tabgroup { display: contents; }
+:root[data-nav="side"] .tabgroup .tab { width: 100%; max-width: none; flex: 0 0 auto; }
+:root[data-nav="side"] .tab {
+  width: 100%; height: 44px; flex-direction: row; justify-content: flex-start;
+  gap: 12px; padding: 0 10px; border-radius: 11px;
+}
+:root[data-nav="side"] .tab span { font-size: 14.5px; font-weight: 600; }
+:root[data-nav="side"] .tab[data-active="true"],
+:root[data-nav="side"] .tab[aria-current="page"] { background: rgba(255, 255, 255, 0.72); }
+:root[data-nav="side"] .reelsbtn {
+  width: 100%; height: 44px; margin: 10px 0 4px; border-radius: 12px;
+  gap: 12px; padding: 0 10px; justify-content: flex-start;
+  font-size: 14.5px; font-weight: 650; color: #fff;
+  background: linear-gradient(180deg, oklch(0.31 0.016 258), oklch(0.23 0.014 258));
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 1px 2px rgba(30,38,60,.08), 0 6px 16px -10px rgba(24,30,48,.36),
+              inset 0 1px 0 rgba(255,255,255,.14);
+  transform: none;
+}
+:root[data-nav="side"] .reelsbtn svg { transform: none; width: 20px; height: 16px; }
+:root[data-nav="side"] .reelsbtn__label { display: inline; }
+
+/* Forced bottom bar. --rail drives body padding, the reels overlay and its close
+   button, so zeroing it here is most of the work; the rest restores the dock. */
+:root[data-nav="bottom"] { --rail: 0px; }
+:root[data-nav="bottom"] body { padding-left: 0; }
+:root[data-nav="bottom"] .shell { padding-bottom: 110px; }
+:root[data-nav="bottom"] .tabbar {
+  left: 0; right: 0; top: auto; bottom: 0; transform: none;
+  width: auto; height: calc(76px + env(safe-area-inset-bottom)); border-radius: 0;
+  flex-direction: row; align-items: flex-start; justify-content: space-between;
+  padding: 13px 20px env(safe-area-inset-bottom); gap: 0;
+  border: none; border-top: 1px solid var(--glass-edge);
+  box-shadow: none;
+}
+:root[data-nav="bottom"] .tabbar > .inner {
+  flex-direction: row; align-items: flex-start; justify-content: space-between;
+  gap: 0; max-width: 430px;
+}
+:root[data-nav="bottom"] .railhead { display: none; }
+:root[data-nav="bottom"] .tabgroup {
+  display: flex; flex: 1 1 0; min-width: 0;
+  align-items: flex-start; justify-content: space-around;
+}
+:root[data-nav="bottom"] .tabgroup .tab { width: auto; flex: 1 1 0; min-width: 0; max-width: 60px; }
+:root[data-nav="bottom"] .tab {
+  height: 44px; flex-direction: column; justify-content: center;
+  gap: 3px; padding: 0; border-radius: 0;
+}
+:root[data-nav="bottom"] .tab span { font-size: 9.5px; font-weight: 600; }
+:root[data-nav="bottom"] .tab[data-active="true"],
+:root[data-nav="bottom"] .tab[aria-current="page"] { background: none; }
+:root[data-nav="bottom"] .reelsbtn {
+  width: 56px; height: 56px; margin: -24px 0 0; border-radius: 50%;
+  gap: 0; padding: 0; justify-content: center; flex: 0 0 auto;
+  background: linear-gradient(180deg, oklch(0.32 0.016 258), oklch(0.22 0.014 258));
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 1px 2px rgba(30,38,60,.10), 0 10px 24px -8px rgba(24,30,48,.38),
+              0 0 0 3px rgba(255,255,255,.72), inset 0 1px 0 rgba(255,255,255,.16);
+}
+:root[data-nav="bottom"] .reelsbtn svg { transform: translateY(-1px); width: auto; height: auto; }
+:root[data-nav="bottom"] .reelsbtn__label { display: none; }
+
+/* Past 560px the default bottom bar is a centred floating dock, not a full-width
+   band; a forced bottom bar has to become one too or it reads as a phone bar
+   stretched across a desktop. */
+@media (min-width: 560px) {
+  :root[data-nav="bottom"] .tabbar {
+    left: 50%; right: auto; transform: translateX(-50%);
+    width: 462px; bottom: 16px; height: 68px;
+    border: 1px solid var(--glass-edge); border-radius: 26px;
+    box-shadow: 0 8px 30px -10px rgba(30, 38, 60, 0.22);
+  }
+}
+
+/* The placement control's own buttons: .chip was written for <label> and <a>,
+   neither of which needs a font reset. */
+button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
