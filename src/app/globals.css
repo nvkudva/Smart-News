@@ -435,3 +435,30 @@ body {
 }
 .masthead-mark { display: flex; }
 @media (min-width: 700px) { .masthead-mark { display: none; } }
+
+/* ── Uniform card height ───────────────────────────────────────────────────
+   In grid mode every card is the same height so rows align, whatever the
+   content length. The photo takes the slack rather than the text: headline and
+   crux are clamped to a fixed number of lines, the footer is pinned to the
+   bottom, and the hero flexes into whatever space is left. */
+@media (min-width: 560px) {
+  .feed { align-items: stretch; }
+  .cardwrap { height: var(--card-h); }
+  .cardwrap > .card { height: 100%; }
+
+  .card--stack .plate--hero,
+  .card--lead  .plate--hero { flex: 1 1 auto; min-height: 110px; aspect-ratio: auto; }
+
+  /* Only the photo flexes. Text blocks are flex items too, so without an
+     explicit flex:0 0 auto the growing hero shrinks them and headlines get
+     cut mid-phrase — a fixed card height must not cost the reader the end
+     of a headline. */
+  .card h2, .card p, .foot, .card__body > .foot { flex: 0 0 auto; }
+  .card p { -webkit-line-clamp: 4; }
+  .card--text p { -webkit-line-clamp: 8; }
+  .foot { margin-top: auto; }
+}
+
+:root { --card-h: 400px; }
+@media (min-width: 1024px) { :root { --card-h: 396px; } }
+@media (min-width: 1440px) { :root { --card-h: 372px; } }
