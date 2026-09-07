@@ -21,7 +21,9 @@ jobs:
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_D1_ID:      ${{ secrets.CLOUDFLARE_D1_ID }}
+      # Not a secret: this id is already in wrangler.jsonc in a public repo,
+      # and it grants nothing without the API token.
+      CLOUDFLARE_D1_ID: 1e779125-88d9-4688-85f2-08c3c6bcecf3
       LLM_PROVIDER: cloudflare
       LLM_MODEL: '@cf/meta/llama-3.2-3b-instruct'
       LLM_RPM: '100'
