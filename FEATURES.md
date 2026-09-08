@@ -120,3 +120,61 @@ Left/right/centre bias breakdown, credibility scoring, GPS-precise local news,
 and themes B and C are roadmap items with their own designs — see the design
 canvas and `docs/MODELS.md`. They are not review findings and are not in scope
 for this list.
+
+---
+
+## From the v2.0 product review
+
+A product review after v1.5, the navigation override and v2.0 shipped. The
+blindspot calibration it flagged was fixed in that pass rather than recorded
+here; these are the rest, ordered by value.
+
+### 12. The feed dead-ends at 30 cards, and ranks less than it claims
+Home renders 30 cards with no pagination, while Explore's own facet counts over
+the same 48-hour window total 631 stories. `getFeed` also pre-truncates with
+`ORDER BY c.last_seen DESC LIMIT 400` *before* scoring, so a few hundred
+in-window stories are cut by recency alone and can never rank however high
+`score()` would put them. Rank the whole window, and page by rank rather than by
+`last_seen` so slot 34 still honours the one-in-four exploration budget.
+`src/lib/feed.ts`, `src/app/(feed)/page.tsx`, `src/app/api/feed/route.ts`.
+
+### 13. Nothing knows what you have already read
+`logEvent()` has no call sites, and the `events` table is written by nothing and
+read by nothing — the schema note says it exists "so personalisation has history
+to learn from later", and it has been collecting nothing. Every visit re-serves
+the same cards in the same order, so a reader returning after lunch rescans
+thirty headlines to find three that are new. Call it on story open, dim and
+demote read cards, and show "12 new since you last looked".
+`src/lib/feed.ts`, `src/app/story/[id]/page.tsx`, `src/components/StoryCard.tsx`.
+
+### 14. Cards show a CSS-truncated paragraph, not a written short line
+Every card renders the full 4-6 sentence `crux` and the CSS clamps it to 3-5
+lines, so the feed is thirty summaries cut off mid-sentence. Ask the model for a
+one-sentence `lede` alongside the crux — roughly 20 more output tokens on a call
+that already writes 100-830 — and keep `crux` for the story page and reels.
+`src/lib/summarise.ts`, `src/components/StoryCard.tsx`, `scripts/d1-schema.ts`.
+
+### 15. "Related" is just the category's three newest
+`getStory` selects `WHERE category = ? ORDER BY last_seen DESC LIMIT 3`, so a
+Nepal flood story offers whatever else is filed under World this hour. Canonical
+`place_id`, the proper-noun extraction in `src/lib/text.ts` that clustering
+already runs, and `first_seen` are all in place to rank on entity and place
+overlap instead — and to offer an "earlier" link to a prior chapter of the same
+running story, which is the follow-the-thread move a clustered reader returns
+for. `src/lib/feed.ts`, `src/app/story/[id]/page.tsx`.
+
+### 16. Every outlet's own headline is fetched, then thrown away
+`getStory` selects `a.title` per article; the story page renders only source
+names in a "Summarised from" run of links. Showing each outlet's actual headline
+side by side is the most literal way to let a reader see how coverage differs,
+needs no model call, and unlike the framing sentences does not depend on the
+hand-curated bias table being right. Group them by the side `coverageOf` already
+computes. `src/app/story/[id]/page.tsx`, `src/lib/feed.ts`.
+
+### 17. A stalled pipeline looks exactly like a quiet news day
+The only freshness signal is on /profile, and it is developer copy — "Run
+`npm run cycle` to pull the latest" — on a site whose cycle runs in GitHub
+Actions where the reader can do nothing about it. If that job fails, Home keeps
+serving stories whose relative timestamps age plausibly for days and nothing
+says the feed stopped. Show a staleness strip on Home when `max(last_seen)`
+passes about 90 minutes. `src/app/(feed)/page.tsx`, `src/lib/library.ts`.

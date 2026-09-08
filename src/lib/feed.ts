@@ -1,5 +1,5 @@
 import { d1 } from './d1';
-import type { Bias } from './sources';
+import { SOURCES, type Bias } from './sources';
 import { expandPlaceIds, geoAdjacentPlaceIds, placesReady } from './places';
 
 export type Story = {
@@ -289,7 +289,19 @@ export type Coverage = {
 };
 
 const BLINDSPOT_SHARE = 0.75;
-const BLINDSPOT_MIN_OUTLETS = 3;
+const BLINDSPOT_MIN_OUTLETS = 5;
+
+/**
+ * A side can only be *missing* from a story if we read enough of that side for
+ * its silence to mean anything. We rate 4 right outlets against 25 centre, so
+ * "no right-leaning outlet ran this" would fire on most stories and would be a
+ * fact about our source list, not about the coverage. Sides below the floor
+ * still count in the split bar — they just never generate a blindspot claim.
+ */
+const MIN_OUTLETS_TO_CLAIM_SILENCE = 5;
+const CORPUS: Record<Bias, number> = SOURCES.reduce(
+  (acc, s) => { acc[s.bias]++; return acc; },
+  { left: 0, centre: 0, right: 0 } as Record<Bias, number>);
 
 export function coverageOf(articles: { source: string; bias: Bias | null }[]): Coverage {
   const bySource = new Map<string, Bias | null>();
@@ -309,7 +321,9 @@ export function coverageOf(articles: { source: string; bias: Bias | null }[]): C
   return {
     counts, total: bySource.size, dominant, rated, unrated,
     missing: rated >= BLINDSPOT_MIN_OUTLETS
-      ? (Object.keys(counts) as Bias[]).filter((b) => counts[b] === 0) : [],
+      ? (Object.keys(counts) as Bias[]).filter(
+          (b) => counts[b] === 0 && CORPUS[b] >= MIN_OUTLETS_TO_CLAIM_SILENCE)
+      : [],
   };
 }
 
