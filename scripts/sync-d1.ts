@@ -76,6 +76,13 @@ async function reap(d: D1, local: DatabaseSync, since: number) {
   }
   for (let i = 0; i < ghosts.length; i += MAX_PARAMS) {
     const batch = ghosts.slice(i, i + MAX_PARAMS);
+    // Release the children first. D1 does not enforce the foreign key, so a
+    // cluster deleted out from under its articles leaves them pointing at
+    // nothing — and the next hydrate, into a store that does enforce it, dies
+    // on the insert. A null cluster_id is also the truth, and puts the article
+    // back in front of the clusterer.
+    await d.run(
+      `UPDATE articles SET cluster_id = NULL WHERE cluster_id IN (${batch.map(() => '?').join(',')})`, batch);
     await d.run(`DELETE FROM clusters WHERE id IN (${batch.map(() => '?').join(',')})`, batch);
   }
   console.log(`  clusters: ${ghosts.length} merged away, deleted`);

@@ -112,13 +112,46 @@ async function main() {
   const clusterCols = ['id','headline','crux','category','place','country','place_id','importance','image_url',
     'framing_left','framing_centre','framing_right',
     'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'];
+  const haveClusterCols = (await columns('clusters', clusterCols)).join(',');
   const clusters = await pull<Record<string, unknown>>('clusters',
-    (await columns('clusters', clusterCols)).join(','), 'WHERE last_seen >= ?', [since]);
+    haveClusterCols, 'WHERE last_seen >= ?', [since]);
 
   const articleCols = ['id','source_id','url','title','lead','body','image_url','published_at','fetched_at',
     'content_hash','cluster_id'];
   const articles = await pull<Record<string, unknown>>('articles', articleCols.join(','),
     'WHERE published_at >= ?', [since]);
+
+  // The two windows do not have to agree, and in practice they do not: an
+  // article published inside the window can belong to a cluster whose last_seen
+  // is outside it, and articles.cluster_id is a foreign key the local store
+  // enforces. Fetch exactly the parents the articles ask for.
+  const have = new Set(clusters.map((c) => c.id as string));
+  const orphans = [...new Set(articles
+    .map((a) => a.cluster_id as string | null)
+    .filter((id): id is string => !!id && !have.has(id)))];
+
+  if (orphans.length) {
+    const before = clusters.length;
+    const d = await d1();
+    for (let i = 0; i < orphans.length; i += 100) {
+      const chunk = orphans.slice(i, i + 100);
+      const rows = await d.all<Record<string, unknown>>(
+        `SELECT ${haveClusterCols} FROM clusters WHERE id IN (${chunk.map(() => '?').join(',')})`, chunk);
+      clusters.push(...rows);
+      for (const r of rows) have.add(r.id as string);
+    }
+    console.log(`  clusters: +${clusters.length - before} parents outside the window`);
+  }
+
+  // A parent that is not in D1 at all was deleted there, by a sync that ran
+  // before it knew to release its children. Null the link rather than drop the
+  // article: the row is real, and the clusterer will find it a new home on this
+  // very run, which sync then writes back.
+  let released = 0;
+  for (const a of articles) {
+    if (a.cluster_id && !have.has(a.cluster_id as string)) { a.cluster_id = null; released++; }
+  }
+  if (released) console.warn(`  ! ${released} articles released: their cluster is gone from D1`);
 
   const prefsCols = ['user_id','country','categories','places','place_ids','geo_consent','geo_place_id'];
   const prefs = await pull<Record<string, unknown>>('prefs',
