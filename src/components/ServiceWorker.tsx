@@ -10,6 +10,13 @@ import { useEffect } from 'react';
 export function ServiceWorker() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
+    // Not in development. Turbopack reuses chunk names, so a cache-first rule
+    // written for content-hashed production output serves yesterday's CSS.
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      navigator.serviceWorker.getRegistrations()
+        .then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+      return;
+    }
     const register = () => navigator.serviceWorker.register('/sw.js').catch(() => {});
     if (document.readyState === 'complete') register();
     else {

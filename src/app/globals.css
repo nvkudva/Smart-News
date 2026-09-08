@@ -188,8 +188,6 @@ body {
 .card--stack { flex-direction: column; }
 .card--stack .plate--hero { aspect-ratio: 16 / 9; height: auto; }
 .card--lead  .plate--hero { aspect-ratio: 21 / 9; height: auto; }
-.card--lead h2 { max-width: 24ch; }
-.card--lead p { max-width: 68ch; }
 
 /* No image: drop the plate rather than show a grey rectangle 350px wide. */
 .card--text h2 { font-size: 19.5px; -webkit-line-clamp: 3; }
