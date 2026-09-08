@@ -16,4 +16,4 @@ export const BOOT =
   `try{var d=document.documentElement,n=localStorage.getItem('${NAV_KEY}');` +
   `if(n==='bottom'||n==='side')d.dataset.nav=n;` +
   `var t=localStorage.getItem('${THEME_KEY}');` +
-  `if(t==='pastel')d.dataset.theme=t}catch(e){}`;
+  `if(t&&t!=='frost')d.dataset.theme=t}catch(e){}`;

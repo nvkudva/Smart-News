@@ -19,7 +19,7 @@
   --ring:          oklch(0.48 0.15 252);
 }
 
-/* Theme B — Pastel. The same Frosted Stack geometry with the glass tinted: a
+/* Pastel — a tinted Frosted Stack. The same geometry with the glass coloured: a
    card takes a quiet shade from its category so a scrolled feed reads as bands
    of subject rather than one white column. Hues are the card's only variable;
    everything structural stays on theme A's tokens. */
@@ -1001,3 +1001,94 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 }
 /* The feed masthead carried its own small mark; the header now owns branding. */
 .masthead-mark { display: none !important; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Theme B — Quiet Broadsheet, and Theme C — Ambient Lens
+
+   Both were designed on the canvas beside Frosted Stack and carry only its
+   colour and type; where a design collides with A, A's geometry wins, which
+   is why neither redefines the grid, the card sizes or the bar.
+   ───────────────────────────────────────────────────────────────────────── */
+:root[data-theme="broadsheet"] {
+  --ground:        oklch(0.972 0.008 82);
+  --ink:           oklch(0.21 0.014 62);
+  --ink-2:         oklch(0.47 0.014 62);
+  --ink-3:         oklch(0.56 0.014 62);
+  --kicker:        oklch(0.52 0.08 62);
+  --kicker-near:   oklch(0.44 0.09 158);
+  --kicker-new:    oklch(0.48 0.11 32);
+  --accent:        oklch(0.48 0.11 32);
+  --glass:         transparent;
+  --glass-edge:    oklch(0.89 0.010 72);
+  --glass-warm:    none;
+  --plate:         linear-gradient(150deg, oklch(0.905 0.016 78), oklch(0.935 0.012 78));
+  --shadow:        none;
+  --rule:          oklch(0.89 0.010 72);
+  --ring:          oklch(0.48 0.11 32);
+}
+/* Paper, not glass: the ambient wash is what makes A translucent, so it goes. */
+:root[data-theme="broadsheet"] .wash { display: none; }
+/* Hairlines instead of cards. The card keeps its box — the grid still owns the
+   rhythm — and gives up only its fill, its corners and its shadow. */
+:root[data-theme="broadsheet"] .card {
+  background: none; border: none; border-radius: 0; box-shadow: none;
+  border-bottom: 1px solid var(--rule);
+  padding: 12px 2px 14px;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+:root[data-theme="broadsheet"] .card h2,
+:root[data-theme="broadsheet"] .catlink,
+:root[data-theme="broadsheet"] .pagehead h1,
+:root[data-theme="broadsheet"] .appbar__brand {
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-weight: 600; letter-spacing: -0.008em;
+}
+:root[data-theme="broadsheet"] .plate { border-radius: 3px; border-color: var(--rule); }
+:root[data-theme="broadsheet"] .appbar { background: rgba(250, 247, 241, 0.78); }
+:root[data-theme="broadsheet"] .tabbar { background: rgba(250, 247, 241, 0.90); }
+
+:root[data-theme="ambient"] {
+  --ground:        oklch(0.155 0.016 42);
+  --ink:           oklch(0.97 0.004 48);
+  --ink-2:         oklch(0.74 0.010 48);
+  --ink-3:         oklch(0.66 0.010 48);
+  --kicker:        oklch(0.78 0.07 66);
+  --kicker-near:   oklch(0.86 0.07 158);
+  --kicker-new:    oklch(0.88 0.08 68);
+  --accent:        oklch(0.82 0.10 72);
+  --glass:         rgba(255, 255, 255, 0.085);
+  --glass-edge:    rgba(255, 255, 255, 0.13);
+  --glass-warm:    linear-gradient(140deg, rgba(255,255,255,0.11), rgba(255,255,255,0.05));
+  --plate:         linear-gradient(150deg, oklch(0.36 0.055 44), oklch(0.27 0.045 18));
+  --shadow:        0 18px 44px -22px rgba(0, 0, 0, 0.70);
+  --rule:          rgba(255, 255, 255, 0.10);
+  --ring:          oklch(0.82 0.10 72);
+}
+:root[data-theme="ambient"] .wash i:nth-child(1) { background: oklch(0.62 0.14 62); opacity: .30; }
+:root[data-theme="ambient"] .wash i:nth-child(2) { background: oklch(0.50 0.16 18); opacity: .30; }
+:root[data-theme="ambient"] .wash i:nth-child(3) { background: oklch(0.52 0.09 108); opacity: .26; }
+:root[data-theme="ambient"] .card {
+  background: linear-gradient(155deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045));
+}
+/* Every surface A wrote as translucent white has to come back the other way. */
+:root[data-theme="ambient"] .panel,
+:root[data-theme="ambient"] .chip,
+:root[data-theme="ambient"] .pinchip,
+:root[data-theme="ambient"] .savebtn,
+:root[data-theme="ambient"] .relrow,
+:root[data-theme="ambient"] .subpill[data-active="true"],
+:root[data-theme="ambient"] .subpill[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.075);
+  border-color: var(--glass-edge);
+  color: var(--ink);
+}
+:root[data-theme="ambient"] .appbar { background: rgba(26, 18, 13, 0.72); }
+:root[data-theme="ambient"] .tabbar { background: rgba(26, 18, 13, 0.82); }
+:root[data-theme="ambient"] .plate { border-color: rgba(255, 255, 255, 0.10); }
+/* The ember accent is a light colour; white on it is unreadable. */
+:root[data-theme="ambient"] .btn,
+:root[data-theme="ambient"] .savebtn[data-saved="true"] { color: oklch(0.22 0.03 42); }
+:root[data-theme="ambient"] .reelsbtn {
+  background: linear-gradient(158deg, oklch(0.82 0.125 82), oklch(0.67 0.155 56) 46%, oklch(0.53 0.145 28));
+  color: oklch(0.20 0.03 42);
+}

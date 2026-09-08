@@ -7,11 +7,13 @@ import { useEffect, useState } from 'react';
 // client graph leaves this page's subtree unhydrated.
 const KEY = 'sn_theme';
 
-export type Theme = 'frost' | 'pastel';
+export type Theme = 'frost' | 'pastel' | 'broadsheet' | 'ambient';
 
 const OPTIONS: [Theme, string, string][] = [
   ['frost', 'Frosted', 'White glass over a soft wash. The default.'],
-  ['pastel', 'Pastel', 'Each card takes a quiet tint from its category.'],
+  ['pastel', 'Pastel', 'The same glass, each card tinted by its category.'],
+  ['broadsheet', 'Broadsheet', 'Paper, serif headlines and hairlines instead of cards.'],
+  ['ambient', 'Ambient', 'Dark and warm — an ember palette, calm at night.'],
 ];
 
 export function ThemeControl() {
@@ -22,7 +24,8 @@ export function ThemeControl() {
 
   useEffect(() => {
     try {
-      if (localStorage.getItem(KEY) === 'pastel') setTheme('pastel');
+      const v = localStorage.getItem(KEY) as Theme | null;
+      if (v && OPTIONS.some(([o]) => o === v)) setTheme(v);
     } catch { /* storage blocked — the default is the right answer anyway */ }
   }, []);
 
