@@ -11,7 +11,6 @@ export default function LoadingFeed() {
     <>
       <main className="shell">
         <CategoryStrip active="top" />
-        <div className="pagehead"><h1>Today</h1></div>
         <div className="feed" aria-busy="true" aria-label="Loading stories">
           {Array.from({ length: 9 }, (_, i) => (
             <div key={i} className={`skel ${i === 0 ? 'skel--lead' : i % 3 === 2 ? 'skel--compact' : ''}`} />

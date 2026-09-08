@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { NAV_BOOT } from '@/components/NavPlacement';
+import { AppHeader } from '@/components/AppHeader';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             to place the rail before the bar is painted. */}
         <Script id="nav-placement" strategy="beforeInteractive">{NAV_BOOT}</Script>
         <div className="wash" aria-hidden><i /><i /><i /></div>
+        <AppHeader />
         {children}
       </body>
     </html>

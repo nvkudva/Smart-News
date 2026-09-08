@@ -645,9 +645,10 @@ body {
 /* ─────────────────────────────────────────────────────────────────────────
    Category and sub-category strips
 
-   The bar at the bottom carries the six destinations at every width; moving
-   between categories is these two strips' job. Both are scrollers on a phone
-   and static wrapped rows once there is room for the whole set.
+   The bar at the bottom carries the destinations at every width; moving
+   between categories is these two strips' job. Both scroll horizontally at
+   every width, and StripScroller holds the selected item against the left
+   edge, so the strip reads as the page's title with its neighbours showing.
 
    Neither may widen the document. Full bleed is negative inline margins
    cancelled by equal inline padding — the box then measures exactly the
@@ -662,7 +663,6 @@ body {
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-  scroll-snap-type: x proximity;
   /* both engines; the strip is the one place a visible bar would sit over glass */
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -675,34 +675,31 @@ body {
 .catstrip::-webkit-scrollbar,
 .substrip::-webkit-scrollbar { display: none; }
 
-.catstrip { padding-block: 10px 2px; }
-.substrip { padding-block: 2px 6px; }
+.catstrip { padding-block: 10px 4px; }
+.substrip { padding-block: 0 6px; }
 
 .catstrip__row,
 .substrip__row {
-  display: flex; flex-wrap: nowrap; width: max-content; align-items: center;
+  display: flex; flex-wrap: nowrap; width: max-content; align-items: baseline;
 }
-.catstrip__row { gap: 7px; }
+.catstrip__row { gap: 17px; }
 .substrip__row { gap: 6px; }
 .catstrip__row > *,
-.substrip__row > * { flex: 0 0 auto; scroll-snap-align: start; }
+.substrip__row > * { flex: 0 0 auto; }
 
+/* The strip is the page title. The selected category carries the full heading
+   weight; the others are the same type held back to a quiet grey, which is what
+   makes the row read as one title with its neighbours showing rather than as a
+   row of controls. */
 .catlink {
-  display: inline-flex; align-items: center; min-height: 36px;
-  padding: 0 14px; border-radius: 13px;
-  font-size: 13.5px; font-weight: 600; letter-spacing: -0.008em;
-  white-space: nowrap; text-decoration: none; color: var(--ink-2);
-  background: var(--glass); border: 1px solid var(--glass-edge);
-  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  display: inline-block; padding: 0;
+  font-size: 25px; line-height: 1.12; font-weight: 700; letter-spacing: -0.026em;
+  white-space: nowrap; text-decoration: none;
+  color: var(--ink-3); opacity: 0.5;
+  transition: color .18s ease, opacity .18s ease;
 }
 .catlink[aria-current="page"],
-.catlink[data-active="true"] {
-  color: oklch(0.97 0.005 250);
-  background: linear-gradient(180deg, oklch(0.32 0.016 258), oklch(0.22 0.014 258));
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 1px 2px rgba(30,38,60,.08), 0 6px 16px -10px rgba(24,30,48,.36),
-              inset 0 1px 0 rgba(255,255,255,.16);
-}
+.catlink[data-active="true"] { color: var(--ink); opacity: 1; }
 
 /* One step quieter than .catlink: the sub-strip is a refinement of a choice the
    reader has already made, so idle pills carry no border and no fill. */
@@ -720,32 +717,23 @@ body {
   border-color: var(--glass-edge);
 }
 
-.cathead { margin: 12px 0 8px; }
-.cathead__title {
-  margin: 0; font-size: 25px; line-height: 1.12; font-weight: 700;
-  letter-spacing: -0.026em; color: var(--ink); text-wrap: balance;
-}
-.cathead__meta { margin: 5px 0 0; font-size: 13px; color: var(--kicker); }
+/* All that is left of the old category header: the strip carries the name now,
+   so this only counts what is under it. */
+.cathead__meta { margin: 0 0 10px; font-size: 13px; color: var(--kicker); }
 
 @media (min-width: 700px) {
   /* Room for the whole set. A wrapped row cannot hide a category past an edge,
      so the scroller — and the mask that advertised it — comes off. */
-  .catstrip,
-  .substrip {
-    overflow: visible; margin-inline: 0; padding-inline: 0;
-    -webkit-mask-image: none; mask-image: none;
-  }
-  .catstrip__row,
-  .substrip__row { flex-wrap: wrap; width: auto; }
-  .catstrip { padding-block: 16px 4px; }
-  .substrip { padding-block: 0 10px; }
+  .catstrip { padding-block: 18px 4px; }
+  .substrip { padding-block: 2px 10px; }
+  .catstrip__row { gap: 26px; }
+  .catlink { font-size: clamp(30px, 3vw, 40px); letter-spacing: -0.028em; }
 
-  .cathead { margin: 18px 0 10px; }
-  .cathead__title { font-size: clamp(30px, 3vw, 40px); letter-spacing: -0.028em; }
+  .cathead__meta { margin-bottom: 14px; }
 
   /* On a desktop the subs are a row of links under the title, not pills: the
      underline marks the current one without repeating the catlink's weight. */
-  .substrip__row { gap: 4px 18px; }
+  .substrip__row { gap: 18px; }
   .subpill {
     min-height: 28px; padding: 0 1px; border-radius: 0;
     border: none; font-size: 13.5px;
@@ -805,7 +793,7 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 .framing__side[data-side="right"]  { background: oklch(0.50 0.105 52); }
 .framing p { font-size: 13px; line-height: 1.55; color: oklch(0.36 0.014 258); }
 
-/* ── restored: see commit d624723 ── */
+/* ────────────────────────────────────────────────────────────────────────
    Navigation placement override — html[data-nav]
 
    The bar's form is a media query by default. A reader who prefers the other
@@ -919,3 +907,26 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 /* The placement control's own buttons: .chip was written for <label> and <a>,
    neither of which needs a font reset. */
 button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* ── App header ────────────────────────────────────────────────────────────
+   The wordmark lived in the rail; with the rail gone this is where it goes. */
+.appbar {
+  position: sticky; top: 0; z-index: 15;
+  display: flex; align-items: center;
+  padding: 10px 16px 10px calc(16px + env(safe-area-inset-left));
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  backdrop-filter: blur(28px) saturate(190%);
+  border-bottom: 1px solid var(--glass-edge);
+}
+.appbar__brand {
+  display: flex; align-items: center; gap: 9px;
+  font-weight: 700; font-size: 18px; letter-spacing: -0.02em;
+  color: var(--ink); text-decoration: none;
+}
+@media (min-width: 700px) {
+  .appbar { padding-left: 28px; padding-right: 28px; }
+  .appbar__brand { font-size: 19px; }
+}
+/* The feed masthead carried its own small mark; the header now owns branding. */
+.masthead-mark { display: none !important; }

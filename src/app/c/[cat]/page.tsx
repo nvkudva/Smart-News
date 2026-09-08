@@ -52,13 +52,10 @@ export default async function Section({
       <main className="shell">
         <CategoryStrip active={category.slug} />
 
-        <header className="cathead">
-          <h1 className="cathead__title">{category.name}</h1>
-          <p className="cathead__meta">{meta}</p>
-        </header>
-
         <SubcategoryStrip label={category.name} base={`/c/${category.slug}`}
                           subs={subs} active={active} />
+
+        <p className="cathead__meta">{meta}</p>
 
         {n === 0 ? (
           <div className="panel">

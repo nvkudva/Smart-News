@@ -23,22 +23,19 @@ export default async function Home() {
   return (
     <>
       <main className="shell">
-        <CategoryStrip active="top" />
-        <header style={{ padding: '28px 4px 14px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, color: 'var(--kicker)' }}>
-              <span className="masthead-mark"><Logo size={18} tone="ink" tight /></span>
-              {today}
-            </div>
-            <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.05, fontWeight: 700, letterSpacing: '-0.028em' }}>Today</h1>
+        {/* The date line sits above the strip now that the strip is the title;
+            the pin is still the one way into the local surface. */}
+        <header style={{ padding: '14px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, color: 'var(--kicker)', minWidth: 0 }}>
+            <span className="masthead-mark"><Logo size={18} tone="ink" tight /></span>
+            {today}
           </div>
-          {/* The one way into the local surface: no sixth tab, but the pin was
-              already naming the reader's place, so make it go there. */}
           <Link href="/local" className="pinchip" aria-label={`Local news for ${here}`}>
             <span className="pinchip__i"><Pin size={12} /></span>
             <span className="pinchip__t">{here}</span>
           </Link>
         </header>
+        <CategoryStrip active="top" />
 
         {stories.length === 0 ? (
           <div className="panel" style={{ marginTop: 8 }}>

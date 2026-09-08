@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { SubCount } from '@/lib/taxonomy';
+import { StripScroller } from './StripScroller';
 
 /**
  * Renders nothing when the non-empty gate left no subs: an "All" pill on its own
@@ -14,7 +15,8 @@ export function SubcategoryStrip(
   const all = active === null;
 
   return (
-    <nav className="substrip" aria-label={`${label} sub-categories`}>
+    <StripScroller className="substrip" label={`${label} sub-categories`}
+                   activeKey={active ?? 'all'}>
       <div className="substrip__row">
         <Link href={base} className="subpill" data-active={all}
               aria-current={all ? 'page' : undefined}>All</Link>
@@ -27,6 +29,6 @@ export function SubcategoryStrip(
           );
         })}
       </div>
-    </nav>
+    </StripScroller>
   );
 }
