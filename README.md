@@ -24,6 +24,23 @@ under Profile.
 The bar sits at the bottom at every width, and the category strip is one
 horizontal row that holds the selected category against the left edge.
 
+### The other three
+
+| Frosted — the default | Broadsheet | Ambient |
+|---|---|---|
+| ![The feed in the Frosted theme](docs/screenshots/desktop-frost.jpg) | ![The feed in the Broadsheet theme](docs/screenshots/desktop-broadsheet.jpg) | ![The feed in the Ambient theme](docs/screenshots/desktop-ambient.jpg) |
+| White glass over a soft wash. | Paper, serif headlines, hairlines instead of cards. | Dark and warm, on an ember palette. |
+
+<p align="center">
+  <img src="docs/screenshots/mobile-frost.jpg" alt="The feed on a phone, in the Frosted theme" width="240">
+  <img src="docs/screenshots/mobile-broadsheet.jpg" alt="The feed on a phone, in the Broadsheet theme" width="240">
+  <img src="docs/screenshots/mobile-ambient.jpg" alt="The feed on a phone, in the Ambient theme" width="240">
+</p>
+
+Frosted is the shipped design; Broadsheet and Ambient were drawn beside it on
+the same canvas and carry its geometry with their own colour and type. The
+choice is kept per device, not in the account.
+
 ## Requirements
 
 - Node 22 or newer. The pipeline uses the built-in `node:sqlite` module; CI runs Node 26.
