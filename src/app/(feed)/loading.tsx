@@ -1,4 +1,5 @@
 import { TabBar } from '@/components/TabBar';
+import { CategoryStrip } from '@/components/CategoryStrip';
 
 /**
  * Scoped to the (feed) route group on purpose. A loading.tsx at the app root
@@ -9,6 +10,7 @@ export default function LoadingFeed() {
   return (
     <>
       <main className="shell">
+        <CategoryStrip active="top" />
         <div className="pagehead"><h1>Today</h1></div>
         <div className="feed" aria-busy="true" aria-label="Loading stories">
           {Array.from({ length: 9 }, (_, i) => (

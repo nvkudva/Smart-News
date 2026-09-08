@@ -19,7 +19,6 @@ export function TabBar({ active = 'home' }: { active?: Tab }) {
   return (
     <nav className="tabbar" aria-label="Primary">
       <div className="inner">
-        <div className="railhead"><Logo size={22} tone="ink" />smartnews</div>
         <div className="tabgroup">
           {tab('/', 'home', 'Home', <Home />)}
           {tab('/local', 'local', 'Local', <Near />)}

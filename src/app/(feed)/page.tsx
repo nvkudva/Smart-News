@@ -3,6 +3,7 @@ import { effectivePlaceIds, getFeed, getPrefs } from '@/lib/feed';
 import { getPlaces } from '@/lib/places';
 import { StoryCard, variantFor } from '@/components/StoryCard';
 import { TabBar } from '@/components/TabBar';
+import { CategoryStrip } from '@/components/CategoryStrip';
 import { Pin } from '@/components/icons';
 import { Logo } from '@/components/Logo';
 
@@ -22,6 +23,7 @@ export default async function Home() {
   return (
     <>
       <main className="shell">
+        <CategoryStrip active="top" />
         <header style={{ padding: '28px 4px 14px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, color: 'var(--kicker)' }}>
