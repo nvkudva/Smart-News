@@ -21,8 +21,9 @@ let navigated = false;
  * useSearchParams bailout into the pages that render it.
  */
 export function StripScroller(
-  { className, label, activeKey, children }:
-  { className: string; label: string; activeKey: string; children: React.ReactNode },
+  { className, label, activeKey, children, ...rest }:
+  { className: string; label: string; activeKey: string; children: React.ReactNode }
+  & React.HTMLAttributes<HTMLElement>,
 ) {
   const router = useRouter();
   const ref = useRef<HTMLElement>(null);
@@ -115,7 +116,7 @@ export function StripScroller(
   }, [activeKey, router]);
 
   return (
-    <nav ref={ref} className={className} aria-label={label} data-edge="none">
+    <nav ref={ref} className={className} aria-label={label} data-edge="none" {...rest}>
       {children}
     </nav>
   );

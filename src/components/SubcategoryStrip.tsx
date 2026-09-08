@@ -8,14 +8,14 @@ import { StripScroller } from './StripScroller';
  * caller has already dropped the zero-count subs; this never re-filters.
  */
 export function SubcategoryStrip(
-  { label, base, subs, active }:
-  { label: string; base: string; subs: SubCount[]; active: string | null },
+  { cat, label, base, subs, active }:
+  { cat: string; label: string; base: string; subs: SubCount[]; active: string | null },
 ) {
   if (subs.length === 0) return null;
   const all = active === null;
 
   return (
-    <StripScroller className="substrip" label={`${label} sub-categories`}
+    <StripScroller className="substrip" data-cat={cat} label={`${label} sub-categories`}
                    activeKey={active ?? 'all'}>
       <div className="substrip__row">
         <Link href={base} className="subpill" data-active={all}

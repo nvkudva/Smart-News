@@ -16,7 +16,7 @@ export function CategoryStrip({ active }: { active: string }) {
           const on = c.slug === active;
           return (
             <Link key={c.slug} href={c.slug === 'top' ? '/' : `/c/${c.slug}`}
-                  className="catlink" data-active={on}
+                  className="catlink" data-cat={c.slug} data-active={on}
                   aria-current={on ? 'page' : undefined}>{c.name}</Link>
           );
         })}

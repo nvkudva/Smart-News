@@ -75,7 +75,8 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
 
   return (
     <>
-      <SubcategoryStrip label={name} base={`/c/${cat}`} subs={data.subs} active={data.active} />
+      <SubcategoryStrip cat={cat} label={name} base={`/c/${cat}`}
+                        subs={data.subs} active={data.active} />
       {data.total === 0 ? (
         <div className="panel">
           <div className="label">Quiet so far</div>
