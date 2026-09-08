@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { TAXONOMY } from '@/lib/taxonomy';
+import { CategorySwipe } from './CategorySwipe';
 import { StripScroller } from './StripScroller';
 
 /**
@@ -10,6 +11,8 @@ import { StripScroller } from './StripScroller';
  */
 export function CategoryStrip({ active }: { active: string }) {
   return (
+    <>
+      <CategorySwipe active={active} order={TAXONOMY.map((c) => c.slug)} />
     <StripScroller className="catstrip" label="Categories" activeKey={active}>
       <div className="catstrip__row">
         {TAXONOMY.map((c) => {
@@ -22,5 +25,6 @@ export function CategoryStrip({ active }: { active: string }) {
         })}
       </div>
     </StripScroller>
+    </>
   );
 }

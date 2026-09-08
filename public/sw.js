@@ -10,7 +10,7 @@
  *   · documents go network first with a cached fallback, so an offline open
  *     lands on the last page seen rather than the browser's error
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const MEDIA = `media-${VERSION}`;
@@ -74,17 +74,14 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.startsWith('/api/')) { e.respondWith(swr(request, DATA, 60_000)); return; }
   if (request.destination === 'image') { e.respondWith(swr(request, MEDIA, 86_400_000)); return; }
 
-  // The category pages carry no data of their own any more: the strip, the
-  // highlight and the bar are the same bytes every time, and the rows come
-  // from /api/section. So the shell can be answered from cache and refreshed
-  // behind the reader, which is what makes the second tap on a category feel
-  // like nothing happened. This covers both the document and the ?_rsc=
-  // payload the client router asks for on a soft navigation.
-  if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
-    e.respondWith(swr(request, SHELL, 300_000));
-    return;
-  }
-
+  // Documents are network-first, and this is not negotiable: an HTML page names
+  // the exact hashed chunks of the build that produced it, so a cached one
+  // served after a deploy asks for scripts that 404 and the page never
+  // hydrates. It looks like a working page that ignores every tap. The cache
+  // is the offline fallback and nothing else.
+  //
+  // The ?_rsc= payloads the client router fetches on a soft navigation are the
+  // same bargain, and are excluded for the same reason.
   if (request.mode === 'navigate') {
     e.respondWith((async () => {
       try {
