@@ -17,6 +17,11 @@
   --shadow:        0 1px 2px rgba(30,38,60,0.04), 0 10px 26px -10px rgba(30,38,60,0.14);
   --rule:          oklch(0.90 0.008 258);
   --ring:          oklch(0.48 0.15 252);
+  /* The bar sat at white on a near-white ground and disappeared. It takes
+     the accent's hue, a few steps down in lightness, so it reads as its own
+     surface rather than as a lighter patch of the page. */
+  --bar:           oklch(0.928 0.030 252 / 0.86);
+  --bar-edge:      oklch(0.86 0.038 252 / 0.90);
 }
 
 /* Pastel — a tinted Frosted Stack. The same geometry with the glass coloured: a
@@ -24,6 +29,9 @@
    of subject rather than one white column. Hues are the card's only variable;
    everything structural stays on theme A's tokens. */
 :root[data-theme="pastel"] {
+  /* Cream ground, so the bar goes the other way round the wheel. */
+  --bar:        oklch(0.925 0.036 268 / 0.88);
+  --bar-edge:   oklch(0.85 0.045 268 / 0.90);
   --ground:     oklch(0.980 0.010 95);
   --glass:      oklch(0.985 0.012 250 / 0.62);
   --glass-edge: oklch(0.955 0.020 250 / 0.85);
@@ -134,7 +142,7 @@ body {
   height: calc(76px + env(safe-area-inset-bottom));
   display: flex; align-items: flex-start; justify-content: space-between;
   padding: 13px 20px env(safe-area-inset-bottom); overflow: visible;
-  background: rgba(255,255,255,0.86); border-top: 1px solid var(--glass-edge);
+  background: var(--bar); border-top: 1px solid var(--bar-edge);
   -webkit-backdrop-filter: blur(34px) saturate(190%); backdrop-filter: blur(34px) saturate(190%);
 }
 .tabbar > .inner { max-width: 430px; width: 100%; margin: 0 auto; display: flex; align-items: flex-start; justify-content: space-between; }
@@ -211,8 +219,8 @@ body {
   .tabbar {
     left: 50%; transform: translateX(-50%); right: auto;
     width: 462px; bottom: 16px; height: 68px;
-    border-radius: 26px; border: 1px solid var(--glass-edge);
-    box-shadow: 0 8px 30px -10px rgba(30, 38, 60, 0.22);
+    border-radius: 26px; border: 1px solid var(--bar-edge);
+    box-shadow: 0 10px 34px -12px rgba(30, 38, 60, 0.30);
   }
 
   /* Discrete blurred circles are sized for a 430px column; stretched across a
@@ -875,7 +883,7 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
   width: var(--rail); height: auto; border-radius: 0;
   flex-direction: column; align-items: stretch; justify-content: flex-start;
   padding: 24px 16px; gap: 4px;
-  border: none; border-right: 1px solid var(--glass-edge);
+  border: none; border-right: 1px solid var(--bar-edge);
   box-shadow: none;
 }
 :root[data-nav="side"] .tabbar > .inner {
@@ -919,7 +927,7 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
   width: auto; height: calc(76px + env(safe-area-inset-bottom)); border-radius: 0;
   flex-direction: row; align-items: flex-start; justify-content: space-between;
   padding: 13px 20px env(safe-area-inset-bottom); gap: 0;
-  border: none; border-top: 1px solid var(--glass-edge);
+  border: none; border-top: 1px solid var(--bar-edge);
   box-shadow: none;
 }
 :root[data-nav="bottom"] .tabbar > .inner {
@@ -1023,6 +1031,10 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
   --shadow:        none;
   --rule:          oklch(0.89 0.010 72);
   --ring:          oklch(0.48 0.11 32);
+  /* Newsprint keeps its restraint: a deeper shade of the same paper, and the
+     ember rule the rest of the theme uses for its one accent. */
+  --bar:           oklch(0.935 0.016 76 / 0.94);
+  --bar-edge:      oklch(0.84 0.024 72);
 }
 /* Paper, not glass: the ambient wash is what makes A translucent, so it goes. */
 :root[data-theme="broadsheet"] .wash { display: none; }
@@ -1043,7 +1055,7 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 }
 :root[data-theme="broadsheet"] .plate { border-radius: 3px; border-color: var(--rule); }
 :root[data-theme="broadsheet"] .appbar { background: rgba(250, 247, 241, 0.78); }
-:root[data-theme="broadsheet"] .tabbar { background: rgba(250, 247, 241, 0.90); }
+
 
 :root[data-theme="ambient"] {
   --ground:        oklch(0.155 0.016 42);
@@ -1061,6 +1073,8 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
   --shadow:        0 18px 44px -22px rgba(0, 0, 0, 0.70);
   --rule:          rgba(255, 255, 255, 0.10);
   --ring:          oklch(0.82 0.10 72);
+  --bar:           oklch(0.235 0.030 44 / 0.88);
+  --bar-edge:      oklch(0.40 0.045 48 / 0.70);
 }
 :root[data-theme="ambient"] .wash i:nth-child(1) { background: oklch(0.62 0.14 62); opacity: .30; }
 :root[data-theme="ambient"] .wash i:nth-child(2) { background: oklch(0.50 0.16 18); opacity: .30; }
@@ -1081,7 +1095,7 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
   color: var(--ink);
 }
 :root[data-theme="ambient"] .appbar { background: rgba(26, 18, 13, 0.72); }
-:root[data-theme="ambient"] .tabbar { background: rgba(26, 18, 13, 0.82); }
+
 :root[data-theme="ambient"] .plate { border-color: rgba(255, 255, 255, 0.10); }
 /* The ember accent is a light colour; white on it is unreadable. */
 :root[data-theme="ambient"] .btn,
