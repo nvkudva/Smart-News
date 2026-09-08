@@ -113,7 +113,7 @@ body {
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .card p  { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); text-wrap: pretty;
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
-.card--compact p { -webkit-line-clamp: 3; }
+.card--compact p { -webkit-line-clamp: 4; }
 /* A developing story's meta ("N sources · 21h ago · developing · updated 2h ago")
    is wider on its own than the ~220px card track in grid mode, and as an
    unbreakable row it printed over the neighbouring card. It now takes a second
@@ -471,7 +471,7 @@ body {
   .cardwrap:has(.card--compact) { grid-row: span 1; }
 
   .card--compact h2 { font-size: 15.5px; -webkit-line-clamp: 2; }
-  .card--compact p  { font-size: 12.5px; -webkit-line-clamp: 3; }
+  .card--compact p  { font-size: 12.5px; -webkit-line-clamp: 4; }
   /* Fluid width, because three columns leaves tracks as narrow as 235px and a
      fixed thumb there left the summary ~15 characters a line.
      Height comes from the row it shares with the summary. */
@@ -709,20 +709,37 @@ body {
   /* both engines; the strip is the one place a visible bar would sit over glass */
   scrollbar-width: none;
   -ms-overflow-style: none;
-  /* Only the far edge fades. A symmetric mask dims the first pill before
-     anything has been scrolled, which reads as a rendering fault rather than
-     as "there is more this way". */
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 30px), transparent 100%);
-  mask-image: linear-gradient(90deg, #000 calc(100% - 30px), transparent 100%);
+}
+/* A side fades only while there is something past it. A mask that is always on
+   dims the first item before anything has been scrolled, which reads as a
+   rendering fault rather than as "there is more this way". StripScroller sets
+   data-edge from the live scroll offset. */
+.catstrip[data-edge="end"],   .substrip[data-edge="end"] {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+}
+.catstrip[data-edge="start"], .substrip[data-edge="start"] {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 20px);
+          mask-image: linear-gradient(90deg, transparent, #000 20px);
+}
+.catstrip[data-edge="both"],  .substrip[data-edge="both"] {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 20px,
+                                      #000 calc(100% - 34px), transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 20px,
+                                      #000 calc(100% - 34px), transparent);
 }
 .catstrip::-webkit-scrollbar,
 .substrip::-webkit-scrollbar { display: none; }
 
-.catstrip { padding-block: 10px 4px; }
+.catstrip { padding-block: 3px 12px; }
+/* The sub-strip is the next line of the same heading, not the next block. */
+.catstrip:has(+ .substrip) { padding-bottom: 2px; }
 .substrip { padding-block: 0 6px; }
 
 .catstrip__row,
 .substrip__row {
+  /* positioned so an item's offsetLeft is the scrollLeft that pins it left */
+  position: relative;
   display: flex; flex-wrap: nowrap; width: max-content; align-items: baseline;
 }
 .catstrip__row { gap: 17px; }
@@ -767,7 +784,7 @@ body {
 @media (min-width: 700px) {
   /* Room for the whole set. A wrapped row cannot hide a category past an edge,
      so the scroller — and the mask that advertised it — comes off. */
-  .catstrip { padding-block: 18px 4px; }
+  .catstrip { padding-block: 8px 15px; }
   .substrip { padding-block: 2px 10px; }
   .catstrip__row { gap: 26px; }
   .catlink { font-size: clamp(30px, 3vw, 40px); letter-spacing: -0.028em; }
@@ -955,7 +972,7 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
    The wordmark lived in the rail; with the rail gone this is where it goes. */
 .appbar {
   position: sticky; top: 0; z-index: 15;
-  display: flex; align-items: center;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 10px 16px 10px calc(16px + env(safe-area-inset-left));
   background: rgba(255, 255, 255, 0.72);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
@@ -964,12 +981,23 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 }
 .appbar__brand {
   display: flex; align-items: center; gap: 9px;
-  font-weight: 700; font-size: 18px; letter-spacing: -0.02em;
+  font-weight: 700; font-size: 26px; letter-spacing: -0.02em;
   color: var(--ink); text-decoration: none;
 }
+.appbar__aside {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+}
+.appbar__date {
+  font-size: 12.5px; font-weight: 600; color: var(--kicker); white-space: nowrap;
+}
+/* The date is the first thing to go: the pin names a place the reader chose,
+   and today's date is the one line they can read off any other clock. */
+@media (max-width: 439.98px) { .appbar__date { display: none; } }
+
 @media (min-width: 700px) {
   .appbar { padding-left: 28px; padding-right: 28px; }
-  .appbar__brand { font-size: 19px; }
+  .appbar__brand { font-size: 27.5px; }
+  .appbar__date { font-size: 13px; }
 }
 /* The feed masthead carried its own small mark; the header now owns branding. */
 .masthead-mark { display: none !important; }

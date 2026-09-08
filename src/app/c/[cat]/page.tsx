@@ -55,8 +55,6 @@ export default async function Section({
         <SubcategoryStrip label={category.name} base={`/c/${category.slug}`}
                           subs={subs} active={active} />
 
-        <p className="cathead__meta">{meta}</p>
-
         {n === 0 ? (
           <div className="panel">
             <div className="label">Quiet so far</div>
