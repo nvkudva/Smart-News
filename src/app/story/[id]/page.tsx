@@ -29,8 +29,8 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <main className="shell">
-        <header style={{ padding: '24px 0 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Link href="/" style={{ width: 44, height: 44, marginLeft: -12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'oklch(0.48 0.11 252)' }} aria-label="Back">
+        <header style={{ padding: '8px 0 6px', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Link href="/" style={{ width: 34, height: 34, marginLeft: -8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'oklch(0.48 0.11 252)' }} aria-label="Back">
             <Back />
           </Link>
           <span style={{ fontSize: 14.5, fontWeight: 600, color: 'oklch(0.42 0.02 258)' }}>{cluster.category}</span>

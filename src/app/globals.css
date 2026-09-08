@@ -387,9 +387,11 @@ body {
   margin: 0; font-size: 26px; line-height: 1.18; font-weight: 700;
   letter-spacing: -0.026em; color: #fff; text-wrap: pretty;
 }
+/* Unclamped. A reel is one story on a whole screen; there is nothing else on
+   it competing for the room, and a summary cut mid-sentence is the one thing
+   this surface cannot afford. */
 .reel__body p {
   margin: 0; font-size: 14.5px; line-height: 1.56; color: rgba(255,255,255,0.80); text-wrap: pretty;
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; overflow: hidden;
 }
 .reel__actions { display: flex; gap: 9px; margin-top: 4px; flex-wrap: wrap; }
 .reel .savebtn {
@@ -410,7 +412,7 @@ body {
   .reel { justify-content: center; }
   .reel__body { padding: 0 40px 0 56px; max-width: 40%; gap: 14px; }
   .reel__body h2 { font-size: 30px; }
-  .reel__body p { -webkit-line-clamp: 8; font-size: 15.5px; }
+  .reel__body p { font-size: 15.5px; }
 }
 
 @media (min-width: 1600px) {
@@ -766,7 +768,7 @@ body {
 .catstrip::-webkit-scrollbar,
 .substrip::-webkit-scrollbar { display: none; }
 
-.catstrip { padding-block: 3px 12px; }
+.catstrip { padding-block: 10px 16px; }
 /* The sub-strip is the next line of the same heading, not the next block. */
 .catstrip:has(+ .substrip) { padding-bottom: 2px; }
 .substrip { padding-block: 0 6px; }
@@ -819,7 +821,7 @@ body {
 @media (min-width: 700px) {
   /* Room for the whole set. A wrapped row cannot hide a category past an edge,
      so the scroller — and the mask that advertised it — comes off. */
-  .catstrip { padding-block: 8px 15px; }
+  .catstrip { padding-block: 14px 20px; }
   .substrip { padding-block: 2px 10px; }
   .catstrip__row { gap: 26px; }
   .catlink { font-size: clamp(30px, 3vw, 40px); letter-spacing: -0.028em; }
@@ -1137,4 +1139,43 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 :root[data-theme="ambient"] .reelsbtn {
   background: linear-gradient(158deg, oklch(0.82 0.125 82), oklch(0.67 0.155 56) 46%, oklch(0.53 0.145 28));
   color: oklch(0.20 0.03 42);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Category slide
+
+   A swipe or a tap sets data-slide on <html> just before the navigation, and
+   whatever mounts next enters from that side. The content carries the distance
+   and the strip's selected title carries a smaller echo of it, so the two read
+   as one movement rather than as a page change that happened to be animated.
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes slide-from-right { from { opacity: 0; transform: translate3d(6%, 0, 0); } }
+@keyframes slide-from-left  { from { opacity: 0; transform: translate3d(-6%, 0, 0); } }
+@keyframes title-from-right { from { opacity: 0; transform: translate3d(14px, 0, 0); } }
+@keyframes title-from-left  { from { opacity: 0; transform: translate3d(-14px, 0, 0); } }
+
+/* Longhands, not the shorthand: `animation: 320ms ... both` with no name is
+   valid and does nothing the minifier can see, so it drops it and the slide
+   plays for zero seconds. */
+:root[data-slide] .feed,
+:root[data-slide] .shell > .panel {
+  animation-duration: 320ms; animation-timing-function: cubic-bezier(.22, .7, .25, 1);
+  animation-fill-mode: both;
+}
+:root[data-slide] .catlink[data-active="true"] {
+  animation-duration: 280ms; animation-timing-function: cubic-bezier(.22, .7, .25, 1);
+  animation-fill-mode: both;
+}
+
+:root[data-slide="next"] .feed,
+:root[data-slide="next"] .shell > .panel { animation-name: slide-from-right; }
+:root[data-slide="prev"] .feed,
+:root[data-slide="prev"] .shell > .panel { animation-name: slide-from-left; }
+:root[data-slide="next"] .catlink[data-active="true"] { animation-name: title-from-right; }
+:root[data-slide="prev"] .catlink[data-active="true"] { animation-name: title-from-left; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-slide] .feed,
+  :root[data-slide] .shell > .panel,
+  :root[data-slide] .catlink[data-active="true"] { animation-name: none; }
 }

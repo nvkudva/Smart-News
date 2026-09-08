@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { setSlide } from '@/lib/slide';
 
 const href = (slug: string) => (slug === 'top' ? '/' : `/c/${slug}`);
 
@@ -55,7 +56,9 @@ export function CategorySwipe({ active, order }: { active: string; order: string
       if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
 
       const next = slugs[at + (dx < 0 ? 1 : -1)];
-      if (next) router.push(href(next));
+      if (!next) return;
+      setSlide(dx < 0 ? 'next' : 'prev');
+      router.push(href(next));
     };
 
     document.addEventListener('touchstart', start, { passive: true });

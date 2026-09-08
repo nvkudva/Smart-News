@@ -13,7 +13,8 @@ export function CategoryStrip({ active }: { active: string }) {
   return (
     <>
       <CategorySwipe active={active} order={TAXONOMY.map((c) => c.slug)} />
-    <StripScroller className="catstrip" label="Categories" activeKey={active}>
+    <StripScroller className="catstrip" label="Categories" activeKey={active}
+                     order={TAXONOMY.map((c) => c.slug)}>
       <div className="catstrip__row">
         {TAXONOMY.map((c) => {
           const on = c.slug === active;

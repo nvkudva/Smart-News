@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { warmSection } from './SectionFeed';
+import { setSlide, slideBetween } from '@/lib/slide';
 
 /**
  * Module scope on purpose: it survives a client navigation and resets on a hard
@@ -21,8 +22,9 @@ let navigated = false;
  * useSearchParams bailout into the pages that render it.
  */
 export function StripScroller(
-  { className, label, activeKey, children, ...rest }:
-  { className: string; label: string; activeKey: string; children: React.ReactNode }
+  { className, label, activeKey, order, children, ...rest }:
+  { className: string; label: string; activeKey: string; order?: string[];
+    children: React.ReactNode }
   & React.HTMLAttributes<HTMLElement>,
 ) {
   const router = useRouter();
@@ -107,11 +109,25 @@ export function StripScroller(
     el.addEventListener('pointerover', warm, { passive: true });
     el.addEventListener('touchstart', warm, { passive: true });
 
+    // A tap has to slide the same way a swipe to the same place would, or the
+    // two read as different gestures.
+    const aim2 = (e: Event) => {
+      if (!order) return;
+      const link = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      const href = link?.getAttribute('href');
+      if (!href) return;
+      const to = href === '/' ? 'top' : href.match(/^\/c\/([^/?#]+)/)?.[1];
+      const dir = to && slideBetween(order, activeKey, to);
+      if (dir) setSlide(dir);
+    };
+    el.addEventListener('click', aim2, { capture: true });
+
     return () => {
       ro.disconnect();
       el.removeEventListener('scroll', markEdges);
       el.removeEventListener('pointerover', warm);
       el.removeEventListener('touchstart', warm);
+      el.removeEventListener('click', aim2, true);
     };
   }, [activeKey, router]);
 
