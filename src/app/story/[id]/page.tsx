@@ -34,6 +34,12 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
             <Back />
           </Link>
           <span style={{ fontSize: 14.5, fontWeight: 600, color: 'oklch(0.42 0.02 258)' }}>{cluster.category}</span>
+          {/* Top right, opposite the way out. Saving is the one thing you can do
+              to this story, and at the foot of the summary it sat below the fold
+              on every story long enough to be worth keeping. */}
+          <div style={{ marginLeft: 'auto' }}>
+            <SaveButton clusterId={cluster.id} initial={await isSaved(cluster.id)} />
+          </div>
         </header>
 
         <div className="detail">
@@ -56,8 +62,6 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
               <div className="label">What happened</div>
               {paragraphs.map((group, i) => <p key={i}>{group.join(' ')}</p>)}
             </div>
-
-            <SaveButton clusterId={cluster.id} initial={await isSaved(cluster.id)} />
           </div>
 
           <div className="detail__side">
@@ -73,7 +77,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
 
             {related.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-                <div className="label" style={{ paddingLeft: 2 }}>Related</div>
+                <h2 className="sectitle">Related</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {related.map((r) => (
                     <Link key={r.id} href={`/story/${encodeURIComponent(r.id)}`} className="relrow">
@@ -86,7 +90,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 2px' }}>
-              <div className="label">Summarised from</div>
+              <h2 className="sectitle">Summarised from</h2>
               <p className="sources">
                 {outlets.map((a, i) => (
                   <span key={a.url}>
