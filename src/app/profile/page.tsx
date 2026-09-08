@@ -1,5 +1,7 @@
 import { savePrefsAction } from '@/app/actions';
 import { GeoConsent } from '@/components/GeoConsent';
+import { ThemeControl } from '@/components/Theme';
+import { NavPlacementControl } from '@/components/NavPlacement';
 import { PlacePicker, type PickedPlace } from '@/components/PlacePicker';
 import { TabBar } from '@/components/TabBar';
 import { CATEGORIES } from '@/lib/db';
@@ -60,6 +62,9 @@ export default async function Profile() {
           </form>
 
           <GeoConsent initialConsent={prefs.geoConsent} initialLabel={geo[0]?.label ?? null} />
+
+          <ThemeControl />
+          <NavPlacementControl />
 
           <div className="panel">
             <div className="label">Library</div>

@@ -2,25 +2,18 @@
 
 import { useEffect, useState } from 'react';
 
-export type Placement = 'auto' | 'bottom' | 'side';
-
+// Repeated rather than imported from lib/boot: the root layout is a server
+// component and reads BOOT from there, and pulling the same module into the
+// client graph leaves this page's subtree unhydrated.
 const KEY = 'sn_nav';
+
+export type Placement = 'auto' | 'bottom' | 'side';
 
 const OPTIONS: [Placement, string][] = [
   ['auto', 'Automatic'],
   ['bottom', 'Bottom bar'],
   ['side', 'Side rail'],
 ];
-
-/**
- * Runs from <head>, before the first paint. The stored placement has to be on
- * <html> by the time the first frame is composed, or every load shows the media
- * query's answer and then jumps to the reader's — and the whole point of keeping
- * this out of the database is that it applies with no server round trip.
- */
-export const NAV_BOOT =
-  `try{var v=localStorage.getItem('${KEY}');` +
-  `if(v==='bottom'||v==='side')document.documentElement.dataset.nav=v}catch(e){}`;
 
 function applyPlacement(v: Placement) {
   if (v === 'auto') delete document.documentElement.dataset.nav;

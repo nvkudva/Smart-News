@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
-import { NAV_BOOT } from '@/components/NavPlacement';
+import { BOOT } from '@/lib/boot';
 import { AppHeader } from '@/components/AppHeader';
 import './globals.css';
 
@@ -27,8 +27,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             in the tree, which desynchronises the body's children from the
             server HTML and leaves the whole page below the layout unhydrated.
             beforeInteractive is also the only strategy that runs early enough
-            to place the rail before the bar is painted. */}
-        <Script id="nav-placement" strategy="beforeInteractive">{NAV_BOOT}</Script>
+            to place the rail and the theme before the first paint. */}
+        <Script id="boot" strategy="beforeInteractive">{BOOT}</Script>
         <div className="wash" aria-hidden><i /><i /><i /></div>
         <AppHeader />
         {children}

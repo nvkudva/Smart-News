@@ -79,7 +79,8 @@ export function StoryCard({ story, variant = 'compact' }: { story: Story; varian
 
   return (
     <div className="cardwrap">
-      <Link href={`/story/${encodeURIComponent(story.id)}`} className={className}>
+      <Link href={`/story/${encodeURIComponent(story.id)}`} className={className}
+            data-cat={story.category.toLowerCase()}>
         {variant === 'compact' ? (
           /* Headline runs the full width; the thumbnail sits beside the summary,
              which is the only block that can afford to be narrower. */

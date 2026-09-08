@@ -19,6 +19,49 @@
   --ring:          oklch(0.48 0.15 252);
 }
 
+/* Theme B — Pastel. The same Frosted Stack geometry with the glass tinted: a
+   card takes a quiet shade from its category so a scrolled feed reads as bands
+   of subject rather than one white column. Hues are the card's only variable;
+   everything structural stays on theme A's tokens. */
+:root[data-theme="pastel"] {
+  --ground:     oklch(0.980 0.010 95);
+  --glass:      oklch(0.985 0.012 250 / 0.62);
+  --glass-edge: oklch(0.955 0.020 250 / 0.85);
+  --rule:       oklch(0.91 0.014 258);
+}
+:root[data-theme="pastel"] .wash i:nth-child(1) { background: oklch(0.90 0.060 252); }
+:root[data-theme="pastel"] .wash i:nth-child(2) { background: oklch(0.92 0.055 340); }
+:root[data-theme="pastel"] .wash i:nth-child(3) { background: oklch(0.93 0.050 95); }
+
+/* Hue per category. --cat-h is the one thing that changes; the card's fill,
+   edge and kicker are all derived from it, so a new category needs one line. */
+:root[data-theme="pastel"] .card { --cat-h: 252; }
+:root[data-theme="pastel"] .card[data-cat="india"]         { --cat-h: 62; }
+:root[data-theme="pastel"] .card[data-cat="politics"]      { --cat-h: 305; }
+:root[data-theme="pastel"] .card[data-cat="business"]      { --cat-h: 210; }
+:root[data-theme="pastel"] .card[data-cat="technology"]    { --cat-h: 278; }
+:root[data-theme="pastel"] .card[data-cat="science"]       { --cat-h: 195; }
+:root[data-theme="pastel"] .card[data-cat="health"]        { --cat-h: 355; }
+:root[data-theme="pastel"] .card[data-cat="sports"]        { --cat-h: 150; }
+:root[data-theme="pastel"] .card[data-cat="entertainment"] { --cat-h: 330; }
+:root[data-theme="pastel"] .card[data-cat="climate"]       { --cat-h: 128; }
+
+:root[data-theme="pastel"] .card {
+  background: linear-gradient(152deg,
+              oklch(0.955 0.045 var(--cat-h) / 0.80),
+              oklch(0.985 0.020 var(--cat-h) / 0.66));
+  border-color: oklch(0.925 0.045 var(--cat-h) / 0.90);
+  box-shadow: 0 1px 2px oklch(0.55 0.05 var(--cat-h) / 0.06),
+              0 10px 26px -12px oklch(0.55 0.09 var(--cat-h) / 0.28);
+}
+:root[data-theme="pastel"] .card .kicker { color: oklch(0.50 0.095 var(--cat-h)); }
+:root[data-theme="pastel"] .card .meta   { color: oklch(0.56 0.045 var(--cat-h)); }
+/* The placeholder plate is the one surface with no photo to carry the hue. */
+:root[data-theme="pastel"] .card .plate {
+  background: linear-gradient(150deg,
+              oklch(0.90 0.055 var(--cat-h)), oklch(0.93 0.035 var(--cat-h)));
+}
+
 html { background: var(--ground); }
 body {
   background: var(--ground);
