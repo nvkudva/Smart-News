@@ -21,6 +21,11 @@ const WINDOW_MS = 48 * 3_600_000;
  *  not the first screen of it. */
 export const SECTION_LIMIT = 200;
 
+/** How many of those actually reach the page. The counts need every row; the
+ *  reader needs the first few screens, and rendering all 200 was most of what
+ *  made switching categories feel slow. */
+export const SECTION_PAGE = 48;
+
 const stamp = (rows: Story[]): Story[] =>
   rows.map((s) => ({ ...s, exploration: 0 as const, exploration_kind: null }));
 
@@ -57,6 +62,31 @@ export function getTopicSection(category: string, limit = SECTION_LIMIT): Promis
 }
 
 /**
+ * A section costs two D1 round trips and up to 200 rows, and the pipeline only
+ * moves every fifteen minutes, so re-running it for each tap on the strip is
+ * pure latency. The map lives in module scope: on Workers that is the isolate,
+ * which serves many requests, and on a cold isolate it is simply empty.
+ *
+ * Promises, not results, are cached — two readers landing on the same section
+ * at once then share one query instead of racing.
+ */
+const TTL_MS = 60_000;
+const warm = new Map<string, { at: number; rows: Promise<Story[]> }>();
+
+function cached(key: string, run: () => Promise<Story[]>): Promise<Story[]> {
+  const hit = warm.get(key);
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.rows;
+
+  const rows = run();
+  warm.set(key, { at: Date.now(), rows });
+  // A failed query must not be remembered as this section's answer for a minute.
+  rows.catch(() => { if (warm.get(key)?.rows === rows) warm.delete(key); });
+
+  for (const [k, v] of warm) if (Date.now() - v.at > TTL_MS) warm.delete(k);
+  return rows;
+}
+
+/**
  * One entry point for the strip. Returns null for a slug outside the taxonomy so
  * the caller can 404 rather than render an empty section, which a reader would
  * read as a quiet news day.
@@ -69,11 +99,13 @@ export async function getSection(
 
   let stories: Story[] = [];
   try {
-    if (category.kind === 'topic') stories = await getTopicSection(category.name, limit);
-    else if (category.slug === 'top') stories = await getFeed(limit, userId);
-    else if (category.slug === 'local') stories = await getLocalSection(limit, userId);
-    else if (category.slug === 'national') stories = await getNationalSection(limit, userId);
-    else stories = await getInternationalSection(limit, userId);
+    stories = await cached(`${slug}:${limit}:${userId}`, () => {
+      if (category.kind === 'topic') return getTopicSection(category.name, limit);
+      if (category.slug === 'top') return getFeed(limit, userId);
+      if (category.slug === 'local') return getLocalSection(limit, userId);
+      if (category.slug === 'national') return getNationalSection(limit, userId);
+      return getInternationalSection(limit, userId);
+    });
   } catch {
     // A store that predates the v1.5 migration answers some of these with a
     // missing column. An empty section beats a 500 on a live deploy.

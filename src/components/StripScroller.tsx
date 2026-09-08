@@ -86,6 +86,8 @@ export function StripScroller(
     });
     ro.observe(el);
     el.addEventListener('scroll', markEdges, { passive: true });
+
+
     return () => {
       ro.disconnect();
       el.removeEventListener('scroll', markEdges);
