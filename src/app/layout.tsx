@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { BOOT } from '@/lib/boot';
 import { AppHeader } from '@/components/AppHeader';
+import { ServiceWorker } from '@/components/ServiceWorker';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="wash" aria-hidden><i /><i /><i /></div>
         <AppHeader />
         {children}
+        <ServiceWorker />
       </body>
     </html>
   );

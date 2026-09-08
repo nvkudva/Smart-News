@@ -1,6 +1,8 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
+import { warmSection } from './SectionFeed';
 
 /**
  * Module scope on purpose: it survives a client navigation and resets on a hard
@@ -22,6 +24,7 @@ export function StripScroller(
   { className, label, activeKey, children }:
   { className: string; label: string; activeKey: string; children: React.ReactNode },
 ) {
+  const router = useRouter();
   const ref = useRef<HTMLElement>(null);
   // What we last added to the row, so its natural width stays derivable without
   // zeroing the padding and re-measuring mid-animation.
@@ -87,12 +90,29 @@ export function StripScroller(
     ro.observe(el);
     el.addEventListener('scroll', markEdges, { passive: true });
 
+    // The shell is static, so the route prefetch is a cached file; the rows are
+    // ours to fetch. Warming both on intent — the pointer arriving, the finger
+    // landing — is what makes the tap itself cost nothing.
+    const warmed = new Set<string>();
+    const warm = (e: Event) => {
+      const link = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      const href = link?.getAttribute('href');
+      if (!href || warmed.has(href)) return;
+      warmed.add(href);
+      router.prefetch(href);
+      const cat = href === '/' ? 'top' : href.match(/^\/c\/([^/?#]+)/)?.[1];
+      if (cat) warmSection(cat);
+    };
+    el.addEventListener('pointerover', warm, { passive: true });
+    el.addEventListener('touchstart', warm, { passive: true });
 
     return () => {
       ro.disconnect();
       el.removeEventListener('scroll', markEdges);
+      el.removeEventListener('pointerover', warm);
+      el.removeEventListener('touchstart', warm);
     };
-  }, [activeKey]);
+  }, [activeKey, router]);
 
   return (
     <nav ref={ref} className={className} aria-label={label} data-edge="none">
