@@ -6,6 +6,24 @@ The npm package and the deployed Worker are both named `smartnews`; the repo is 
 
 [Live site](https://smartnews.nvkudva.workers.dev) - [Model and provider notes](docs/MODELS.md)
 
+## What it looks like
+
+Shown in the Pastel theme, where each card takes a quiet tint from its category.
+Three others ship with it — Frosted, Broadsheet and Ambient — and the picker is
+under Profile.
+
+| Desktop — the feed | Desktop — a category |
+|---|---|
+| ![The feed on a desktop, in the Pastel theme](docs/screenshots/desktop-home.jpg) | ![The Sports category on a desktop, in the Pastel theme](docs/screenshots/desktop-sports.jpg) |
+
+<p align="center">
+  <img src="docs/screenshots/mobile-home.jpg" alt="The feed on a phone, in the Pastel theme" width="300">
+  <img src="docs/screenshots/mobile-sports.jpg" alt="The Sports category on a phone, in the Pastel theme" width="300">
+</p>
+
+The bar sits at the bottom at every width, and the category strip is one
+horizontal row that holds the selected category against the left edge.
+
 ## Requirements
 
 - Node 22 or newer. The pipeline uses the built-in `node:sqlite` module; CI runs Node 26.
