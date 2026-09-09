@@ -30,6 +30,26 @@
   --bar-edge:      oklch(0.78 0.060 252 / 0.90);
   /* Unfilled meters and switch backs — a surface, so it inverts with the theme. */
   --track:         oklch(0.88 0.008 258);
+
+  /* Ten type steps, not the twenty-four half-pixel sizes this replaced. Every
+     size in the sheet lands on one of these; a value off the scale is a bug. */
+  --t-1:  0.6875rem;   /* 11   micro caps, tab labels, meta */
+  --t-2:  0.78125rem;  /* 12.5 captions, hints, pills */
+  --t-3:  0.875rem;    /* 14   secondary body */
+  --t-4:  0.9375rem;   /* 15   reading body */
+  --t-5:  1.03125rem;  /* 16.5 emphasised body */
+  --t-6:  1.125rem;    /* 18   card headline */
+  --t-7:  1.25rem;     /* 20   lead headline */
+  --t-8:  1.5625rem;   /* 25   section title */
+  --t-9:  1.9375rem;   /* 31   page title */
+  --t-10: 2.5rem;      /* 40   display */
+
+  /* Four radii. The pill shapes are absent on purpose: a 26px switch track and
+     a 30px chip are half their own height, which is a geometry, not a style. */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 30px;
 }
 
 /* Pastel — a tinted Frosted Stack. The same geometry with the glass coloured: a
@@ -133,7 +153,7 @@ body {
 
 .card {
   display: flex; flex-direction: column; gap: 7px;
-  border-radius: 22px; padding: 15px 16px 14px;
+  border-radius: var(--r-lg); padding: 15px 16px 14px;
   background: var(--glass); border: 1px solid var(--glass-edge);
   -webkit-backdrop-filter: blur(30px) saturate(185%); backdrop-filter: blur(30px) saturate(185%);
   box-shadow: var(--shadow);
@@ -151,7 +171,7 @@ body {
 
 .kicker {
   display: flex; align-items: center; gap: 5px;
-  font-size: 0.65625rem; letter-spacing: .06em; text-transform: uppercase;
+  font-size: var(--t-1); letter-spacing: .06em; text-transform: uppercase;
   font-weight: 650; color: var(--kicker);
   min-width: 0; flex: 0 1 auto; white-space: nowrap; overflow: hidden;
 }
@@ -160,9 +180,9 @@ body {
 .kicker--new  { color: var(--kicker-new); }
 .kicker span.sep { opacity: .35; }
 
-.card h2 { margin: 0; font-size: 1.09375rem; line-height: 1.26; font-weight: 650; letter-spacing: -.016em; text-wrap: pretty;
+.card h2 { margin: 0; font-size: var(--t-6); line-height: 1.26; font-weight: 650; letter-spacing: -.016em; text-wrap: pretty;
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
-.card p  { margin: 0; font-size: 0.84375rem; line-height: 1.5; color: var(--ink-2); text-wrap: pretty;
+.card p  { margin: 0; font-size: var(--t-3); line-height: 1.5; color: var(--ink-2); text-wrap: pretty;
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
 .card--compact p { -webkit-line-clamp: 4; }
 /* A developing story's meta ("N sources · 21h ago · developing · updated 2h ago")
@@ -173,12 +193,12 @@ body {
    kicker keeps the first line and the meta wraps under it. */
 .foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .foot .kicker { flex: 1 1 0; min-width: min(100%, 9.5em); }
-.foot .meta { font-size: 0.71875rem; color: var(--ink-3); min-width: 0; }
+.foot .meta { font-size: var(--t-1); color: var(--ink-3); min-width: 0; }
 
 .plate { background: var(--plate); border: 1px solid rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .plate img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.plate--hero  { height: 168px; border-radius: 15px; margin: -2px -2px 2px; }
-.plate--thumb { width: 76px; height: 76px; border-radius: 14px; flex: 0 0 auto; }
+.plate--hero  { height: 168px; border-radius: var(--r-sm); margin: -2px -2px 2px; }
+.plate--thumb { width: 76px; height: 76px; border-radius: var(--r-sm); flex: 0 0 auto; }
 
 /* A floating glass pill rather than a full-width band: the disc breaks the top
    edge, so the bar needs its own outline all the way round for the break to
@@ -190,7 +210,7 @@ body {
   height: 66px;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 12px; overflow: visible;
-  border-radius: 30px; border: 1px solid var(--bar-edge);
+  border-radius: var(--r-xl); border: 1px solid var(--bar-edge);
   background:
     linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04) 46%, rgba(255,255,255,0)),
     var(--bar);
@@ -201,7 +221,7 @@ body {
 .tabbar > .inner { max-width: 430px; width: 100%; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
 .tab { width: 52px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ink-3); text-decoration: none; }
 .tab[data-active="true"], .tab[aria-current="page"] { color: var(--accent); }
-.tab span { font-size: 0.65625rem; font-weight: 600; color: oklch(0.45 0.012 258); }
+.tab span { font-size: var(--t-1); font-weight: 600; color: oklch(0.45 0.012 258); }
 .tab[data-active="true"] span, .tab[aria-current="page"] span { font-weight: 750; color: inherit; }
 
 /* One ball, no halo: the disc is a lit sphere in the accent's own hue, so it
@@ -228,14 +248,14 @@ body {
 .reelsbtn svg { transform: translateY(-1px); }
 
 .panel {
-  border-radius: 24px; padding: 19px;
+  border-radius: var(--r-lg); padding: 19px;
   background: rgba(255,255,255,0.60); border: 1px solid rgba(255,255,255,0.80);
   -webkit-backdrop-filter: blur(30px) saturate(185%); backdrop-filter: blur(30px) saturate(185%);
   box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 14px;
 }
-.label { font-size: 0.65625rem; letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: oklch(0.55 0.02 258); }
-.panel p { margin: 0; font-size: 0.9375rem; line-height: 1.58; color: var(--ink-2); text-wrap: pretty; }
+.label { font-size: var(--t-1); letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: oklch(0.55 0.02 258); }
+.panel p { margin: 0; font-size: var(--t-4); line-height: 1.58; color: var(--ink-2); text-wrap: pretty; }
 
 /* A section heading in the detail's side column, where .label — a 10.5px
    all-caps kicker meant to sit inside a panel — read as a caption for the thing
@@ -244,14 +264,14 @@ body {
 .sectitle {
   display: flex; align-items: center; gap: 10px;
   margin: 0; padding-left: 2px;
-  font-size: 0.875rem; font-weight: 700; letter-spacing: -0.012em; color: var(--ink);
+  font-size: var(--t-3); font-weight: 700; letter-spacing: -0.012em; color: var(--ink);
 }
 .sectitle::after {
   content: ''; flex: 1 1 auto; height: 1px; min-width: 16px;
   background: var(--rule);
 }
 
-.sources { font-size: 0.71875rem; line-height: 1.62; color: oklch(0.53 0.014 258); }
+.sources { font-size: var(--t-1); line-height: 1.62; color: oklch(0.53 0.014 258); }
 .sources a { color: var(--accent); text-decoration: none; }
 .sources a:hover { text-decoration: underline; }
 
@@ -277,7 +297,7 @@ body {
 .card--lead  .plate--hero { aspect-ratio: 21 / 9; height: auto; }
 
 /* No image: drop the plate rather than show a grey rectangle 350px wide. */
-.card--text h2 { font-size: 1.21875rem; -webkit-line-clamp: 3; }
+.card--text h2 { font-size: var(--t-7); -webkit-line-clamp: 3; }
 .card--text p  { -webkit-line-clamp: 6; }
 
 @media (min-width: 560px) {
@@ -344,8 +364,8 @@ body {
 
 .savebtn {
   display: inline-flex; align-items: center; gap: 7px;
-  height: 38px; padding: 0 14px; border-radius: 12px; cursor: pointer;
-  font: inherit; font-size: 13.5px; font-weight: 600;
+  height: 38px; padding: 0 14px; border-radius: var(--r-md); cursor: pointer;
+  font: inherit; font-size: var(--t-2); font-weight: 600;
   background: rgba(255,255,255,0.62); border: 1px solid var(--glass-edge);
   -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
   color: var(--ink-2);
@@ -355,18 +375,18 @@ body {
 
 .tile {
   display: flex; flex-direction: column; gap: 8px;
-  border-radius: 20px; padding: 15px 16px 14px; text-decoration: none; color: inherit;
+  border-radius: var(--r-lg); padding: 15px 16px 14px; text-decoration: none; color: inherit;
   background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--shadow);
 }
-.tile__n { font-size: 0.71875rem; color: var(--ink-3); }
-.tile h3 { margin: 0; font-size: 1rem; font-weight: 650; letter-spacing: -0.014em; }
-.tile p  { margin: 0; font-size: 0.8125rem; line-height: 1.42; color: var(--ink-2);
+.tile__n { font-size: var(--t-1); color: var(--ink-3); }
+.tile h3 { margin: 0; font-size: var(--t-5); font-weight: 650; letter-spacing: -0.014em; }
+.tile p  { margin: 0; font-size: var(--t-2); line-height: 1.42; color: var(--ink-2);
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 11px; }
 
 .chip {
   display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px;
-  border-radius: 17px; font-size: 13px; font-weight: 600; text-decoration: none;
+  border-radius: 17px; font-size: var(--t-2); font-weight: 600; text-decoration: none;
   background: rgba(255,255,255,0.55); border: 1px solid var(--glass-edge); color: var(--ink-2);
 }
 .chip[data-on="true"] { background: var(--ink); border-color: transparent; color: oklch(0.97 0.005 250); }
@@ -377,21 +397,21 @@ body {
 }
 
 .field { display: flex; flex-direction: column; gap: 7px; }
-.field label { font-size: 0.78125rem; font-weight: 650; color: var(--ink-2); }
+.field label { font-size: var(--t-2); font-weight: 650; color: var(--ink-2); }
 .field input[type="text"] {
-  height: 42px; padding: 0 13px; border-radius: 12px; font: inherit; font-size: 14.5px;
+  height: 42px; padding: 0 13px; border-radius: var(--r-md); font: inherit; font-size: var(--t-3);
   background: rgba(255,255,255,0.7); border: 1px solid var(--glass-edge); color: var(--ink);
 }
 .btn {
-  height: 42px; padding: 0 20px; border-radius: 12px; cursor: pointer;
-  font: inherit; font-size: 14px; font-weight: 650; border: none;
+  height: 42px; padding: 0 20px; border-radius: var(--r-md); cursor: pointer;
+  font: inherit; font-size: var(--t-3); font-weight: 650; border: none;
   background: var(--accent); color: #fff;
 }
 .pagehead { padding: 28px 4px 18px; }
-.pagehead h1 { margin: 0; font-size: 1.875rem; line-height: 1.05; font-weight: 700; letter-spacing: -0.028em; }
-.pagehead p  { margin: 6px 0 0; font-size: 0.84375rem; color: var(--ink-2); }
-@media (min-width: 700px) { .pagehead h1 { font-size: 2.25rem; } }
-@media (min-width: 1024px) { .pagehead h1 { font-size: 2.5rem; } }
+.pagehead h1 { margin: 0; font-size: var(--t-9); line-height: 1.05; font-weight: 700; letter-spacing: -0.028em; }
+.pagehead p  { margin: 6px 0 0; font-size: var(--t-3); color: var(--ink-2); }
+@media (min-width: 700px) { .pagehead h1 { font-size: var(--t-10); } }
+@media (min-width: 1024px) { .pagehead h1 { font-size: var(--t-10); } }
 
 /* ── Reels ─────────────────────────────────────────────────────────────── */
 .reels {
@@ -432,14 +452,14 @@ body {
 .reel__body .kicker { flex-wrap: wrap; row-gap: 3px; overflow: visible; }
 .reel__body .kicker > span { overflow: visible; }
 .reel__body h2 {
-  margin: 0; font-size: 1.625rem; line-height: 1.18; font-weight: 700;
+  margin: 0; font-size: var(--t-8); line-height: 1.18; font-weight: 700;
   letter-spacing: -0.026em; color: #fff; text-wrap: pretty;
 }
 /* Unclamped. A reel is one story on a whole screen; there is nothing else on
    it competing for the room, and a summary cut mid-sentence is the one thing
    this surface cannot afford. */
 .reel__body p {
-  margin: 0; font-size: 0.90625rem; line-height: 1.56; color: rgba(255,255,255,0.80); text-wrap: pretty;
+  margin: 0; font-size: var(--t-4); line-height: 1.56; color: rgba(255,255,255,0.80); text-wrap: pretty;
 }
 .reel__actions { display: flex; gap: 9px; margin-top: 4px; flex-wrap: wrap; }
 .reel .savebtn {
@@ -459,18 +479,18 @@ body {
   }
   .reel { justify-content: center; }
   .reel__body { padding: 0 40px 0 56px; max-width: 40%; gap: 14px; }
-  .reel__body h2 { font-size: 1.875rem; }
-  .reel__body p { font-size: 0.96875rem; }
+  .reel__body h2 { font-size: var(--t-9); }
+  .reel__body p { font-size: var(--t-5); }
 }
 
 @media (min-width: 1600px) {
   .reel__body { max-width: 38%; padding: 0 48px 0 72px; }
-  .reel__body h2 { font-size: 2.25rem; }
+  .reel__body h2 { font-size: var(--t-10); }
 }
 
 /* ── Story detail ──────────────────────────────────────────────────────── */
 .detail { display: flex; flex-direction: column; gap: 22px; }
-.plate--detail { height: 208px; border-radius: 22px; }
+.plate--detail { height: 208px; border-radius: var(--r-md); }
 @media (min-width: 560px) { .plate--detail { aspect-ratio: 16 / 9; height: auto; max-height: 380px; } }
 .relrow {
   border-radius: 17px; padding: 13px 15px; text-decoration: none; color: inherit;
@@ -478,15 +498,15 @@ body {
   -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
   display: flex; flex-direction: column; gap: 4px;
 }
-.relrow__t { font-size: 0.90625rem; font-weight: 620; line-height: 1.3; letter-spacing: -0.012em; }
+.relrow__t { font-size: var(--t-4); font-weight: 620; line-height: 1.3; letter-spacing: -0.012em; }
 
 /* Detail layout lives at the end of the file on purpose: the base `.detail`
    rule above is equal specificity, so these must come after it to win. */
 @media (min-width: 700px) {
   .detail__main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
   .detail__side { display: flex; flex-direction: column; gap: 22px; }
-  .detail h1 { font-size: 1.9375rem !important; max-width: 18em; }
-  .detail .panel p { font-size: 1.03125rem; line-height: 1.62; max-width: 62ch; }
+  .detail h1 { font-size: var(--t-9) !important; max-width: 18em; }
+  .detail .panel p { font-size: var(--t-5); line-height: 1.62; max-width: 62ch; }
 }
 
 @media (min-width: 1024px) {
@@ -495,7 +515,7 @@ body {
     gap: 32px; align-items: start;
   }
   .detail__side { position: sticky; top: 32px; }
-  .detail h1 { font-size: 2.5rem !important; max-width: 14em; }
+  .detail h1 { font-size: var(--t-10) !important; max-width: 14em; }
 }
 
 /* ── Exploration marker ────────────────────────────────────────────────────
@@ -519,8 +539,8 @@ body {
 .expdot__hit[aria-expanded="true"] .expdot__dot { box-shadow: 0 0 0 4px oklch(0.52 0.13 252 / 0.22); }
 .expdot__tip {
   position: absolute; left: 8px; bottom: 40px; width: 232px; z-index: 3;
-  padding: 11px 13px; border-radius: 14px;
-  font-size: 0.78125rem; line-height: 1.45; color: var(--ink-2);
+  padding: 11px 13px; border-radius: var(--r-md);
+  font-size: var(--t-2); line-height: 1.45; color: var(--ink-2);
   background: rgba(255, 255, 255, 0.94); border: 1px solid var(--glass-edge);
   -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
   box-shadow: 0 10px 30px -10px rgba(30, 38, 60, 0.28);
@@ -555,8 +575,8 @@ body {
   .cardwrap:has(.card--lead)    { grid-row: span 2; }
   .cardwrap:has(.card--compact) { grid-row: span 1; }
 
-  .card--compact h2 { font-size: 0.96875rem; -webkit-line-clamp: 2; }
-  .card--compact p  { font-size: 0.78125rem; -webkit-line-clamp: 4; }
+  .card--compact h2 { font-size: var(--t-5); -webkit-line-clamp: 2; }
+  .card--compact p  { font-size: var(--t-2); -webkit-line-clamp: 4; }
   /* Fluid width, because three columns leaves tracks as narrow as 235px and a
      fixed thumb there left the summary ~15 characters a line.
      Height comes from the row it shares with the summary. */
@@ -647,7 +667,7 @@ body {
    and sit on the same row rhythm, so the real cards land where they stood. */
 .skel {
   position: relative; overflow: hidden;
-  border-radius: 22px;
+  border-radius: var(--r-lg);
   background: var(--glass); border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow);
 }
@@ -676,7 +696,7 @@ body {
   height: 30px; padding: 0 11px; border-radius: 15px; max-width: min(52vw, 22ch);
   background: rgba(255,255,255,0.6); border: 1px solid var(--glass-edge);
   -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
-  font-size: 12px; font-weight: 600; color: oklch(0.42 0.02 258); text-decoration: none;
+  font-size: var(--t-2); font-weight: 600; color: oklch(0.42 0.02 258); text-decoration: none;
 }
 .pinchip__i { display: flex; flex: 0 0 auto; color: var(--kicker-near); }
 .pinchip__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -686,32 +706,32 @@ body {
 .picker__menu {
   position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5;
   margin: 0; padding: 5px; list-style: none; max-height: 264px; overflow-y: auto;
-  border-radius: 14px;
+  border-radius: var(--r-md);
   background: rgba(255,255,255,0.94); border: 1px solid var(--glass-edge);
   -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
   box-shadow: 0 10px 30px -10px rgba(30,38,60,0.28);
 }
 .picker__opt {
   display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
-  padding: 8px 10px; border: none; border-radius: 10px;
+  padding: 8px 10px; border: none; border-radius: var(--r-sm);
   background: none; color: inherit; font: inherit; cursor: pointer;
 }
 @media (hover: hover) { .picker__opt:hover { background: oklch(0.94 0.012 258); } }
-.picker__opt-n { font-size: 0.875rem; font-weight: 620; }
+.picker__opt-n { font-size: var(--t-3); font-weight: 620; }
 /* The label is the whole point of the menu: it is what tells Delhi from
    New Delhi, and a city in Karnataka from one in Telangana. */
-.picker__opt-l { font-size: 0.71875rem; color: var(--ink-3); }
-.picker__empty { padding: 10px 11px; font-size: 0.78125rem; line-height: 1.45; color: var(--ink-3); }
+.picker__opt-l { font-size: var(--t-1); color: var(--ink-3); }
+.picker__empty { padding: 10px 11px; font-size: var(--t-2); line-height: 1.45; color: var(--ink-3); }
 
 .chip__x {
   display: inline-flex; align-items: center; justify-content: center;
   width: 20px; height: 20px; margin-right: -5px; padding: 0;
   border: none; border-radius: 50%; background: rgba(255,255,255,0.18);
-  color: inherit; font: inherit; font-size: 15px; line-height: 1; cursor: pointer;
+  color: inherit; font: inherit; font-size: var(--t-4); line-height: 1; cursor: pointer;
 }
 .picker .chip { max-width: 100%; }
 
-.hint, .panel p.hint { margin: 0; font-size: 0.78125rem; line-height: 1.45; color: var(--ink-3); }
+.hint, .panel p.hint { margin: 0; font-size: var(--t-2); line-height: 1.45; color: var(--ink-3); }
 
 .geo__on { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
@@ -761,7 +781,7 @@ body {
 .switch input:checked + .switch__track .switch__knob { transform: translateX(18px); }
 .switch input:focus-visible + .switch__track { outline: 2px solid var(--ring); outline-offset: 2px; }
 .switch input:disabled + .switch__track { opacity: .55; }
-.switch__text { font-size: 0.84375rem; line-height: 1.5; color: var(--ink-2); }
+.switch__text { font-size: var(--t-3); line-height: 1.5; color: var(--ink-2); }
 
 .geo__pin { display: flex; }
 
@@ -772,7 +792,7 @@ body {
   background: none; border-style: dashed; border-color: oklch(0.82 0.01 258); color: var(--ink-3);
 }
 .chip__note {
-  font-size: 0.59375rem; letter-spacing: .07em; text-transform: uppercase; font-weight: 700;
+  font-size: var(--t-1); letter-spacing: .07em; text-transform: uppercase; font-weight: 700;
   opacity: .6;
 }
 /* Inside a filled chip the pin has to borrow the chip's own colour; the accent
@@ -847,7 +867,7 @@ body {
    row of controls. */
 .catlink {
   display: inline-block; padding-block: 8px;
-  font-size: 1.5625rem; line-height: 1.12; font-weight: 700; letter-spacing: -0.026em;
+  font-size: var(--t-8); line-height: 1.12; font-weight: 700; letter-spacing: -0.026em;
   white-space: nowrap; text-decoration: none;
   /* A real colour, not a wash: at opacity .5 an idle title measured 1.93:1,
      well under the 3:1 large-text floor, and the fix is a lighter ink rather
@@ -862,8 +882,8 @@ body {
    reader has already made, so idle pills carry no border and no fill. */
 .subpill {
   display: inline-flex; align-items: center; min-height: 30px;
-  padding: 0 11px; border-radius: 11px;
-  font-size: 13px; font-weight: 600;
+  padding: 0 11px; border-radius: var(--r-md);
+  font-size: var(--t-2); font-weight: 600;
   white-space: nowrap; text-decoration: none; color: var(--ink-3);
   background: none; border: 1px solid transparent;
 }
@@ -876,7 +896,7 @@ body {
 
 /* All that is left of the old category header: the strip carries the name now,
    so this only counts what is under it. */
-.cathead__meta { margin: 0 0 10px; font-size: 0.8125rem; color: var(--kicker); }
+.cathead__meta { margin: 0 0 10px; font-size: var(--t-2); color: var(--kicker); }
 
 @media (min-width: 700px) {
   /* Room for the whole set. A wrapped row cannot hide a category past an edge,
@@ -893,7 +913,7 @@ body {
   .substrip__row { gap: 18px; }
   .subpill {
     min-height: 28px; padding: 0 1px; border-radius: 0;
-    border: none; font-size: 13.5px;
+    border: none; font-size: var(--t-2);
   }
   .subpill[aria-current="page"],
   .subpill[data-active="true"] {
@@ -909,7 +929,7 @@ body {
 
 /* Chips rendered as <button>: .chip was written for <label> and <a>, neither
    of which needs a font reset. */
-button.chip { font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
+button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: pointer; }
 
 /* ─────────────────────────────────────────────────────────────────────────
    Coverage split — how many outlets on each side ran a story.
@@ -931,29 +951,29 @@ button.chip { font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: poi
 .split__keys { display: flex; flex-wrap: wrap; gap: 12px; }
 .split__key {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 0.75rem; font-weight: 600; color: var(--ink-2);
+  font-size: var(--t-2); font-weight: 600; color: var(--ink-2);
 }
 /* A side that ran nothing still gets a row — its absence is the information. */
 .split__key[data-on="false"] { opacity: .45; }
 .split__dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
 
 .blindspot {
-  font-size: 0.78125rem; line-height: 1.5; color: var(--ink-2);
-  padding: 9px 11px; border-radius: 12px;
+  font-size: var(--t-2); line-height: 1.5; color: var(--ink-2);
+  padding: 9px 11px; border-radius: var(--r-md);
   background: var(--glass); border: 1px solid var(--glass-edge);
 }
 .blindspot strong { color: var(--ink); }
 
 .framing { display: flex; flex-direction: column; gap: 4px; }
 .framing__side {
-  align-self: flex-start; font-size: 0.625rem; font-weight: 700;
+  align-self: flex-start; font-size: var(--t-1); font-weight: 700;
   letter-spacing: .07em; text-transform: uppercase;
-  padding: 2px 8px; border-radius: 8px; color: oklch(0.97 0.005 250);
+  padding: 2px 8px; border-radius: var(--r-sm); color: oklch(0.97 0.005 250);
 }
 .framing__side[data-side="left"]   { background: oklch(0.52 0.115 268); }
 .framing__side[data-side="centre"] { background: oklch(0.48 0.045 196); }
 .framing__side[data-side="right"]  { background: oklch(0.50 0.105 52); }
-.framing p { font-size: 0.8125rem; line-height: 1.55; color: var(--ink-2); }
+.framing p { font-size: var(--t-2); line-height: 1.55; color: var(--ink-2); }
 
 /* ────────────────────────────────────────────────────────────────────────
    Navigation placement override — html[data-nav]
@@ -988,22 +1008,22 @@ button.chip { font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: poi
 }
 :root[data-nav="side"] .railhead {
   display: flex; align-items: center; gap: 9px;
-  padding: 2px 10px 22px; font-weight: 700; font-size: 1.1875rem; letter-spacing: -0.02em;
+  padding: 2px 10px 22px; font-weight: 700; font-size: var(--t-6); letter-spacing: -0.02em;
   color: var(--ink);
 }
 :root[data-nav="side"] .tabgroup { display: contents; }
 :root[data-nav="side"] .tabgroup .tab { width: 100%; max-width: none; flex: 0 0 auto; }
 :root[data-nav="side"] .tab {
   width: 100%; height: 44px; flex-direction: row; justify-content: flex-start;
-  gap: 12px; padding: 0 10px; border-radius: 11px;
+  gap: 12px; padding: 0 10px; border-radius: var(--r-md);
 }
-:root[data-nav="side"] .tab span { font-size: 0.90625rem; font-weight: 600; }
+:root[data-nav="side"] .tab span { font-size: var(--t-4); font-weight: 600; }
 :root[data-nav="side"] .tab[data-active="true"],
 :root[data-nav="side"] .tab[aria-current="page"] { background: rgba(255, 255, 255, 0.72); }
 :root[data-nav="side"] .reelsbtn {
-  width: 100%; height: 44px; margin: 10px 0 4px; border-radius: 12px;
+  width: 100%; height: 44px; margin: 10px 0 4px; border-radius: var(--r-md);
   gap: 12px; padding: 0 10px; justify-content: flex-start;
-  font-size: 14.5px; font-weight: 650; color: #fff;
+  font-size: var(--t-3); font-weight: 650; color: #fff;
   background: linear-gradient(180deg, oklch(0.31 0.016 258), oklch(0.23 0.014 258));
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: 0 1px 2px rgba(30,38,60,.08), 0 6px 16px -10px rgba(24,30,48,.36),
@@ -1021,7 +1041,7 @@ button.chip { font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: poi
 :root[data-nav="bottom"] .tabbar {
   left: 12px; right: 12px; top: auto; transform: none;
   bottom: calc(10px + env(safe-area-inset-bottom));
-  width: auto; height: 66px; border-radius: 30px;
+  width: auto; height: 66px; border-radius: var(--r-xl);
   flex-direction: row; align-items: center; justify-content: space-between;
   padding: 0 12px; gap: 0;
   border: 1px solid var(--bar-edge);
@@ -1042,7 +1062,7 @@ button.chip { font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: poi
   height: 44px; flex-direction: column; justify-content: center;
   gap: 3px; padding: 0; border-radius: 0;
 }
-:root[data-nav="bottom"] .tab span { font-size: 0.59375rem; font-weight: 600; }
+:root[data-nav="bottom"] .tab span { font-size: var(--t-1); font-weight: 600; }
 :root[data-nav="bottom"] .tab[data-active="true"],
 :root[data-nav="bottom"] .tab[aria-current="page"] { background: none; }
 :root[data-nav="bottom"] .reelsbtn {
@@ -1067,14 +1087,14 @@ button.chip { font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: poi
   :root[data-nav="bottom"] .tabbar {
     left: 50%; right: auto; transform: translateX(-50%);
     width: 462px; bottom: 16px; height: 68px;
-    border: 1px solid var(--glass-edge); border-radius: 26px;
+    border: 1px solid var(--glass-edge); border-radius: var(--r-xl);
     box-shadow: 0 8px 30px -10px rgba(30, 38, 60, 0.22);
   }
 }
 
 /* The placement control's own buttons: .chip was written for <label> and <a>,
    neither of which needs a font reset. */
-button.chip { font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
+button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: pointer; }
 
 /* ── App header ────────────────────────────────────────────────────────────
    The wordmark lived in the rail; with the rail gone this is where it goes. */
@@ -1090,14 +1110,14 @@ button.chip { font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: poi
 }
 .appbar__brand {
   display: flex; align-items: center; gap: 9px;
-  font-weight: 700; font-size: 1.625rem; letter-spacing: -0.02em;
+  font-weight: 700; font-size: var(--t-8); letter-spacing: -0.02em;
   color: var(--ink); text-decoration: none;
 }
 .appbar__aside {
   display: flex; align-items: center; gap: 10px; min-width: 0;
 }
 .appbar__date {
-  font-size: 0.78125rem; font-weight: 600; color: var(--kicker); white-space: nowrap;
+  font-size: var(--t-2); font-weight: 600; color: var(--kicker); white-space: nowrap;
 }
 /* The date is the first thing to go: the pin names a place the reader chose,
    and today's date is the one line they can read off any other clock. */
@@ -1105,8 +1125,8 @@ button.chip { font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: poi
 
 @media (min-width: 700px) {
   .appbar { padding-left: 28px; padding-right: 28px; }
-  .appbar__brand { font-size: 1.71875rem; }
-  .appbar__date { font-size: 0.8125rem; }
+  .appbar__brand { font-size: var(--t-9); }
+  .appbar__date { font-size: var(--t-2); }
 }
 /* The feed masthead carried its own small mark; the header now owns branding. */
 .masthead-mark { display: none !important; }
