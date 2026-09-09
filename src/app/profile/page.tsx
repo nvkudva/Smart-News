@@ -1,6 +1,7 @@
 import { savePrefsAction } from '@/app/actions';
 import { GeoConsent } from '@/components/GeoConsent';
 import { ThemeControl } from '@/components/Theme';
+import { ModeControl } from '@/components/Mode';
 import { NavPlacementControl } from '@/components/NavPlacement';
 import { PlacePicker, type PickedPlace } from '@/components/PlacePicker';
 import { TabBar } from '@/components/TabBar';
@@ -27,67 +28,88 @@ export default async function Profile() {
     ...prefs.places.filter((t) => !named.has(t.toLowerCase())).map((t) => ({ id: null, name: t, label: t })),
   ];
 
+  const counts = [
+    ['Articles', stats.articles],
+    ['Clusters', stats.clusters],
+    ['Summarised', stats.summarised],
+    ['Sources', stats.sources],
+    ['Saved', stats.saved],
+  ] as const;
+
   return (
     <>
-      <main className="shell">
+      <main className="shell setpage">
         <div className="pagehead">
           <h1>Profile</h1>
-          <p>What the feed is tuned to. One slot in four is always kept for
-             something outside these interests — a different subject, or a place
-             near the ones you follow.</p>
+          <p>What the feed is tuned to.</p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <form action={savePrefsAction} className="panel">
-            <div className="label">Interests</div>
-            <div className="chips">
-              {CATEGORIES.map((c) => (
-                <label key={c} className="chip" data-on={prefs.categories.includes(c)}>
-                  <input type="checkbox" name={`cat:${c}`} defaultChecked={prefs.categories.includes(c)}
-                         style={{ margin: 0, accentColor: 'var(--accent)' }} />
-                  {c}
-                </label>
-              ))}
+        <section className="setsection">
+          <h2 className="sethead">Feed</h2>
+
+          <form action={savePrefsAction} className="setgroup">
+            <div className="setrow setrow--stack">
+              <span className="setrow__title">Interests</span>
+              <div className="setchips">
+                {CATEGORIES.map((c) => (
+                  <label key={c} className="chip" data-on={prefs.categories.includes(c)}>
+                    <input type="checkbox" name={`cat:${c}`} defaultChecked={prefs.categories.includes(c)} />
+                    {c}
+                  </label>
+                ))}
+              </div>
             </div>
 
-            <div className="field">
-              <label htmlFor="country">Home country — its news is always represented</label>
+            <div className="setrow">
+              <label className="setrow__title" htmlFor="country">Home country</label>
               <input id="country" name="country" type="text" defaultValue={prefs.country}
-                     maxLength={2} style={{ width: 90, textTransform: 'uppercase' }} />
+                     maxLength={2} className="setinput setinput--code" />
             </div>
 
-            <PlacePicker initial={picked} />
+            <div className="setrow setrow--stack">
+              <PlacePicker initial={picked} />
+            </div>
 
-            <button type="submit" className="btn" style={{ alignSelf: 'flex-start' }}>Save preferences</button>
+            <button type="submit" className="btn setsave">Save preferences</button>
           </form>
 
-          <GeoConsent initialConsent={prefs.geoConsent} initialLabel={geo[0]?.label ?? null} />
+          <p className="setnote">
+            Home country news is always represented, and one slot in four is kept
+            for something outside these interests — a different subject, or a
+            place near the ones you follow.
+          </p>
 
-          <ThemeControl />
-          <NavPlacementControl />
+          <div className="setgroup">
+            <GeoConsent initialConsent={prefs.geoConsent} initialLabel={geo[0]?.label ?? null} />
+          </div>
+        </section>
 
-          <div className="panel">
-            <div className="label">Library</div>
-            <div className="tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
-              {([
-                ['Articles', stats.articles],
-                ['Clusters', stats.clusters],
-                ['Summarised', stats.summarised],
-                ['Sources', stats.sources],
-                ['Saved', stats.saved],
-              ] as const).map(([label, n]) => (
-                <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.028em' }}>{n.toLocaleString()}</div>
-                  <div className="tile__n">{label}</div>
+        <section className="setsection">
+          <h2 className="sethead">Appearance</h2>
+          <div className="setgroup">
+            <ThemeControl />
+            <ModeControl />
+            <NavPlacementControl />
+          </div>
+        </section>
+
+        <section className="setsection">
+          <h2 className="sethead">Library</h2>
+          <div className="setgroup">
+            <div className="setstats">
+              {counts.map(([label, n]) => (
+                <div key={label} className="setstat">
+                  <b>{n.toLocaleString()}</b>
+                  <span>{label}</span>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-              Newest story {stats.newest ? ago(stats.newest) : '—'}.
-              Run <code>npm run cycle</code> to pull the latest.
-            </p>
           </div>
-        </div>
+          <p className="setnote">
+            Newest story {stats.newest ? ago(stats.newest) : '—'}.
+            Run <code>npm run cycle</code> to pull the latest.
+          </p>
+        </section>
       </main>
       <TabBar active="profile" />
     </>

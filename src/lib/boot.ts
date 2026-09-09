@@ -11,6 +11,7 @@
  */
 export const NAV_KEY = 'sn_nav';
 export const THEME_KEY = 'sn_theme';
+export const MODE_KEY = 'sn_mode';
 
 /**
  * Each theme's ground, as the browser and standalone chrome need it. Not
@@ -22,11 +23,24 @@ export const THEME_CHROME: Record<string, string> = {
   frost: '#f7f7fa',
   pastel: '#f8f8fa',
   broadsheet: '#f9f6f0',
-  ambient: '#1a120d',
+  ambient: '#fdf8ef',
+  'frost-dark': '#15171c',
+  'pastel-dark': '#16161f',
+  'broadsheet-dark': '#141310',
+  'ambient-dark': '#1a120d',
 };
 
-export function paintChrome(theme: string) {
-  const c = THEME_CHROME[theme] ?? THEME_CHROME.frost;
+/** 'light' | 'dark' | null, where null means follow the system. */
+export type Mode = 'light' | 'dark';
+
+export function resolveMode(stored: string | null): Mode {
+  if (stored === 'light' || stored === 'dark') return stored;
+  return typeof matchMedia === 'function'
+    && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+export function paintChrome(theme: string, mode: Mode) {
+  const c = THEME_CHROME[mode === 'dark' ? `${theme}-dark` : theme] ?? THEME_CHROME.frost;
   let m = document.querySelector('meta[name="theme-color"]');
   if (!m) {
     m = document.createElement('meta');
@@ -36,11 +50,21 @@ export function paintChrome(theme: string) {
   m.setAttribute('content', c);
 }
 
+/**
+ * The mode is resolved to a literal 'light' or 'dark' here rather than left to
+ * a media query in the stylesheet. Four themes times two modes would otherwise
+ * need every dark token set written twice — once under [data-mode="dark"] and
+ * again under the auto case's @media — and the two copies would drift.
+ */
 export const BOOT =
   `try{var d=document.documentElement,n=localStorage.getItem('${NAV_KEY}');` +
   `if(n==='bottom'||n==='side')d.dataset.nav=n;` +
-  `var t=localStorage.getItem('${THEME_KEY}');` +
-  `if(t&&t!=='frost')d.dataset.theme=t;` +
-  `var c=${JSON.stringify(THEME_CHROME)}[t||'frost']||'#f7f7fa';` +
+  `var t=localStorage.getItem('${THEME_KEY}')||'frost';` +
+  `if(t!=='frost')d.dataset.theme=t;` +
+  `var s=localStorage.getItem('${MODE_KEY}');` +
+  `var k=(s==='light'||s==='dark')?s:` +
+  `(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');` +
+  `d.dataset.mode=k;` +
+  `var c=${JSON.stringify(THEME_CHROME)}[k==='dark'?t+'-dark':t]||'#f7f7fa';` +
   `var m=document.createElement('meta');m.name='theme-color';m.content=c;` +
   `document.head.appendChild(m)}catch(e){}`;

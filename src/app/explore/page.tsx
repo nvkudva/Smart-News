@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { StoryCard, variantFor } from '@/components/StoryCard';
+import { CategoryTile, PlaceTile } from '@/components/ExploreTiles';
 import { TabBar } from '@/components/TabBar';
 import { getByCategory, getByCountry, getByPlace, getCategoryFacets, getPlaceFacets } from '@/lib/library';
 import { getPlaces } from '@/lib/places';
+import { slug } from '@/lib/taxonomy';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,9 +28,9 @@ export default async function Explore({
     return (
       <>
         <main className="shell">
-          <div className="pagehead">
-            <Link href="/explore" className="kicker" style={{ textDecoration: 'none' }}>← Explore</Link>
-            <h1 style={{ marginTop: 8 }}>{title}</h1>
+          <div className="pagehead exploretint" data-cat={category ? slug(category) : undefined}>
+            <Link href="/explore" className="kicker exploreback">← Explore</Link>
+            <h1 className="exploretitle">{title}</h1>
             <p>{stories.length} {stories.length === 1 ? 'story' : 'stories'} in the last 48 hours</p>
           </div>
           <div className="feed">
@@ -50,33 +52,27 @@ export default async function Explore({
           <p>Everything covered in the last 48 hours, by subject and by place.</p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="explorestack">
+          <section className="exploresec">
             <div className="label">Categories</div>
             <div className="tiles">
               {categories.map((c) => (
-                <Link key={c.category} href={`/explore?category=${encodeURIComponent(c.category)}`} className="tile">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <h3>{c.category}</h3>
-                    <span className="tile__n">{c.stories}</span>
-                  </div>
-                  {c.lead && <p>{c.lead.headline}</p>}
-                </Link>
+                <CategoryTile key={c.category} name={c.category} stories={c.stories} lead={c.lead} />
               ))}
             </div>
           </section>
 
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div className="label">Places</div>
-            <div className="chips">
-              {places.map((p) => (
-                <Link key={p.place_id} href={`/explore?place=${encodeURIComponent(p.place_id)}`} className="chip">
-                  {p.label}
-                  <span style={{ opacity: 0.5, fontWeight: 500 }}>{p.stories}</span>
-                </Link>
-              ))}
-            </div>
-          </section>
+          {places.length > 0 && (
+            <section className="exploresec">
+              <div className="label">Places</div>
+              <div className="exploreplaces">
+                {places.map((p) => (
+                  <PlaceTile key={p.place_id} placeId={p.place_id} label={p.label}
+                             kind={p.kind} stories={p.stories} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </main>
       <TabBar active="explore" />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { paintChrome } from '@/lib/boot';
+import { paintChrome, resolveMode, MODE_KEY } from '@/lib/boot';
 
 // Repeated rather than imported from lib/boot: the root layout is a server
 // component and reads BOOT from there, and pulling the same module into the
@@ -34,7 +34,9 @@ export function ThemeControl() {
     setTheme(v);
     if (v === 'frost') delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = v;
-    paintChrome(v);
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(MODE_KEY); } catch { /* auto is fine */ }
+    paintChrome(v, resolveMode(stored));
     try {
       if (v === 'frost') localStorage.removeItem(KEY);
       else localStorage.setItem(KEY, v);

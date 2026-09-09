@@ -23,6 +23,8 @@
   --shadow:        0 1px 2px rgba(30,38,60,0.04), 0 10px 26px -10px rgba(30,38,60,0.14);
   --rule:          oklch(0.90 0.008 258);
   --ring:          oklch(0.48 0.15 252);
+  /* What sits on top of an accent fill — inverts with the mode, not the theme. */
+  --on-accent:     oklch(0.99 0 0);
   /* The bar sat at white on a near-white ground and disappeared. It takes
      the accent's hue, a few steps down in lightness, so it reads as its own
      surface rather than as a lighter patch of the page. */
@@ -128,6 +130,35 @@
 :root[data-theme="pastel"] .card .plate {
   background: linear-gradient(150deg,
               oklch(0.86 0.105 var(--cat-h)), oklch(0.91 0.065 var(--cat-h)));
+}
+
+/* The same hue system, read the other way up: at night the category tint is a
+   lit edge on a dark card rather than a wash on a pale one, and the type over
+   it has to come back light or the whole card inverts except its words. */
+:root[data-theme="pastel"][data-mode="dark"] .card {
+  background: linear-gradient(152deg,
+              oklch(0.30 0.055 var(--cat-h) / 0.92),
+              oklch(0.22 0.030 var(--cat-h) / 0.80));
+  border-color: oklch(0.42 0.060 var(--cat-h) / 0.55);
+  box-shadow: 0 18px 44px -22px oklch(0.10 0.04 var(--cat-h) / 0.80);
+}
+:root[data-theme="pastel"][data-mode="dark"] .card .kicker { color: oklch(0.80 0.085 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .card .meta   { color: oklch(0.72 0.040 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .card .plate {
+  background: linear-gradient(150deg,
+              oklch(0.38 0.070 var(--cat-h)), oklch(0.30 0.045 var(--cat-h)));
+}
+:root[data-theme="pastel"][data-mode="dark"] .catlink { color: oklch(0.60 0.075 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .catlink[data-active="true"],
+:root[data-theme="pastel"][data-mode="dark"] .catlink[aria-current="page"] {
+  color: oklch(0.86 0.130 var(--cat-h));
+}
+:root[data-theme="pastel"][data-mode="dark"] .subpill { color: oklch(0.72 0.070 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .subpill[data-active="true"],
+:root[data-theme="pastel"][data-mode="dark"] .subpill[aria-current="page"] {
+  color: oklch(0.90 0.110 var(--cat-h));
+  background: oklch(0.32 0.060 var(--cat-h));
+  border-color: oklch(0.44 0.075 var(--cat-h));
 }
 
 html { background: var(--ground); }
@@ -370,7 +401,7 @@ body {
   -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
   color: var(--ink-2);
 }
-.savebtn[data-saved="true"] { background: var(--accent); border-color: transparent; color: #fff; }
+.savebtn[data-saved="true"] { background: var(--accent); border-color: transparent; color: var(--on-accent); }
 .savebtn:disabled { opacity: .55; }
 
 .tile {
@@ -378,18 +409,21 @@ body {
   border-radius: var(--r-lg); padding: 15px 16px 14px; text-decoration: none; color: inherit;
   background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--shadow);
 }
-.tile__n { font-size: var(--t-1); color: var(--ink-3); }
-.tile h3 { margin: 0; font-size: var(--t-5); font-weight: 650; letter-spacing: -0.014em; }
+.tile__n { font-size: var(--t-2); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.tile h3 { margin: 0; font-size: var(--t-5); font-weight: 650; letter-spacing: -0.016em; text-wrap: balance; }
 .tile p  { margin: 0; font-size: var(--t-2); line-height: 1.42; color: var(--ink-2);
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 11px; }
+/* Two up on a phone. The old auto-fill collapsed to one column under 240px of
+   content width, which turned an index meant to be scanned into a list. */
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 600px) { .tiles { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 11px; } }
 
 .chip {
   display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px;
   border-radius: 17px; font-size: var(--t-2); font-weight: 600; text-decoration: none;
   background: rgba(255,255,255,0.55); border: 1px solid var(--glass-edge); color: var(--ink-2);
 }
-.chip[data-on="true"] { background: var(--ink); border-color: transparent; color: oklch(0.97 0.005 250); }
+.chip[data-on="true"] { background: var(--ink); border-color: transparent; color: var(--ground); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
 @media (pointer: coarse) {
@@ -405,7 +439,7 @@ body {
 .btn {
   height: 42px; padding: 0 20px; border-radius: var(--r-md); cursor: pointer;
   font: inherit; font-size: var(--t-3); font-weight: 650; border: none;
-  background: var(--accent); color: #fff;
+  background: var(--accent); color: var(--on-accent);
 }
 .pagehead { padding: 28px 4px 18px; }
 .pagehead h1 { margin: 0; font-size: var(--t-9); line-height: 1.05; font-weight: 700; letter-spacing: -0.028em; }
@@ -673,6 +707,19 @@ body {
   .catlink:active, .expdot__hit:active, .btn:active, .pinchip:active { transform: none; }
 }
 
+/* The one control in the header that is not a destination. Sized to the 44pt
+   target with an icon well inside it, so it reads as quiet next to the pin. */
+.modetoggle {
+  flex: 0 0 auto; width: 44px; height: 44px; margin-right: -8px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; border: none; background: none; cursor: pointer;
+  color: var(--ink-2);
+  transition: transform .18s cubic-bezier(.32,.72,0,1), color .18s ease;
+}
+.modetoggle:active { transform: scale(.9); }
+@media (hover: hover) { .modetoggle:hover { color: var(--ink); } }
+@media (prefers-reduced-motion: reduce) { .modetoggle:active { transform: none; } }
+
 /* ── Update banner ─────────────────────────────────────────────────────────
    Sits above the dock rather than over the header: it is an offer, not an
    interruption, and the reader can ignore it for as long as they like. */
@@ -683,7 +730,10 @@ body {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 10px 10px 14px;
   border-radius: var(--r-md); border: 1px solid var(--bar-edge);
-  background: var(--bar);
+  /* Near the ground rather than the dock's tint: the header sits under the page
+     and should read as the page's own edge, where the dock is a floating object
+     on top of it. Derived so it follows the mode without a second token. */
+  background: color-mix(in oklab, var(--ground) 84%, transparent);
   -webkit-backdrop-filter: blur(28px) saturate(190%); backdrop-filter: blur(28px) saturate(190%);
   box-shadow: 0 12px 30px -12px rgba(30, 38, 60, .45);
   animation: updatebar-in .32s cubic-bezier(.22, .7, .25, 1) both;
@@ -693,14 +743,13 @@ body {
 .updatebar__go {
   flex: 0 0 auto; height: 32px; padding: 0 14px; border-radius: var(--r-sm);
   border: none; cursor: pointer; font: inherit; font-size: var(--t-2); font-weight: 650;
-  background: var(--accent); color: #fff;
+  background: var(--accent); color: var(--on-accent);
 }
 .updatebar__go[disabled] { opacity: .6; cursor: default; }
 .updatebar__x {
   flex: 0 0 auto; width: 32px; height: 32px; padding: 0; border: none; border-radius: var(--r-sm);
   background: none; cursor: pointer; color: var(--ink-3); font-size: var(--t-2);
 }
-:root[data-theme="ambient"] .updatebar__go { color: oklch(0.22 0.03 42); }
 /* With a side rail the dock is not below, so the banner returns to the corner. */
 :root[data-nav="side"] .updatebar {
   left: calc(var(--rail) + 16px); right: 16px; bottom: 16px; margin: 0;
@@ -1013,7 +1062,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .framing__side {
   align-self: flex-start; font-size: var(--t-1); font-weight: 700;
   letter-spacing: .07em; text-transform: uppercase;
-  padding: 2px 8px; border-radius: var(--r-sm); color: oklch(0.97 0.005 250);
+  padding: 2px 8px; border-radius: var(--r-sm); color: var(--ground);
 }
 .framing__side[data-side="left"]   { background: oklch(0.52 0.115 268); }
 .framing__side[data-side="centre"] { background: oklch(0.48 0.045 196); }
@@ -1148,7 +1197,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding-block: calc(10px + env(safe-area-inset-top)) 10px;
   padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--bar);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
   backdrop-filter: blur(28px) saturate(190%);
   border-bottom: 1px solid var(--glass-edge);
@@ -1222,81 +1271,161 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   font-weight: 600; letter-spacing: -0.008em;
 }
 :root[data-theme="broadsheet"] .plate { border-radius: 3px; border-color: var(--rule); }
-:root[data-theme="broadsheet"] .appbar { background: rgba(250, 247, 241, 0.78); }
 
 
+/* Ember, in the light. The same warm family the dark mode uses, read off paper
+   rather than off a lit screen — a theme is a hue family now, not a time of day. */
 :root[data-theme="ambient"] {
+  --ground:        oklch(0.980 0.012 76);
+  --ink:           oklch(0.23 0.020 44);
+  --ink-2:         oklch(0.48 0.020 44);
+  --ink-3:         oklch(0.57 0.018 44);
+  --kicker:        oklch(0.52 0.09 56);
+  --kicker-near:   oklch(0.46 0.09 158);
+  --kicker-new:    oklch(0.50 0.11 44);
+  --accent:        oklch(0.52 0.13 48);
+  --glass:         oklch(0.995 0.010 70 / 0.62);
+  --glass-edge:    oklch(0.94 0.020 70 / 0.85);
+  --glass-warm:    linear-gradient(140deg, rgba(255,251,242,0.76), rgba(255,245,232,0.54));
+  --plate:         linear-gradient(150deg, oklch(0.88 0.055 58), oklch(0.91 0.035 30));
+  --shadow:        0 1px 2px rgba(60,40,24,0.05), 0 10px 26px -10px rgba(60,40,24,0.16);
+  --rule:          oklch(0.90 0.016 66);
+  --ring:          oklch(0.52 0.13 48);
+  --track:         oklch(0.89 0.022 66);
+  --bar:           oklch(0.905 0.038 66 / 0.78);
+  --bar-edge:      oklch(0.80 0.055 62 / 0.90);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Dark mode
+
+   A second axis, not a fifth theme. BOOT resolves the reader's choice — or the
+   system's, when they have not made one — into an explicit data-mode before the
+   first paint, so every rule below can test one attribute and no token set has
+   to be written twice for the auto case.
+
+   Each block redefines only what a dark ground changes. Geometry, type and the
+   category hues are the theme's, and they are the same in both modes.
+   ───────────────────────────────────────────────────────────────────────── */
+:root[data-mode="dark"] {
+  --ground:        oklch(0.165 0.014 262);
+  --ink:           oklch(0.97 0.003 258);
+  --ink-2:         oklch(0.74 0.008 258);
+  --ink-3:         oklch(0.66 0.008 258);
+  --kicker:        oklch(0.78 0.06 258);
+  --kicker-near:   oklch(0.85 0.07 158);
+  --kicker-new:    oklch(0.87 0.08 74);
+  --accent:        oklch(0.80 0.11 254);
+  --on-accent:     oklch(0.20 0.02 258);
+  --glass:         rgba(255, 255, 255, 0.075);
+  --glass-edge:    rgba(255, 255, 255, 0.12);
+  --glass-warm:    linear-gradient(140deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045));
+  --plate:         linear-gradient(150deg, oklch(0.34 0.045 258), oklch(0.27 0.040 296));
+  --shadow:        0 18px 44px -22px rgba(0, 0, 0, 0.70);
+  --rule:          rgba(255, 255, 255, 0.10);
+  --ring:          oklch(0.80 0.11 254);
+  --track:         rgba(255, 255, 255, 0.14);
+  --bar:           oklch(0.225 0.024 262 / 0.76);
+  --bar-edge:      oklch(0.40 0.035 262 / 0.70);
+}
+
+:root[data-theme="pastel"][data-mode="dark"] {
+  --ground:        oklch(0.170 0.018 274);
+  --accent:        oklch(0.80 0.13 274);
+  --ring:          oklch(0.80 0.13 274);
+  --kicker:        oklch(0.79 0.07 274);
+  --plate:         linear-gradient(150deg, oklch(0.35 0.055 274), oklch(0.28 0.045 320));
+  --bar:           oklch(0.235 0.030 274 / 0.78);
+  --bar-edge:      oklch(0.42 0.048 274 / 0.70);
+}
+
+:root[data-theme="broadsheet"][data-mode="dark"] {
+  --ground:        oklch(0.155 0.008 76);
+  --ink:           oklch(0.94 0.006 76);
+  --ink-2:         oklch(0.72 0.008 76);
+  --ink-3:         oklch(0.63 0.008 76);
+  --kicker:        oklch(0.76 0.07 62);
+  --accent:        oklch(0.78 0.12 36);
+  --ring:          oklch(0.78 0.12 36);
+  --glass:         transparent;
+  --glass-edge:    rgba(255, 255, 255, 0.14);
+  --glass-warm:    none;
+  --plate:         linear-gradient(150deg, oklch(0.32 0.020 78), oklch(0.26 0.016 78));
+  --shadow:        none;
+  --rule:          rgba(255, 255, 255, 0.13);
+  --bar:           oklch(0.215 0.012 76 / 0.90);
+  --bar-edge:      rgba(255, 255, 255, 0.16);
+}
+
+/* Ember at night: the palette this whole mode was originally written for. */
+:root[data-theme="ambient"][data-mode="dark"] {
   --ground:        oklch(0.155 0.016 42);
   --ink:           oklch(0.97 0.004 48);
   --ink-2:         oklch(0.74 0.010 48);
-  --track:         rgba(255, 255, 255, 0.14);
   --ink-3:         oklch(0.66 0.010 48);
   --kicker:        oklch(0.78 0.07 66);
   --kicker-near:   oklch(0.86 0.07 158);
   --kicker-new:    oklch(0.88 0.08 68);
   --accent:        oklch(0.82 0.10 72);
+  --on-accent:     oklch(0.22 0.03 42);
+  --ring:          oklch(0.82 0.10 72);
   --glass:         rgba(255, 255, 255, 0.085);
   --glass-edge:    rgba(255, 255, 255, 0.13);
   --glass-warm:    linear-gradient(140deg, rgba(255,255,255,0.11), rgba(255,255,255,0.05));
   --plate:         linear-gradient(150deg, oklch(0.36 0.055 44), oklch(0.27 0.045 18));
-  --shadow:        0 18px 44px -22px rgba(0, 0, 0, 0.70);
-  --rule:          rgba(255, 255, 255, 0.10);
-  --ring:          oklch(0.82 0.10 72);
   --bar:           oklch(0.235 0.030 44 / 0.88);
   --bar-edge:      oklch(0.40 0.045 48 / 0.70);
 }
-:root[data-theme="ambient"] .wash i:nth-child(1) { background: oklch(0.62 0.14 62); opacity: .30; }
-:root[data-theme="ambient"] .wash i:nth-child(2) { background: oklch(0.50 0.16 18); opacity: .30; }
-:root[data-theme="ambient"] .wash i:nth-child(3) { background: oklch(0.52 0.09 108); opacity: .26; }
-:root[data-theme="ambient"] .card {
+:root[data-mode="dark"] .wash i:nth-child(1) { background: oklch(0.62 0.14 62); opacity: .30; }
+:root[data-mode="dark"] .wash i:nth-child(2) { background: oklch(0.50 0.16 18); opacity: .30; }
+:root[data-mode="dark"] .wash i:nth-child(3) { background: oklch(0.52 0.09 108); opacity: .26; }
+:root[data-mode="dark"] .card {
   background: linear-gradient(155deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045));
 }
 /* Every surface A wrote as translucent white has to come back the other way. */
-:root[data-theme="ambient"] .panel,
-:root[data-theme="ambient"] .chip,
-:root[data-theme="ambient"] .pinchip,
-:root[data-theme="ambient"] .savebtn,
-:root[data-theme="ambient"] .relrow,
-:root[data-theme="ambient"] .subpill[data-active="true"],
-:root[data-theme="ambient"] .subpill[aria-current="page"] {
+:root[data-mode="dark"] .panel,
+:root[data-mode="dark"] .chip,
+:root[data-mode="dark"] .pinchip,
+:root[data-mode="dark"] .savebtn,
+:root[data-mode="dark"] .relrow,
+:root[data-mode="dark"] .subpill[data-active="true"],
+:root[data-mode="dark"] .subpill[aria-current="page"] {
   background: rgba(255, 255, 255, 0.075);
   border-color: var(--glass-edge);
   color: var(--ink);
 }
-:root[data-theme="ambient"] .appbar { background: rgba(26, 18, 13, 0.72); }
 
-:root[data-theme="ambient"] .plate { border-color: rgba(255, 255, 255, 0.10); }
+:root[data-mode="dark"] .plate { border-color: rgba(255, 255, 255, 0.10); }
+
+/* The wash is a set of pale blobs lighting a pale ground. Unchanged on a dark
+   one they read as four lamps behind the page, so they dim to a glow instead. */
+:root[data-mode="dark"] .wash i { opacity: .18; filter: blur(96px); }
+:root[data-mode="dark"] .wash { opacity: .5; }
 
 /* The surfaces theme A wrote as opaque white, which no token reaches: the text
    over them all resolves to a near-white ink, so each one has to come back the
    other way explicitly or it renders white on white. */
-:root[data-theme="ambient"] .expdot__tip,
-:root[data-theme="ambient"] .picker__menu {
-  background: oklch(0.24 0.02 42); border-color: var(--glass-edge);
+:root[data-mode="dark"] .expdot__tip,
+:root[data-mode="dark"] .picker__menu {
+  /* Lifted off the ground rather than a fixed colour: these float above the
+     page, and the page is a different hue in each of the four themes. */
+  background: color-mix(in oklab, var(--ink) 8%, var(--ground));
+  border-color: var(--glass-edge);
 }
-:root[data-theme="ambient"] .field input[type="text"] {
+:root[data-mode="dark"] .field input[type="text"] {
   background: rgba(255, 255, 255, 0.07); border-color: var(--glass-edge); color: var(--ink);
 }
-:root[data-theme="ambient"] .field input::placeholder { color: var(--ink-3); }
+:root[data-mode="dark"] .field input::placeholder { color: var(--ink-3); }
 @media (hover: hover) {
-  :root[data-theme="ambient"] .picker__opt:hover { background: rgba(255, 255, 255, 0.09); }
+  :root[data-mode="dark"] .picker__opt:hover { background: rgba(255, 255, 255, 0.09); }
 }
-/* The blanket ambient .chip rule above is (0,3,0) and out-specifies
+/* The blanket dark .chip rule above is (0,3,0) and out-specifies
    .chip[data-on="true"] at (0,2,0), which left a selected chip and an unselected
    one pixel-identical. Selected has to be restated at the same weight. */
-:root[data-theme="ambient"] .chip[data-on="true"] {
-  background: var(--accent); border-color: transparent; color: oklch(0.22 0.03 42);
+:root[data-mode="dark"] .chip[data-on="true"] {
+  background: var(--accent); border-color: transparent; color: var(--on-accent);
 }
-/* The ember accent is a light colour; white on it is unreadable. */
-:root[data-theme="ambient"] .btn,
-:root[data-theme="ambient"] .savebtn[data-saved="true"] { color: oklch(0.22 0.03 42); }
-:root[data-theme="ambient"] .reelsbtn {
-  background:
-    radial-gradient(115% 115% at 32% 26%, rgba(255,255,255,.55), rgba(255,255,255,0) 56%),
-    linear-gradient(158deg, oklch(0.82 0.125 82), oklch(0.67 0.155 56) 46%, oklch(0.53 0.145 28));
-  color: oklch(0.20 0.03 42);
-}
-:root[data-theme="ambient"] .tabbar {
+:root[data-mode="dark"] .tabbar {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02) 46%, rgba(255,255,255,0)),
     var(--bar);
@@ -1336,3 +1465,194 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   :root[data-slide] .substrip,
   :root[data-slide] .shell > .panel { animation-name: none; }
 }
+
+/* ── Explore ───────────────────────────────────────────────────────────── */
+/* The hue map again, off the theme selector this time: on Explore the colour is
+   the index's organising idea rather than a tint the Pastel theme opts into, so
+   a category has to say its hue in every theme. Themes that set their own
+   [data-cat] hues still win — they carry a :root in the selector. */
+.exploretint                      { --cat-h: 252; }
+.exploretint[data-cat="top"]           { --cat-h: 252; }
+.exploretint[data-cat="local"]         { --cat-h: 158; }
+.exploretint[data-cat="national"]      { --cat-h: 62; }
+.exploretint[data-cat="international"] { --cat-h: 232; }
+.exploretint[data-cat="world"]         { --cat-h: 252; }
+.exploretint[data-cat="india"]         { --cat-h: 62; }
+.exploretint[data-cat="politics"]      { --cat-h: 305; }
+.exploretint[data-cat="business"]      { --cat-h: 210; }
+.exploretint[data-cat="technology"]    { --cat-h: 278; }
+.exploretint[data-cat="science"]       { --cat-h: 195; }
+.exploretint[data-cat="health"]        { --cat-h: 355; }
+.exploretint[data-cat="sports"]        { --cat-h: 150; }
+.exploretint[data-cat="entertainment"] { --cat-h: 330; }
+.exploretint[data-cat="climate"]       { --cat-h: 128; }
+
+.explorestack { display: flex; flex-direction: column; gap: 26px; }
+.exploresec   { display: flex; flex-direction: column; gap: 12px; }
+
+/* The hue arrives as a wash laid over --glass rather than as a fixed pastel, so
+   the same one declaration tints white glass on the light ground and dark glass
+   at night; the type stays on the ink tokens and never has to be re-picked. */
+.exploretile {
+  min-height: 104px; justify-content: flex-start; padding: 13px 13px 12px;
+  background: linear-gradient(150deg,
+              oklch(0.62 0.17 var(--cat-h) / 0.28),
+              oklch(0.62 0.17 var(--cat-h) / 0.09)),
+              var(--glass);
+  border-color: oklch(0.62 0.15 var(--cat-h) / 0.30);
+}
+.exploretile__top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.exploretile h3 { color: var(--ink); }
+.exploretile p  { color: var(--ink-2); }
+
+/* Places keep the tiles' grid and tokens but drop the fill and the shadow: a
+   place is a filter over the same stories, not another subject, and a hairline
+   row says that without a second vocabulary of shapes. */
+.exploreplaces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 600px) { .exploreplaces { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
+.exploreplace {
+  display: flex; align-items: center; gap: 9px; min-height: 52px;
+  padding: 8px 12px; border-radius: var(--r-md); text-decoration: none;
+  background: var(--glass); border: 1px solid var(--rule); color: var(--ink);
+}
+.exploreplace__pin  { flex: none; color: var(--accent); }
+.exploreplace__name { display: flex; flex-direction: column; min-width: 0; }
+.exploreplace__name b {
+  font-size: var(--t-3); font-weight: 650; letter-spacing: -0.012em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.exploreplace__name small {
+  font-size: var(--t-1); font-weight: 500; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.exploreplace__n {
+  margin-left: auto; font-size: var(--t-2); font-weight: 650;
+  font-variant-numeric: tabular-nums; color: var(--ink-3);
+}
+
+/* The filtered head answers the tile that was tapped, so it repeats that tile's
+   hue; the unfiltered index leaves --cat-h at its default and reads as ink. */
+.exploreback  { display: inline-block; text-decoration: none; }
+.exploretitle { margin-top: 8px; }
+.pagehead.exploretint[data-cat] .exploretitle { color: oklch(0.56 0.170 var(--cat-h)); }
+
+.exploretile:focus-visible, .exploreplace:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+@media (pointer: coarse) { .exploreplace { min-height: 56px; } }
+
+/* ── Settings ──────────────────────────────────────────────────────────────
+   A grouped inset list. Rows share one surface and are parted by a hairline
+   instead of by a gap, so a screen of controls reads as one object rather than
+   as a stack of cards. The three preference controls are other people's
+   components and each renders its own .panel; rather than ask them to render
+   something different, a panel that finds itself inside a group is reshaped
+   into a row here. Every rule is specific enough to outrank the dark-mode
+   surface rules, which reach .panel and .chip through :root[data-mode].
+   ───────────────────────────────────────────────────────────────────────── */
+.setpage    { display: flex; flex-direction: column; gap: 24px; }
+.setsection { display: flex; flex-direction: column; gap: 8px; }
+.sethead {
+  margin: 0; padding: 0 14px;
+  font-size: var(--t-1); font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+/* The footer text under a group, where iOS puts the sentence a row has no room
+   for. Outside the surface on purpose: it is about the group, not in it. */
+.setnote { margin: 2px 0 0; padding: 0 14px; font-size: var(--t-2); line-height: 1.5; color: var(--ink-3); }
+.setnote code { font-size: var(--t-1); }
+
+.setgroup {
+  display: flex; flex-direction: column;
+  border-radius: var(--r-lg); overflow: hidden;
+  background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(30px) saturate(185%); backdrop-filter: blur(30px) saturate(185%);
+  /* .shell > .panel carried this and no longer matches: the page still has to
+     scroll under a finger that comes down on a row. */
+  touch-action: pan-y pinch-zoom;
+}
+.setgroup > * + * { border-top: 1px solid var(--rule); }
+
+.setrow {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 44px; padding: 9px 14px;
+}
+.setrow--stack { flex-direction: column; align-items: stretch; gap: 9px; }
+.setrow__title {
+  font-size: var(--t-4); font-weight: 600; letter-spacing: -0.01em; color: var(--ink);
+}
+
+/* A panel inside a group is a row: the card it draws for itself would be a
+   second surface on top of the one the group already provides. */
+.setsection .setgroup > .panel {
+  padding: 11px 14px 13px; gap: 7px;
+  border: 0; border-radius: 0; box-shadow: none; background: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.setsection .setgroup > .panel > .label {
+  font-size: var(--t-4); font-weight: 600; letter-spacing: -0.01em;
+  text-transform: none; color: var(--ink);
+}
+.setsection .setgroup > .panel > p { font-size: var(--t-2); line-height: 1.45; color: var(--ink-3); }
+
+/* Those panels each offer one choice from a short closed set, which is a
+   segmented control, not a scatter of pills: one track, equal segments, and
+   the row underneath it stays quiet. */
+.setgroup > .panel > .chips {
+  gap: 3px; padding: 3px;
+  border-radius: var(--r-md); background: var(--track); border: 1px solid var(--glass-edge);
+}
+.setgroup > .panel > .chips > .chip {
+  flex: 1 1 auto; justify-content: center;
+  height: 34px; padding: 0 10px; border-radius: calc(var(--r-md) - 3px);
+  background: transparent; border-color: transparent; color: var(--ink-2);
+}
+.setgroup > .panel > .chips > .chip[data-on="true"] {
+  background: var(--accent); border-color: transparent; color: var(--on-accent);
+}
+
+.setchips { display: flex; flex-wrap: wrap; gap: 7px; }
+.setchips .chip { cursor: pointer; }
+.setchips .chip input { margin: 0; accent-color: var(--accent); }
+
+.setinput {
+  height: 36px; padding: 0 11px; border-radius: var(--r-sm);
+  font: inherit; font-size: var(--t-3); color: var(--ink);
+  background: color-mix(in oklab, var(--ink) 8%, var(--ground));
+  border: 1px solid var(--glass-edge);
+}
+/* The country box holds two letters, so it is sized for two letters. */
+.setinput--code { margin-left: auto; width: 74px; text-align: center; text-transform: uppercase; }
+
+/* The picker brings its own .field, whose caption-sized label reads as a hint
+   rather than as the title of the row it now heads. */
+.setgroup .setrow .field > label { font-size: var(--t-4); font-weight: 600; color: var(--ink); }
+
+/* The submit is the group's last row rather than a button floating under it —
+   the one place on the page where a tap changes what is stored on the server. */
+.setsave {
+  width: 100%; height: 46px; padding: 0; border-radius: 0;
+  background: var(--accent); color: var(--on-accent);
+}
+
+.setstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.setstat  { display: flex; flex-direction: column; gap: 1px; padding: 10px 14px; }
+.setstat b {
+  font-size: var(--t-7); font-weight: 700; letter-spacing: -0.028em;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.setstat span {
+  font-size: var(--t-1); font-weight: 650; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+@media (min-width: 600px) { .setstats { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+/* The rows look tight; the targets inside them are not. 40px here would have
+   read as tighter still, but this selector outranks the sheet's own coarse
+   pointer bump on .chip, so anything under 44 silently un-fixes every control
+   on the one page that is nothing but controls. */
+@media (pointer: coarse) {
+  .setgroup > .panel > .chips > .chip { min-height: 44px; }
+  .setinput { min-height: 44px; }
+}
+.setsave:focus-visible, .setinput:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }

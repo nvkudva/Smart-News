@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Pin } from './icons';
+import { ModeToggle } from './Mode';
 
 const KEY = 'sn_here';
 
@@ -42,6 +43,7 @@ export function HeaderAside() {
         <span className="pinchip__i"><Pin size={12} /></span>
         <span className="pinchip__t">{here || 'Local'}</span>
       </Link>
+      <ModeToggle />
     </div>
   );
 }
