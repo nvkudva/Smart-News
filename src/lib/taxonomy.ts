@@ -28,6 +28,9 @@ export type Matchable = { headline: string; crux: string | null; category: strin
 
 export type SubCount = { name: string; slug: string; count: number };
 
+/** How many topic pills a scope category shows before the strip stops helping. */
+const SCOPE_SUB_LIMIT = 5;
+
 const sub = (name: string, keywords: readonly string[]): SubCategory =>
   ({ name, slug: slug(name), keywords });
 
@@ -182,9 +185,17 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
   if (cat.kind === 'scope') {
     const seen = new Map<string, number>();
     for (const s of stories) seen.set(s.category, (seen.get(s.category) ?? 0) + 1);
-    return CATEGORIES
+    const present = CATEGORIES
       .map((name) => ({ name, slug: slug(name), count: seen.get(name) ?? 0 }))
       .filter((s) => s.count > 0);
+    // A scope's subs are the ten topics, and on a busy day nine of them qualify —
+    // a second strip as long as the first, saying the same words. The thinnest
+    // are dropped by count, then declared order is restored so the pills keep
+    // their places instead of reshuffling as the feed moves under them.
+    const keep = new Set(
+      [...present].sort((a, b) => b.count - a.count).slice(0, SCOPE_SUB_LIMIT).map((s) => s.slug),
+    );
+    return present.filter((s) => keep.has(s.slug));
   }
 
   const texts = stories.map(searchText);
