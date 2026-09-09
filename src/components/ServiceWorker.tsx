@@ -12,9 +12,19 @@ export function ServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     // Not in development. Turbopack reuses chunk names, so a cache-first rule
     // written for content-hashed production output serves yesterday's CSS.
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    //
+    // Keyed off the build, not the hostname: a phone on the LAN reaches the dev
+    // server at 192.168.x.x, which is neither localhost nor 127.0.0.1, so it
+    // registered the worker and then ate its own stale chunks — the exact
+    // failure the paragraph above describes, on the one device it was hardest
+    // to notice from. The caches go too; unregistering alone leaves the stored
+    // chunks to be served to the next registration.
+    if (process.env.NODE_ENV !== 'production') {
       navigator.serviceWorker.getRegistrations()
         .then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+      if ('caches' in window) {
+        caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+      }
       return;
     }
     const register = () => navigator.serviceWorker.register('/sw.js').catch(() => {});
