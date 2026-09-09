@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { BOOT } from '@/lib/boot';
 import { AppHeader } from '@/components/AppHeader';
 import { ServiceWorker } from '@/components/ServiceWorker';
+import { UpdateBanner } from '@/components/UpdateBanner';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppHeader />
         {children}
         <ServiceWorker />
+        <UpdateBanner />
       </body>
     </html>
   );
