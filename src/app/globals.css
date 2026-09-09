@@ -20,8 +20,8 @@
   /* The bar sat at white on a near-white ground and disappeared. It takes
      the accent's hue, a few steps down in lightness, so it reads as its own
      surface rather than as a lighter patch of the page. */
-  --bar:           oklch(0.928 0.030 252 / 0.86);
-  --bar-edge:      oklch(0.86 0.038 252 / 0.90);
+  --bar:           oklch(0.860 0.048 252 / 0.76);
+  --bar-edge:      oklch(0.78 0.060 252 / 0.90);
 }
 
 /* Pastel — a tinted Frosted Stack. The same geometry with the glass coloured: a
@@ -29,17 +29,19 @@
    of subject rather than one white column. Hues are the card's only variable;
    everything structural stays on theme A's tokens. */
 :root[data-theme="pastel"] {
-  /* Cream ground, so the bar goes the other way round the wheel. */
-  --bar:        oklch(0.925 0.036 268 / 0.88);
-  --bar-edge:   oklch(0.85 0.045 268 / 0.90);
-  --ground:     oklch(0.980 0.010 95);
-  --glass:      oklch(0.985 0.012 250 / 0.62);
-  --glass-edge: oklch(0.955 0.020 250 / 0.85);
-  --rule:       oklch(0.91 0.014 258);
+  /* A cool near-white ground: the cards carry all the colour, so the page
+     under them stays out of the way instead of adding a warm cast of its own. */
+  --bar:        oklch(0.865 0.072 268 / 0.78);
+  --bar-edge:   oklch(0.76 0.090 268 / 0.90);
+  --ground:     oklch(0.977 0.004 258);
+  --accent:     oklch(0.50 0.165 268);
+  --glass:      oklch(0.990 0.010 258 / 0.66);
+  --glass-edge: oklch(0.965 0.016 258 / 0.85);
+  --rule:       oklch(0.905 0.012 258);
 }
-:root[data-theme="pastel"] .wash i:nth-child(1) { background: oklch(0.90 0.060 252); }
-:root[data-theme="pastel"] .wash i:nth-child(2) { background: oklch(0.92 0.055 340); }
-:root[data-theme="pastel"] .wash i:nth-child(3) { background: oklch(0.93 0.050 95); }
+:root[data-theme="pastel"] .wash i:nth-child(1) { background: oklch(0.86 0.105 262); }
+:root[data-theme="pastel"] .wash i:nth-child(2) { background: oklch(0.88 0.100 335); }
+:root[data-theme="pastel"] .wash i:nth-child(3) { background: oklch(0.90 0.085 175); }
 
 /* Hue per category. --cat-h is the one thing that changes; a card's fill, edge
    and kicker and a strip's type are all derived from it, so a new category
@@ -67,36 +69,36 @@
    distinction, not opacity: a wash of grey over a hue reads as a disabled
    control, where a paler version of the same hue reads as further away. */
 :root[data-theme="pastel"] .catlink {
-  color: oklch(0.78 0.055 var(--cat-h)); opacity: 1;
+  color: oklch(0.74 0.090 var(--cat-h)); opacity: 1;
 }
 :root[data-theme="pastel"] .catlink[data-active="true"],
 :root[data-theme="pastel"] .catlink[aria-current="page"] {
-  color: oklch(0.43 0.135 var(--cat-h));
+  color: oklch(0.44 0.185 var(--cat-h));
 }
 /* Sub-categories inherit the section's hue from the strip around them; they are
    a refinement of that choice, not a set of choices of their own. */
-:root[data-theme="pastel"] .subpill { color: oklch(0.58 0.075 var(--cat-h)); }
+:root[data-theme="pastel"] .subpill { color: oklch(0.58 0.110 var(--cat-h)); }
 :root[data-theme="pastel"] .subpill[data-active="true"],
 :root[data-theme="pastel"] .subpill[aria-current="page"] {
-  color: oklch(0.36 0.115 var(--cat-h));
-  background: oklch(0.945 0.045 var(--cat-h));
-  border-color: oklch(0.87 0.055 var(--cat-h));
+  color: oklch(0.37 0.160 var(--cat-h));
+  background: oklch(0.930 0.075 var(--cat-h));
+  border-color: oklch(0.84 0.095 var(--cat-h));
 }
 
 :root[data-theme="pastel"] .card {
   background: linear-gradient(152deg,
-              oklch(0.955 0.045 var(--cat-h) / 0.80),
-              oklch(0.985 0.020 var(--cat-h) / 0.66));
-  border-color: oklch(0.925 0.045 var(--cat-h) / 0.90);
-  box-shadow: 0 1px 2px oklch(0.55 0.05 var(--cat-h) / 0.06),
-              0 10px 26px -12px oklch(0.55 0.09 var(--cat-h) / 0.28);
+              oklch(0.935 0.080 var(--cat-h) / 0.86),
+              oklch(0.975 0.038 var(--cat-h) / 0.72));
+  border-color: oklch(0.895 0.075 var(--cat-h) / 0.90);
+  box-shadow: 0 1px 2px oklch(0.55 0.08 var(--cat-h) / 0.08),
+              0 10px 26px -12px oklch(0.55 0.14 var(--cat-h) / 0.34);
 }
-:root[data-theme="pastel"] .card .kicker { color: oklch(0.50 0.095 var(--cat-h)); }
-:root[data-theme="pastel"] .card .meta   { color: oklch(0.56 0.045 var(--cat-h)); }
+:root[data-theme="pastel"] .card .kicker { color: oklch(0.49 0.150 var(--cat-h)); }
+:root[data-theme="pastel"] .card .meta   { color: oklch(0.55 0.070 var(--cat-h)); }
 /* The placeholder plate is the one surface with no photo to carry the hue. */
 :root[data-theme="pastel"] .card .plate {
   background: linear-gradient(150deg,
-              oklch(0.90 0.055 var(--cat-h)), oklch(0.93 0.035 var(--cat-h)));
+              oklch(0.86 0.105 var(--cat-h)), oklch(0.91 0.065 var(--cat-h)));
 }
 
 html { background: var(--ground); }
@@ -166,34 +168,50 @@ body {
 .plate--hero  { height: 168px; border-radius: 15px; margin: -2px -2px 2px; }
 .plate--thumb { width: 76px; height: 76px; border-radius: 14px; flex: 0 0 auto; }
 
+/* A floating glass pill rather than a full-width band: the disc breaks the top
+   edge, so the bar needs its own outline all the way round for the break to
+   read as deliberate. Every colour comes off --bar/--accent, so the dock
+   re-tints with the theme instead of carrying its own palette. */
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  height: calc(76px + env(safe-area-inset-bottom));
-  display: flex; align-items: flex-start; justify-content: space-between;
-  padding: 13px 20px env(safe-area-inset-bottom); overflow: visible;
-  background: var(--bar); border-top: 1px solid var(--bar-edge);
+  position: fixed; left: 12px; right: 12px; z-index: 20;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  height: 66px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; overflow: visible;
+  border-radius: 30px; border: 1px solid var(--bar-edge);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04) 46%, rgba(255,255,255,0)),
+    var(--bar);
   -webkit-backdrop-filter: blur(34px) saturate(190%); backdrop-filter: blur(34px) saturate(190%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(30,38,60,.06),
+              0 14px 36px -14px rgba(30,38,60,.42);
 }
-.tabbar > .inner { max-width: 430px; width: 100%; margin: 0 auto; display: flex; align-items: flex-start; justify-content: space-between; }
+.tabbar > .inner { max-width: 430px; width: 100%; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
 .tab { width: 52px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ink-3); text-decoration: none; }
 .tab[data-active="true"], .tab[aria-current="page"] { color: var(--accent); }
 .tab span { font-size: 9.5px; font-weight: 600; }
+.tab[data-active="true"] span, .tab[aria-current="page"] span { font-weight: 750; }
 
+/* One ball, no halo: the disc is a lit sphere in the accent's own hue, so it
+   re-tints with the theme without needing a ring to separate it from the bar. */
 .reelsbtn {
-  width: 56px; height: 56px; margin-top: -24px; flex: 0 0 auto; border-radius: 50%;
-  background: linear-gradient(180deg, oklch(0.32 0.016 258), oklch(0.22 0.014 258));
-  border: 1px solid rgba(255,255,255,0.14);
-  /* the 3px white ring is what separates the disc from the bar now that the
-     coloured glow is gone; an opaque fill cannot blur, so no backdrop-filter */
-  box-shadow: 0 1px 2px rgba(30,38,60,.10), 0 10px 24px -8px rgba(24,30,48,.38),
-              0 0 0 3px rgba(255,255,255,.72), inset 0 1px 0 rgba(255,255,255,.16);
+  position: relative;
+  width: 54px; height: 54px; margin-top: -24px; flex: 0 0 auto; border-radius: 50%;
+  background:
+    radial-gradient(115% 115% at 32% 26%, rgba(255,255,255,.70), rgba(255,255,255,0) 56%),
+    linear-gradient(150deg, color-mix(in oklab, var(--accent) 62%, white),
+                            var(--accent) 58%,
+                            color-mix(in oklab, var(--accent) 78%, black));
+  border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.5),
+              0 8px 20px -8px color-mix(in oklab, var(--accent) 66%, transparent);
   display: flex; align-items: center; justify-content: center; color: #fff;
   transition: transform .18s cubic-bezier(.32,.72,0,1), box-shadow .18s;
 }
 .reelsbtn:active {
   transform: scale(.955);
-  box-shadow: 0 1px 2px rgba(30,38,60,.10), 0 5px 12px -6px rgba(24,30,48,.34),
-              0 0 0 3px rgba(255,255,255,.72);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.5),
+              0 4px 12px -8px color-mix(in oklab, var(--accent) 66%, transparent);
 }
 .reelsbtn svg { transform: translateY(-1px); }
 
@@ -233,7 +251,13 @@ body {
    Wider viewports get MORE columns, not bigger cards.
    ───────────────────────────────────────────────────────────────────────── */
 
-.feed { display: flex; flex-direction: column; gap: 11px; }
+/* The feed owns the horizontal axis so CategorySwipe can follow the finger:
+   without this the browser spends the first several pixels deciding whether the
+   gesture is a pan of its own, and the drag starts late or not at all. Only the
+   feed, never .shell — an ancestor's pan-y would intersect away the category
+   strip's pan-x and kill its scrolling. */
+.feed { display: flex; flex-direction: column; gap: 11px; touch-action: pan-y; }
+.shell > .panel { touch-action: pan-y; }
 
 /* Variants. `row` is the mobile default declared above; these add to it. */
 .card--stack { flex-direction: column; }
@@ -258,12 +282,10 @@ body {
   .plate--hero { aspect-ratio: 16 / 9; height: auto; }
 
 
-  /* The tab bar becomes a floating dock rather than a full-width band. */
+  /* The dock stops stretching and takes a fixed width, centred. */
   .tabbar {
     left: 50%; transform: translateX(-50%); right: auto;
     width: 462px; bottom: 16px; height: 68px;
-    border-radius: 26px; border: 1px solid var(--bar-edge);
-    box-shadow: 0 10px 34px -12px rgba(30, 38, 60, 0.30);
   }
 
   /* Discrete blurred circles are sized for a 430px column; stretched across a
@@ -973,15 +995,17 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 :root[data-nav="bottom"] body { padding-left: 0; }
 :root[data-nav="bottom"] .shell { padding-bottom: 110px; }
 :root[data-nav="bottom"] .tabbar {
-  left: 0; right: 0; top: auto; bottom: 0; transform: none;
-  width: auto; height: calc(76px + env(safe-area-inset-bottom)); border-radius: 0;
-  flex-direction: row; align-items: flex-start; justify-content: space-between;
-  padding: 13px 20px env(safe-area-inset-bottom); gap: 0;
-  border: none; border-top: 1px solid var(--bar-edge);
-  box-shadow: none;
+  left: 12px; right: 12px; top: auto; transform: none;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  width: auto; height: 66px; border-radius: 30px;
+  flex-direction: row; align-items: center; justify-content: space-between;
+  padding: 0 12px; gap: 0;
+  border: 1px solid var(--bar-edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(30,38,60,.06),
+              0 14px 36px -14px rgba(30,38,60,.42);
 }
 :root[data-nav="bottom"] .tabbar > .inner {
-  flex-direction: row; align-items: flex-start; justify-content: space-between;
+  flex-direction: row; align-items: center; justify-content: space-between;
   gap: 0; max-width: 430px;
 }
 :root[data-nav="bottom"] .railhead { display: none; }
@@ -998,12 +1022,16 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 :root[data-nav="bottom"] .tab[data-active="true"],
 :root[data-nav="bottom"] .tab[aria-current="page"] { background: none; }
 :root[data-nav="bottom"] .reelsbtn {
-  width: 56px; height: 56px; margin: -24px 0 0; border-radius: 50%;
+  width: 54px; height: 54px; margin: -24px 0 0; border-radius: 50%;
   gap: 0; padding: 0; justify-content: center; flex: 0 0 auto;
-  background: linear-gradient(180deg, oklch(0.32 0.016 258), oklch(0.22 0.014 258));
-  border: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 1px 2px rgba(30,38,60,.10), 0 10px 24px -8px rgba(24,30,48,.38),
-              0 0 0 3px rgba(255,255,255,.72), inset 0 1px 0 rgba(255,255,255,.16);
+  background:
+    radial-gradient(115% 115% at 32% 26%, rgba(255,255,255,.70), rgba(255,255,255,0) 56%),
+    linear-gradient(150deg, color-mix(in oklab, var(--accent) 62%, white),
+                            var(--accent) 58%,
+                            color-mix(in oklab, var(--accent) 78%, black));
+  border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.5),
+              0 8px 20px -8px color-mix(in oklab, var(--accent) 66%, transparent);
 }
 :root[data-nav="bottom"] .reelsbtn svg { transform: translateY(-1px); width: auto; height: auto; }
 :root[data-nav="bottom"] .reelsbtn__label { display: none; }
@@ -1151,8 +1179,16 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 :root[data-theme="ambient"] .btn,
 :root[data-theme="ambient"] .savebtn[data-saved="true"] { color: oklch(0.22 0.03 42); }
 :root[data-theme="ambient"] .reelsbtn {
-  background: linear-gradient(158deg, oklch(0.82 0.125 82), oklch(0.67 0.155 56) 46%, oklch(0.53 0.145 28));
+  background:
+    radial-gradient(115% 115% at 32% 26%, rgba(255,255,255,.55), rgba(255,255,255,0) 56%),
+    linear-gradient(158deg, oklch(0.82 0.125 82), oklch(0.67 0.155 56) 46%, oklch(0.53 0.145 28));
   color: oklch(0.20 0.03 42);
+}
+:root[data-theme="ambient"] .tabbar {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02) 46%, rgba(255,255,255,0)),
+    var(--bar);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 14px 36px -14px rgba(0,0,0,.55);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -1163,33 +1199,28 @@ button.chip { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
    and the strip's selected title carries a smaller echo of it, so the two read
    as one movement rather than as a page change that happened to be animated.
    ───────────────────────────────────────────────────────────────────────── */
-@keyframes slide-from-right { from { opacity: 0; transform: translate3d(6%, 0, 0); } }
-@keyframes slide-from-left  { from { opacity: 0; transform: translate3d(-6%, 0, 0); } }
-@keyframes title-from-right { from { opacity: 0; transform: translate3d(14px, 0, 0); } }
-@keyframes title-from-left  { from { opacity: 0; transform: translate3d(-14px, 0, 0); } }
+@keyframes slide-from-right { from { opacity: 0; transform: translate3d(16%, 0, 0); } }
+@keyframes slide-from-left  { from { opacity: 0; transform: translate3d(-16%, 0, 0); } }
 
-/* Longhands, not the shorthand: `animation: 320ms ... both` with no name is
-   valid and does nothing the minifier can see, so it drops it and the slide
-   plays for zero seconds. */
+/* The strip is the page's title bar and does not move: only the content below
+   it travels, and it is the same set of elements CategorySwipe drags with the
+   finger, so the release hands straight over to this animation. */
 :root[data-slide] .feed,
+:root[data-slide] .substrip,
 :root[data-slide] .shell > .panel {
-  animation-duration: 320ms; animation-timing-function: cubic-bezier(.22, .7, .25, 1);
-  animation-fill-mode: both;
-}
-:root[data-slide] .catlink[data-active="true"] {
-  animation-duration: 280ms; animation-timing-function: cubic-bezier(.22, .7, .25, 1);
+  animation-duration: 300ms; animation-timing-function: cubic-bezier(.22, .7, .25, 1);
   animation-fill-mode: both;
 }
 
 :root[data-slide="next"] .feed,
+:root[data-slide="next"] .substrip,
 :root[data-slide="next"] .shell > .panel { animation-name: slide-from-right; }
 :root[data-slide="prev"] .feed,
+:root[data-slide="prev"] .substrip,
 :root[data-slide="prev"] .shell > .panel { animation-name: slide-from-left; }
-:root[data-slide="next"] .catlink[data-active="true"] { animation-name: title-from-right; }
-:root[data-slide="prev"] .catlink[data-active="true"] { animation-name: title-from-left; }
 
 @media (prefers-reduced-motion: reduce) {
   :root[data-slide] .feed,
-  :root[data-slide] .shell > .panel,
-  :root[data-slide] .catlink[data-active="true"] { animation-name: none; }
+  :root[data-slide] .substrip,
+  :root[data-slide] .shell > .panel { animation-name: none; }
 }

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: 'World news, clustered from many sources and summarised into one paragraph.',
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'smartnews', statusBarStyle: 'default' },
-  icons: { icon: '/icon.svg', apple: '/icon.svg' },
+  icons: { icon: ['/icon.svg', '/icon-192.png'], apple: '/icon-192.png' },
 };
 
 export const viewport: Viewport = {
