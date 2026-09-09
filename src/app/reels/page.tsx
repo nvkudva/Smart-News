@@ -28,7 +28,7 @@ export default async function Reels() {
           <div className="reel__scrim" />
 
           <div className="reel__body">
-            <div className="kicker" style={{ color: 'rgba(255,255,255,0.82)' }}>
+            <div className="kicker">
               <span>{s.category}</span>
               {s.place && <><span className="sep">·</span><span>{s.place}</span></>}
               {/* A developing story's age carries two more segments. Kept as one

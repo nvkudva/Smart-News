@@ -10,16 +10,27 @@ export function ago(ts: number): string {
   return h < 48 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
 }
 
+/** A cluster gathering coverage six hours after it broke is still running. */
+const running = (s: { first_seen: number; last_seen: number }) =>
+  s.last_seen - s.first_seen > 6 * 3_600_000;
+
 /**
- * last_seen moves every time another article joins the cluster, so on its own it
- * dates a three-day-old running story as breaking. Age is when the story broke;
- * a cluster still gathering coverage a shift later says so instead.
+ * The full account, for the one page with room for it. first_seen is when the
+ * story broke; last_seen moves every time another article joins the cluster, so
+ * on its own it dates a three-day-old running story as breaking.
  */
 export function storyAge(s: { first_seen: number; last_seen: number }): string {
-  const age = ago(s.first_seen);
-  return s.last_seen - s.first_seen > 6 * 3_600_000
-    ? `${age} · developing · updated ${ago(s.last_seen)}`
-    : age;
+  return running(s) ? `${ago(s.first_seen)} · updated ${ago(s.last_seen)}` : ago(s.first_seen);
+}
+
+/**
+ * One time value, for a card foot that has to survive on a single line beside
+ * a place name. A running story reports its latest movement and says so — the
+ * word is what stops `3h ago` on a three-day-old story reading as breaking —
+ * and everything else reports when it broke. The detail page carries both.
+ */
+export function storyWhen(s: { first_seen: number; last_seen: number }): string {
+  return running(s) ? `updated ${ago(s.last_seen)}` : ago(s.first_seen);
 }
 
 export type Variant = 'lead' | 'stack' | 'compact';
@@ -51,16 +62,13 @@ function Kicker({ story }: { story: Story }) {
   // The canonical label says which Delhi and which Hyderabad; the raw string is
   // all an unresolved cluster has, and it still reads exactly as it did before.
   const place = story.place_id ? (story.place_label ?? story.place) : story.place;
-  return (
-    <div className="kicker">
-      <span>{story.category}</span>
-      {place && <><span className="sep">·</span><span className="kicker__place">{place}</span></>}
-    </div>
-  );
+  // No category: on a section page it repeats the title overhead, and on Top it
+  // was the half of the line that got ellipsed to a single letter.
+  return <div className="kicker">{place && <span className="kicker__place">{place}</span>}</div>;
 }
 
 export function StoryCard({ story, variant = 'compact' }: { story: Story; variant?: Variant }) {
-  const meta = `${story.source_count} source${story.source_count === 1 ? '' : 's'} · ${storyAge(story)}`;
+  const meta = `${story.source_count} source${story.source_count === 1 ? '' : 's'} · ${storyWhen(story)}`;
   // A grey placeholder is fine at 76px and dreadful at 350px, so wide cards
   // without a photo drop the plate and take the room back as text.
   const textOnly = !story.image_url && variant !== 'compact';

@@ -419,7 +419,7 @@ body {
      from the reels stack the same as from every other route. */
   position: fixed; inset: 0; z-index: 10; overflow-y: auto;
   scroll-snap-type: y mandatory; overscroll-behavior-y: contain;
-  background: oklch(0.185 0.026 272);
+  background: var(--ground);
 }
 .reels__close {
   position: fixed; top: max(18px, env(safe-area-inset-top)); left: 14px; z-index: 3;
@@ -438,32 +438,42 @@ body {
 .reel__photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .reel__scrim {
   position: absolute; inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,.34) 0 14%, rgba(0,0,0,0) 34%,
-              oklch(0.185 0.026 272 / .82) 55%, oklch(0.185 0.026 272) 62%);
+  /* Only the veil under the close button, which is over a photograph at every
+     theme and so stays dark. The ground below is the body's own. */
+  background: linear-gradient(to bottom, rgba(0,0,0,.34) 0 14%, rgba(0,0,0,0) 32%);
 }
 .reel__body {
-  position: relative; padding: 0 20px 92px; display: flex; flex-direction: column; gap: 11px;
-  max-width: 680px;
+  position: relative; padding: 14px 20px 92px; display: flex; flex-direction: column; gap: 11px;
+  max-width: 680px; background: var(--ground);
+}
+/* The fade that joins the body to the photograph above it. Anchored to the body
+   rather than to a percentage of the screen: the summary sets how tall the body
+   is, so a fixed stop lands mid-sentence on a long story and below the text on
+   a short one. */
+.reel__body::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 72px;
+  background: linear-gradient(to bottom, transparent, var(--ground));
+  pointer-events: none;
 }
 /* The reel body is a narrow text column (40% of the viewport at 1280+), and a
    developing story's age line is wider than it on its own. A card foot is a
    single line by design, so it ellipses; here there is vertical room, so the
    row wraps at the separators rather than clipping category and place too. */
-.reel__body .kicker { flex-wrap: wrap; row-gap: 3px; overflow: visible; }
+.reel__body .kicker { flex-wrap: wrap; row-gap: 3px; overflow: visible; color: var(--kicker); }
 .reel__body .kicker > span { overflow: visible; }
 .reel__body h2 {
   margin: 0; font-size: var(--t-8); line-height: 1.18; font-weight: 700;
-  letter-spacing: -0.026em; color: #fff; text-wrap: pretty;
+  letter-spacing: -0.026em; color: var(--ink); text-wrap: pretty;
 }
 /* Unclamped. A reel is one story on a whole screen; there is nothing else on
    it competing for the room, and a summary cut mid-sentence is the one thing
    this surface cannot afford. */
 .reel__body p {
-  margin: 0; font-size: var(--t-4); line-height: 1.56; color: rgba(255,255,255,0.80); text-wrap: pretty;
+  margin: 0; font-size: var(--t-4); line-height: 1.56; color: var(--ink-2); text-wrap: pretty;
 }
 .reel__actions { display: flex; gap: 9px; margin-top: 4px; flex-wrap: wrap; }
 .reel .savebtn {
-  background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.22); color: #fff;
+  background: var(--glass); border-color: var(--glass-edge); color: var(--ink);
 }
 .reel .savebtn[data-saved="true"] { background: var(--accent); border-color: transparent; }
 
@@ -473,11 +483,13 @@ body {
 @media (min-width: 1280px) {
   .reel__photo { inset: 0 0 0 38%; }
   .reel__scrim {
-    background: linear-gradient(to right, oklch(0.185 0.026 272) 0 38%,
-                oklch(0.185 0.026 272 / .92) 48%, oklch(0.185 0.026 272 / .55) 60%,
+    background: linear-gradient(to right, var(--ground) 0 38%,
+                color-mix(in oklab, var(--ground) 92%, transparent) 48%,
+                color-mix(in oklab, var(--ground) 55%, transparent) 60%,
                 rgba(0,0,0,0) 78%);
   }
   .reel { justify-content: center; }
+  .reel__body::before { content: none; }
   .reel__body { padding: 0 40px 0 56px; max-width: 40%; gap: 14px; }
   .reel__body h2 { font-size: var(--t-9); }
   .reel__body p { font-size: var(--t-5); }
