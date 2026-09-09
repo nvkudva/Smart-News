@@ -52,6 +52,11 @@
   --r-md: 14px;
   --r-lg: 20px;
   --r-xl: 30px;
+
+  /* One column width for the whole app. The header and the dock read it too, so
+     the wordmark, the feed and the tabs all land on the same two edges — change
+     it here and the page changes together instead of in three places. */
+  --content: 100%;
 }
 
 /* Pastel — a tinted Frosted Stack. The same geometry with the glass coloured: a
@@ -178,7 +183,7 @@ body {
 .wash i:nth-child(3) { bottom: 8%; left: -40px; width: 320px; height: 320px; background: oklch(0.91 0.055 85); opacity: .55; }
 
 .shell {
-  width: 100%; margin: 0 auto; padding-bottom: 96px;
+  width: 100%; max-width: var(--content); margin: 0 auto; padding-bottom: 96px;
   padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
 }
 
@@ -332,7 +337,8 @@ body {
 .card--text p  { -webkit-line-clamp: 6; }
 
 @media (min-width: 560px) {
-  .shell { max-width: 760px; padding-bottom: 110px; }
+  :root { --content: 760px; }
+  .shell { padding-bottom: 110px; }
 
   .feed {
     display: grid;
@@ -365,7 +371,8 @@ body {
 }
 
 @media (min-width: 700px) {
-  .shell { max-width: 1080px; padding: 0 24px 110px; }
+  :root { --content: 1080px; }
+  .shell { padding: 0 24px 110px; }
   .plate--thumb { width: 84px; height: 84px; }
 
   /* Thirty live backdrop-filters over a fixed wash stalls the compositor and
@@ -376,7 +383,8 @@ body {
 }
 
 @media (min-width: 1024px) {
-  .shell { max-width: 1200px; padding: 0 28px 110px; }
+  :root { --content: 1200px; }
+  .shell { padding: 0 28px 110px; }
   .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   /* At three columns a two-wide lead strands a ragged hole beside it, so it
      takes the whole row instead. Four columns has room for two cards beside. */
@@ -384,7 +392,7 @@ body {
 }
 
 @media (min-width: 1440px) {
-  .shell { max-width: 1400px; }
+  :root { --content: 1400px; }
   .feed { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
   .cardwrap:has(.card--lead) { grid-column: span 2; }
 }
@@ -1194,9 +1202,8 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    The wordmark lived in the rail; with the rail gone this is where it goes. */
 .appbar {
   position: sticky; top: 0; z-index: 15;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; justify-content: center;
   padding-block: calc(10px + env(safe-area-inset-top)) 10px;
-  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
   background: var(--bar);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
   backdrop-filter: blur(28px) saturate(190%);
@@ -1207,6 +1214,17 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   font-weight: 700; font-size: var(--t-8); letter-spacing: -0.02em;
   color: var(--ink); text-decoration: none;
 }
+.appbar__inner {
+  width: 100%; max-width: var(--content); margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+}
+/* The gutter has to be the shell's own at every step, not a value of its own:
+   the column is centred, so the wordmark's distance from the card edge is
+   exactly the difference between these two paddings. */
+@media (min-width: 700px)  { .appbar__inner { padding-inline: 24px; } }
+@media (min-width: 1024px) { .appbar__inner { padding-inline: 28px; } }
+
 .appbar__aside {
   display: flex; align-items: center; gap: 10px; min-width: 0;
 }
@@ -1218,7 +1236,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 @media (max-width: 439.98px) { .appbar__date { display: none; } }
 
 @media (min-width: 700px) {
-  .appbar { padding-left: 28px; padding-right: 28px; }
   .appbar__brand { font-size: var(--t-9); }
   .appbar__date { font-size: var(--t-2); }
 }

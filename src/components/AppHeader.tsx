@@ -13,11 +13,16 @@ import { Logo } from './Logo';
 export function AppHeader() {
   return (
     <header className="appbar">
-      <Link href="/" className="appbar__brand" aria-label="smartnews home">
-        <Logo size={31} tone="ink" />
-        <span>smartnews</span>
-      </Link>
-      <HeaderAside />
+      {/* The bar bleeds to the window edge; its contents do not. The inner
+          column is the same --content the shell and the dock use, so the
+          wordmark sits above the first card rather than out at the corner. */}
+      <div className="appbar__inner">
+        <Link href="/" className="appbar__brand" aria-label="smartnews home">
+          <Logo size={31} tone="ink" />
+          <span>smartnews</span>
+        </Link>
+        <HeaderAside />
+      </div>
     </header>
   );
 }

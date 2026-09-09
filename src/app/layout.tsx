@@ -11,7 +11,39 @@ export const metadata: Metadata = {
   description: 'World news, clustered from many sources and summarised into one paragraph.',
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'smartnews', statusBarStyle: 'default' },
-  icons: { icon: ['/icon.svg', '/icon-192.png'], apple: '/icon-192.png' },
+  icons: {
+    icon: ['/icon.svg', '/icon-192.png'],
+    apple: '/icon-192.png',
+    // iOS generates no splash of its own: it shows one of these or a white
+    // rectangle, and it will only show one whose media query matches the device
+    // exactly. Hence a file per screen rather than one scaled image.
+    other: [
+    { rel: 'apple-touch-startup-image', url: '/splash/1290x2796.png',
+      media: '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/1284x2778.png',
+      media: '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/1242x2688.png',
+      media: '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/1179x2556.png',
+      media: '(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/1170x2532.png',
+      media: '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/1125x2436.png',
+      media: '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/1242x2208.png',
+      media: '(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/828x1792.png',
+      media: '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/750x1334.png',
+      media: '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/1620x2160.png',
+      media: '(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/1668x2388.png',
+      media: '(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' },
+    { rel: 'apple-touch-startup-image', url: '/splash/2048x2732.png',
+      media: '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
