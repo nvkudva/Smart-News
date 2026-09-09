@@ -2,8 +2,9 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { TabBar } from '@/components/TabBar';
 import { CategoryStrip } from '@/components/CategoryStrip';
-import { SectionFeed, SectionSkeleton } from '@/components/SectionFeed';
-import { categoryBySlug } from '@/lib/taxonomy';
+import { CategoryPager } from '@/components/CategoryPager';
+import { SectionSkeleton } from '@/components/SectionFeed';
+import { TAXONOMY, categoryBySlug } from '@/lib/taxonomy';
 
 /**
  * A static shell. Everything above the rows — the strip, the highlight, the
@@ -34,7 +35,8 @@ export default async function SectionPage({ params }: { params: Promise<{ cat: s
             the rest of the page stay static rather than opting into a render
             per request just to learn the query string. */}
         <Suspense fallback={<SectionSkeleton />}>
-          <SectionFeed cat={category.slug} name={category.name} />
+          <CategoryPager active={category.slug}
+                         sections={TAXONOMY.map((c) => ({ slug: c.slug, name: c.name }))} />
         </Suspense>
       </main>
       <TabBar active="home" />

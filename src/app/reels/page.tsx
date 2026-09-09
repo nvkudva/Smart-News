@@ -27,7 +27,23 @@ export default async function Reels() {
           </div>
           <div className="reel__scrim" />
 
+          {/* The whole reel opens the story. It is a full screen given over to
+              one thing, so anything short of the whole surface being the target
+              is a smaller target than the reader expects; the two controls sit
+              above it and keep their own jobs. */}
+          <Link href={`/story/${encodeURIComponent(s.id)}`} className="reel__open"
+                aria-label={`Read: ${s.headline}`} />
+
           <div className="reel__body">
+            <div className="reel__count" aria-hidden><b>{i + 1}</b> / {stories.length}</div>
+            <div className="reel__head">
+              <h2>{s.headline}</h2>
+              <SaveButton clusterId={s.id} initial={savedFlags[i]} iconOnly />
+            </div>
+            <p>{s.crux}</p>
+            {/* Under the summary, not over the headline: it is what the story
+                turned out to be filed as, which is only worth knowing once you
+                have read what the story is. */}
             <div className="kicker">
               <span>{s.category}</span>
               {s.place && <><span className="sep">·</span><span>{s.place}</span></>}
@@ -39,12 +55,9 @@ export default async function Reels() {
                 <span key={part}>{part}</span>,
               ])}
             </div>
-            <h2>{s.headline}</h2>
-            <p>{s.crux}</p>
             <div className="reel__actions">
-              <SaveButton clusterId={s.id} initial={savedFlags[i]} />
-              <Link href={`/story/${encodeURIComponent(s.id)}`} className="savebtn">
-                {s.source_count} sources · Read
+              <Link href={`/story/${encodeURIComponent(s.id)}`} className="reel__sources">
+                {s.source_count} sources
               </Link>
             </div>
           </div>

@@ -2,8 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getStory } from '@/lib/feed';
 import { CoverageSplit } from '@/components/CoverageSplit';
+import { StoryFraming } from '@/components/StoryFraming';
+import { RelatedCard } from '@/components/RelatedCard';
 import { isSaved } from '@/lib/library';
-import { ago, storyAge } from '@/components/StoryCard';
+import { storyAge } from '@/components/StoryCard';
 import { Back, Photo } from '@/components/icons';
 import { SaveButton } from '@/components/SaveButton';
 import { TabBar } from '@/components/TabBar';
@@ -25,82 +27,84 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   // Two sentences per paragraph reads better than one wall of prose.
   const paragraphs = cluster.crux.split(/(?<=\.)\s+(?=[A-Z])/)
     .reduce<string[][]>((acc, s, i) => { (acc[Math.floor(i / 2)] ??= []).push(s); return acc; }, []);
+  const framing = {
+    left: cluster.framing_left,
+    centre: cluster.framing_centre,
+    right: cluster.framing_right,
+  };
 
   return (
     <>
       <main className="shell">
-        <header style={{ padding: '8px 0 6px', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Link href="/" style={{ width: 34, height: 34, marginLeft: -8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'oklch(0.48 0.11 252)' }} aria-label="Back">
-            <Back />
-          </Link>
-          <span style={{ fontSize: 14.5, fontWeight: 600, color: 'oklch(0.42 0.02 258)' }}>{cluster.category}</span>
+        <header className="story__topbar">
+          <Link href="/" className="story__back" aria-label="Back"><Back /></Link>
+          <span className="story__cat">{cluster.category}</span>
           {/* Top right, opposite the way out. Saving is the one thing you can do
               to this story, and at the foot of the summary it sat below the fold
               on every story long enough to be worth keeping. */}
-          <div style={{ marginLeft: 'auto' }}>
+          <div className="story__save">
             <SaveButton clusterId={cluster.id} initial={await isSaved(cluster.id)} />
           </div>
         </header>
 
         <div className="detail">
-          <div className="detail__main">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <div className="story__head">
+            <div className="story__headtext">
               <div className="kicker">
                 {cluster.place && <><span>{cluster.place}</span><span className="sep">·</span></>}
                 <span>{storyAge(cluster)}</span>
               </div>
-              <h1 style={{ margin: 0, fontSize: 27, lineHeight: 1.16, fontWeight: 700, letterSpacing: '-0.026em', textWrap: 'pretty' }}>
-                {cluster.headline}
-              </h1>
+              <h1 className="story__title">{cluster.headline}</h1>
+              <div className="story__stats">
+                <span>{outlets.length} outlet{outlets.length === 1 ? '' : 's'}</span>
+                <span>{articles.length} article{articles.length === 1 ? '' : 's'}</span>
+              </div>
             </div>
 
             <div className="plate plate--detail">
               {cluster.image_url ? <img src={cluster.image_url} alt="" /> : <Photo size={30} />}
             </div>
+          </div>
 
+          <div className="detail__main">
             <div className="panel">
               <div className="label">What happened</div>
               {paragraphs.map((group, i) => <p key={i}>{group.join(' ')}</p>)}
             </div>
           </div>
 
-          <div className="detail__side">
+          <div className="detail__side story__rail">
+            <h2 className="sectitle">Summarised from</h2>
+            <ul className="sources">
+              {outlets.map((a) => (
+                <li key={a.url}>
+                  <a href={a.url} target="_blank" rel="noreferrer noopener">{a.source}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <section className="story__coverage">
+            {/* The panel keeps the meter and the blindspot note; the framing is
+                nulled out of it and rendered beside it at full width instead. */}
             <CoverageSplit
               coverage={coverage}
               articleCount={articles.length}
-              framing={{
-                left: cluster.framing_left,
-                centre: cluster.framing_centre,
-                right: cluster.framing_right,
-              }}
+              framing={{ left: null, centre: null, right: null }}
             />
+            <StoryFraming framing={framing} />
+          </section>
 
-            {related.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-                <h2 className="sectitle">Related</h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {related.map((r) => (
-                    <Link key={r.id} href={`/story/${encodeURIComponent(r.id)}`} className="relrow">
-                      <div className="relrow__t">{r.headline}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--ink-3)' }}>{r.source_count} sources · {ago(r.last_seen)}</div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 2px' }}>
-              <h2 className="sectitle">Summarised from</h2>
-              <p className="sources">
-                {outlets.map((a, i) => (
-                  <span key={a.url}>
-                    {i > 0 && ' · '}
-                    <a href={a.url} target="_blank" rel="noreferrer noopener">{a.source}</a>
-                  </span>
+          {related.length > 0 && (
+            <section className="story__related">
+              <h2 className="sectitle">Related</h2>
+              <div className="story__relgrid">
+                {related.map((r) => (
+                  <RelatedCard key={r.id} row={r} category={cluster.category} />
                 ))}
-              </p>
-            </div>
-          </div>
+              </div>
+            </section>
+          )}
         </div>
       </main>
       <TabBar />

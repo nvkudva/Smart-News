@@ -307,8 +307,16 @@ body {
   background: var(--rule);
 }
 
-.sources { font-size: var(--t-1); line-height: 1.62; color: oklch(0.53 0.014 258); }
-.sources a { color: var(--accent); text-decoration: none; }
+.sources {
+  margin: 0; padding: 0; list-style: none;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  font-size: var(--t-2); line-height: 1.35; color: var(--ink-3);
+}
+.sources a {
+  display: flex; align-items: center; min-height: 44px; padding: 0 12px;
+  border-radius: var(--r-md); color: var(--accent); text-decoration: none;
+  background: var(--glass); border: 1px solid var(--glass-edge);
+}
 .sources a:hover { text-decoration: underline; }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -410,6 +418,8 @@ body {
   color: var(--ink-2);
 }
 .savebtn[data-saved="true"] { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+.savebtn--icon { width: 38px; padding: 0; justify-content: center; }
+@media (pointer: coarse) { .savebtn--icon { width: 44px; } }
 .savebtn:disabled { opacity: .55; }
 
 .tile {
@@ -493,8 +503,9 @@ body {
    is, so a fixed stop lands mid-sentence on a long story and below the text on
    a short one. */
 .reel__body::before {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 72px;
-  background: linear-gradient(to bottom, transparent, var(--ground));
+  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 104px;
+  background: linear-gradient(to bottom, transparent,
+              color-mix(in oklab, var(--ground) 70%, transparent) 55%, var(--ground));
   pointer-events: none;
 }
 /* The reel body is a narrow text column (40% of the viewport at 1280+), and a
@@ -513,7 +524,36 @@ body {
 .reel__body p {
   margin: 0; font-size: var(--t-4); line-height: 1.56; color: var(--ink-2); text-wrap: pretty;
 }
-.reel__actions { display: flex; gap: 9px; margin-top: 4px; flex-wrap: wrap; }
+/* Headline and its one control on the same line, the control shrink-proof so a
+   long headline wraps under itself rather than squeezing the bookmark away. */
+.reel__head { display: flex; align-items: flex-start; gap: 12px; }
+.reel__head h2 { flex: 1 1 auto; min-width: 0; }
+.reel__head .savebtn--icon { flex: 0 0 auto; margin-top: 2px; }
+
+/* Bottom right and quiet: it is a second way to the same place the whole reel
+   already goes, so it names the thing rather than asking to be pressed. */
+.reel__actions { display: flex; justify-content: flex-end; margin-top: 2px; }
+.reel__sources {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px;
+  font-size: var(--t-2); font-weight: 600; color: var(--ink-3);
+  text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, var(--ink-3) 45%, transparent);
+}
+@media (hover: hover) { .reel__sources:hover { color: var(--ink-2); } }
+
+/* The link covers the reel and the two controls sit above it. The body must NOT
+   carry a z-index of its own: that makes it a stacking context, and its children
+   are then trapped inside it however high they climb, so both controls end up
+   under the link and stop being clickable at all. Left on auto it paints above
+   the photograph by document order and its raised children still outrank the
+   link, which is the whole arrangement. */
+.reel__open { position: absolute; inset: 0; z-index: 3; }
+.reel__head .savebtn--icon, .reel__sources { position: relative; z-index: 4; }
+.reel__count {
+  display: none; font-size: var(--t-1); font-weight: 700; letter-spacing: .08em;
+  color: var(--ink-3); font-variant-numeric: tabular-nums;
+}
+.reel__count b { color: var(--ink); font-weight: 700; }
 .reel .savebtn {
   background: var(--glass); border-color: var(--glass-edge); color: var(--ink);
 }
@@ -522,54 +562,83 @@ body {
 /* The side-by-side split needs real width: at 1024 the text column still lands
    near 290px and the headline wraps to five lines, so the stacked layout holds
    until there is room to do it properly. */
-@media (min-width: 1280px) {
-  .reel__photo { inset: 0 0 0 38%; }
-  .reel__scrim {
-    background: linear-gradient(to right, var(--ground) 0 38%,
-                color-mix(in oklab, var(--ground) 92%, transparent) 48%,
-                color-mix(in oklab, var(--ground) 55%, transparent) 60%,
-                rgba(0,0,0,0) 78%);
+/* Desktop is not the phone screen stretched. The photograph stops being a
+   full-bleed backdrop with the text lying on top of it and becomes a panel
+   beside the text, both inside the same --content column the feed and the header
+   use, so a reel lands on the app's own two edges rather than the window's. */
+@media (min-width: 1024px) {
+  .reel {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr);
+    align-items: center; gap: 44px;
+    width: 100%; max-width: var(--content); margin: 0 auto;
+    /* Clears the header above and the dock below, both of which outrank the
+       stack's z-index and would otherwise sit on the text. */
+    padding: 84px 28px 108px;
   }
-  .reel { justify-content: center; }
+  .reel__photo {
+    position: relative; inset: auto; order: 2;
+    height: min(66dvh, 580px); border-radius: var(--r-lg); overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  /* The scrim exists to give the type a ground when it is over the photograph.
+     Side by side, it has one of its own. */
+  .reel__scrim { display: none; }
+  .reel__body {
+    order: 1; padding: 0; gap: 14px; background: none;
+    max-width: none; justify-self: stretch;
+    /* The summary is unclamped on purpose, and on a short laptop screen the
+       longest of them is a dozen pixels taller than the cell. It scrolls rather
+       than being cut, and the scrollbar only exists on the ones that need it. */
+    max-height: 100%; overflow-y: auto;
+  }
   .reel__body::before { content: none; }
-  .reel__body { padding: 0 40px 0 56px; max-width: 40%; gap: 14px; }
   .reel__body h2 { font-size: var(--t-9); }
-  .reel__body p { font-size: var(--t-5); }
+  .reel__body p { font-size: var(--t-4); max-width: 46ch; }
+  /* Twenty reels page invisibly on a desktop: there is no thumb travelling and
+     no scrollbar inside a snap container worth reading. The count is the only
+     thing that says the stack has a length and a position in it. */
+  .reel__count { display: block; }
 }
 
-@media (min-width: 1600px) {
-  .reel__body { max-width: 38%; padding: 0 48px 0 72px; }
+/* A laptop is wide and short. The gutters are what give way, not the type. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .reel { padding-block: 72px 96px; }
+  .reel__photo { height: min(62dvh, 520px); }
+}
+
+@media (min-width: 1440px) {
+  .reel { gap: 56px; padding: 88px 28px 112px; }
   .reel__body h2 { font-size: var(--t-10); }
+  .reel__body p { font-size: var(--t-5); max-width: 44ch; }
+  .reel__photo { height: min(70dvh, 660px); }
 }
 
 /* ── Story detail ──────────────────────────────────────────────────────── */
 .detail { display: flex; flex-direction: column; gap: 22px; }
 .plate--detail { height: 208px; border-radius: var(--r-md); }
 @media (min-width: 560px) { .plate--detail { aspect-ratio: 16 / 9; height: auto; max-height: 380px; } }
-.relrow {
-  border-radius: 17px; padding: 13px 15px; text-decoration: none; color: inherit;
-  background: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.72);
-  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
-  display: flex; flex-direction: column; gap: 4px;
-}
-.relrow__t { font-size: var(--t-4); font-weight: 620; line-height: 1.3; letter-spacing: -0.012em; }
 
 /* Detail layout lives at the end of the file on purpose: the base `.detail`
    rule above is equal specificity, so these must come after it to win. */
 @media (min-width: 700px) {
   .detail__main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
-  .detail__side { display: flex; flex-direction: column; gap: 22px; }
-  .detail h1 { font-size: var(--t-9) !important; max-width: 18em; }
+  .detail__side { display: flex; flex-direction: column; gap: 14px; }
+  .detail h1 { font-size: var(--t-9); max-width: 18em; }
   .detail .panel p { font-size: var(--t-5); line-height: 1.62; max-width: 62ch; }
 }
 
+/* Named areas rather than source order: the page reads head → summary → how it
+   was covered → related on a phone, and the same five blocks reflow into a
+   masthead, a body-and-rail row, and two full-width bands on a desktop. */
 @media (min-width: 1024px) {
   .detail {
-    display: grid; grid-template-columns: minmax(0, 600px) 320px;
-    gap: 32px; align-items: start;
+    display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-areas: "head head" "main side" "cover cover" "rel rel";
+    column-gap: 36px; row-gap: 34px; align-items: start;
   }
-  .detail__side { position: sticky; top: 32px; }
-  .detail h1 { font-size: var(--t-10) !important; max-width: 14em; }
+  .detail__main { grid-area: main; }
+  .detail__side { grid-area: side; position: sticky; top: 32px; }
+  .detail h1 { font-size: var(--t-10); max-width: 15em; }
 }
 
 /* ── Exploration marker ────────────────────────────────────────────────────
@@ -1041,14 +1110,23 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    a claim the ratings do not make. Same oklch lightness across the three so no
    segment reads as louder than another, and all three clear 4.5:1 on the label.
    ───────────────────────────────────────────────────────────────────────── */
+/* The three lean hues are the sheet's only colours with no token behind them:
+   they name data, not a surface, so they hold across theme and mode. Only their
+   lightness has to move, and mixing toward --ink does that in both directions —
+   darker on a light ground, lighter on a dark one — without a second block. */
+.split, .split__keys, .framing {
+  --side-left:   oklch(0.62 0.115 268);
+  --side-centre: oklch(0.62 0.055 196);
+  --side-right:  oklch(0.62 0.105 52);
+}
 .split {
   display: flex; gap: 3px; height: 8px; border-radius: 4px; overflow: hidden;
   background: var(--track);
 }
 .split__seg { display: block; border-radius: 4px; min-width: 6px; }
-.split__seg[data-side="left"],   .split__dot[data-side="left"]   { background: oklch(0.62 0.115 268); }
-.split__seg[data-side="centre"], .split__dot[data-side="centre"] { background: oklch(0.62 0.055 196); }
-.split__seg[data-side="right"],  .split__dot[data-side="right"]  { background: oklch(0.62 0.105 52); }
+.split__seg[data-side="left"],   .split__dot[data-side="left"]   { background: var(--side-left); }
+.split__seg[data-side="centre"], .split__dot[data-side="centre"] { background: var(--side-centre); }
+.split__seg[data-side="right"],  .split__dot[data-side="right"]  { background: var(--side-right); }
 
 .split__keys { display: flex; flex-wrap: wrap; gap: 12px; }
 .split__key {
@@ -1070,11 +1148,11 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .framing__side {
   align-self: flex-start; font-size: var(--t-1); font-weight: 700;
   letter-spacing: .07em; text-transform: uppercase;
-  padding: 2px 8px; border-radius: var(--r-sm); color: var(--ground);
+  padding: 3px 9px; border-radius: var(--r-sm); color: var(--on-accent);
 }
-.framing__side[data-side="left"]   { background: oklch(0.52 0.115 268); }
-.framing__side[data-side="centre"] { background: oklch(0.48 0.045 196); }
-.framing__side[data-side="right"]  { background: oklch(0.50 0.105 52); }
+.framing__side[data-side="left"]   { background: color-mix(in oklab, var(--side-left) 66%, var(--ink)); }
+.framing__side[data-side="centre"] { background: color-mix(in oklab, var(--side-centre) 66%, var(--ink)); }
+.framing__side[data-side="right"]  { background: color-mix(in oklab, var(--side-right) 66%, var(--ink)); }
 .framing p { font-size: var(--t-2); line-height: 1.55; color: var(--ink-2); }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -1449,40 +1527,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 14px 36px -14px rgba(0,0,0,.55);
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Category slide
-
-   A swipe or a tap sets data-slide on <html> just before the navigation, and
-   whatever mounts next enters from that side. The content carries the distance
-   and the strip's selected title carries a smaller echo of it, so the two read
-   as one movement rather than as a page change that happened to be animated.
-   ───────────────────────────────────────────────────────────────────────── */
-@keyframes slide-from-right { from { opacity: 0; transform: translate3d(16%, 0, 0); } }
-@keyframes slide-from-left  { from { opacity: 0; transform: translate3d(-16%, 0, 0); } }
-
-/* The strip is the page's title bar and does not move: only the content below
-   it travels, and it is the same set of elements CategorySwipe drags with the
-   finger, so the release hands straight over to this animation. */
-:root[data-slide] .feed,
-:root[data-slide] .substrip,
-:root[data-slide] .shell > .panel {
-  animation-duration: 300ms; animation-timing-function: cubic-bezier(.22, .7, .25, 1);
-  animation-fill-mode: both;
-}
-
-:root[data-slide="next"] .feed,
-:root[data-slide="next"] .substrip,
-:root[data-slide="next"] .shell > .panel { animation-name: slide-from-right; }
-:root[data-slide="prev"] .feed,
-:root[data-slide="prev"] .substrip,
-:root[data-slide="prev"] .shell > .panel { animation-name: slide-from-left; }
-
-@media (prefers-reduced-motion: reduce) {
-  :root[data-slide] .feed,
-  :root[data-slide] .substrip,
-  :root[data-slide] .shell > .panel { animation-name: none; }
-}
-
 /* ── Explore ───────────────────────────────────────────────────────────── */
 /* The hue map again, off the theme selector this time: on Explore the colour is
    the index's organising idea rather than a tint the Pastel theme opts into, so
@@ -1673,3 +1717,112 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   .setinput { min-height: 44px; }
 }
 .setsave:focus-visible, .setinput:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Category pager
+
+   Three sections on one track — previous, current, next — with the track held
+   one pane to the left so the middle one is what you see. A swipe moves the
+   track and nothing else, which is why the neighbour is already painted when
+   the finger arrives at it instead of being routed to afterwards.
+   ───────────────────────────────────────────────────────────────────────── */
+.pager {
+  /* Clip, not hidden: hidden on one axis makes the other a scroll container,
+     and a feed that scrolls inside a box of its own is not the page scrolling.
+     The margin/padding pair widens the clip box by the amount a card's shadow
+     spills, so the gutters keep their soft edge and the neighbour's matching
+     padding is all that ever shows through. */
+  margin-inline: -10px;
+  overflow: clip;
+  overflow-clip-margin: 10px;
+  touch-action: pan-y pinch-zoom;
+}
+
+.pagerTrack {
+  display: flex; align-items: flex-start;
+  width: 300%;
+  transform: translate3d(-33.3333%, 0, 0);
+}
+
+.pagerPane { flex: 0 0 33.3333%; min-width: 0; padding-inline: 10px; }
+
+/* A neighbour only ever has to be right for the length of a gesture, and an
+   unbounded one would give the document the tallest section's height whichever
+   section you were actually reading. */
+.pagerPane--side { max-height: 100svh; overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pagerTrack { transition: none !important; }
+}
+
+/* ── Story detail, desktop composition ─────────────────────────────────────
+   The page used to be the phone layout with a rail bolted on, which left the
+   coverage split — the only thing here a feed reader could not show you — as
+   small print in that rail. It is now a full-width band under the summary, and
+   the rail keeps the one thing that genuinely wants to be a narrow list. */
+.story__topbar { display: flex; align-items: center; gap: 4px; padding: 4px 0 6px; }
+.story__back {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; margin-left: -12px; color: var(--accent);
+}
+.story__cat { font-size: var(--t-3); font-weight: 650; color: var(--ink-2); }
+.story__save { margin-left: auto; }
+
+.story__head { display: flex; flex-direction: column; gap: 14px; }
+.story__headtext { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.story__title {
+  margin: 0; font-size: var(--t-8); line-height: 1.16; font-weight: 700;
+  letter-spacing: -0.026em; text-wrap: pretty;
+}
+.story__stats {
+  display: flex; flex-wrap: wrap; gap: 4px 9px;
+  font-size: var(--t-1); font-weight: 650; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.story__stats span + span::before { content: '·'; opacity: .4; margin-right: 9px; }
+
+.story__coverage { display: flex; flex-direction: column; gap: 18px; }
+.story__framings { display: flex; flex-direction: column; gap: 14px; }
+/* A rule in the side's own colour, so a column is identifiable before its badge
+   is read — the badge alone made three columns look like one block of prose. */
+.story__framings .framing {
+  gap: 7px; padding: 2px 0 2px 13px; min-width: 0;
+  border-left: 3px solid var(--side-centre);
+}
+.story__framings .framing:has(.framing__side[data-side="left"])  { border-left-color: var(--side-left); }
+.story__framings .framing:has(.framing__side[data-side="right"]) { border-left-color: var(--side-right); }
+.story__framings .framing p { font-size: var(--t-3); }
+
+.story__related { display: flex; flex-direction: column; gap: 12px; }
+.story__relgrid { display: flex; flex-direction: column; gap: 10px; }
+/* No crux and no thumbnail to balance it, so the headline carries the card and
+   the foot sits on the bottom edge rather than floating under two short lines. */
+.story__rel { justify-content: space-between; min-height: 96px; }
+.story__rel h2 { font-size: var(--t-5); -webkit-line-clamp: 3; }
+
+@media (min-width: 700px) {
+  .story__relgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  /* auto-fit, not three fixed tracks: most stories carry one or two sides,
+     and fixed tracks left the band two-thirds empty on those. */
+  .story__framings { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 360px)); gap: 22px; }
+}
+
+@media (min-width: 1024px) {
+  .story__head {
+    grid-area: head; display: grid; align-items: center; gap: 32px;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 40%);
+  }
+  .story__head .plate--detail { max-height: 288px; }
+  .story__stats { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
+
+  /* The meter and its blindspot note are a fixed-width object; the framing is
+     prose and takes everything left over. */
+  .story__coverage {
+    grid-area: cover; display: grid; align-items: start;
+    grid-template-columns: 340px minmax(0, 1fr); gap: 36px;
+  }
+  .story__related { grid-area: rel; }
+  .story__relgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+}
+.story__sides { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.story__rail { display: flex; flex-direction: column; gap: 12px; }

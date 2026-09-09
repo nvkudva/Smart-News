@@ -2,8 +2,9 @@ import { getFeed } from '@/lib/feed';
 import { StoryCard, variantFor } from '@/components/StoryCard';
 import { TabBar } from '@/components/TabBar';
 import { CategoryStrip } from '@/components/CategoryStrip';
+import { CategoryPager } from '@/components/CategoryPager';
 import { SubcategoryStrip } from '@/components/SubcategoryStrip';
-import { filterBySub, subCategoriesFor } from '@/lib/taxonomy';
+import { TAXONOMY, filterBySub, subCategoriesFor } from '@/lib/taxonomy';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,18 +26,23 @@ export default async function Home({
     <>
       <main className="shell">
         <CategoryStrip active="top" />
-        <SubcategoryStrip cat="top" label="Top" base="/" subs={subs} active={active} />
+        {/* Top is the one section rendered on the server, so it is handed to the
+            pager as its middle pane rather than fetched again on the client —
+            the first paint has to survive the pager being introduced. */}
+        <CategoryPager active="top" sections={TAXONOMY.map((c) => ({ slug: c.slug, name: c.name }))}>
+          <SubcategoryStrip cat="top" label="Top" base="/" subs={subs} active={active} />
 
-        {shown.length === 0 ? (
-          <div className="panel" style={{ marginTop: 8 }}>
-            <div className="label">Nothing yet</div>
-            <p>Run <code>npm run ingest</code> then <code>npm run pipeline</code> to fill the feed.</p>
-          </div>
-        ) : (
-          <div className="feed">
-            {shown.map((s, i) => <StoryCard key={s.id} story={s} variant={variantFor(s, i)} />)}
-          </div>
-        )}
+          {shown.length === 0 ? (
+            <div className="panel" style={{ marginTop: 8 }}>
+              <div className="label">Nothing yet</div>
+              <p>Run <code>npm run ingest</code> then <code>npm run pipeline</code> to fill the feed.</p>
+            </div>
+          ) : (
+            <div className="feed">
+              {shown.map((s, i) => <StoryCard key={s.id} story={s} variant={variantFor(s, i)} />)}
+            </div>
+          )}
+        </CategoryPager>
       </main>
       <TabBar active="home" />
     </>
