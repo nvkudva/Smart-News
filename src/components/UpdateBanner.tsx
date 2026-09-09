@@ -33,7 +33,10 @@ export function UpdateBanner() {
 
     const read = async () => {
       try {
-        const res = await fetch('/BUILD_ID', { cache: 'no-store' });
+        // no-store alone is not enough: it bypasses the browser's cache and
+        // not the CDN's, which served a build-old id for minutes after a
+        // deploy. The query string is what actually reaches the origin.
+        const res = await fetch(`/BUILD_ID?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return null;
         const id = (await res.text()).trim();
         return id && id.length < 128 ? id : null;
