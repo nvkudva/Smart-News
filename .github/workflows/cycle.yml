@@ -4,10 +4,10 @@ name: news cycle
 # new, push the results back. The runner has no disk that survives between runs,
 # so D1 is the durable copy and the local SQLite file is scratch — see
 # scripts/hydrate-d1.ts.
+# GitHub drops most firings of a */15 schedule, so the 15-minute clock lives in
+# a Cloudflare Worker (deploy/cron-worker) that calls workflow_dispatch instead.
 on:
-  schedule:
-    - cron: '*/15 * * * *'
-  workflow_dispatch:          # lets you run it by hand from the Actions tab
+  workflow_dispatch:          # the Worker's trigger, and the Actions tab button
 
 # Two runs sharing one D1 would clobber each other's cluster assignments.
 concurrency:

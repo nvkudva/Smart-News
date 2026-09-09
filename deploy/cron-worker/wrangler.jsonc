@@ -1,0 +1,10 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "smartnews-cycle-cron",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-07",
+  // GitHub drops most firings of a */15 schedule on its own shared runner pool,
+  // so the cron lives here and only asks GitHub to dispatch the run.
+  "triggers": { "crons": ["*/15 * * * *"] },
+  "observability": { "enabled": true }
+}
