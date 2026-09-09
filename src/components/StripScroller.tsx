@@ -76,7 +76,10 @@ export function StripScroller(
         void el.scrollWidth; // flush the new extent before scrolling into it
       }
 
-      el.scrollTo({ left, behavior: navigated ? 'smooth' : 'auto' });
+      // A JS scroll is not reachable by the stylesheet's `scroll-behavior: auto
+      // !important`, so the reduced-motion preference has to be read here.
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollTo({ left, behavior: navigated && !still ? 'smooth' : 'auto' });
       navigated = true;
       markEdges();
     };

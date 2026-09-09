@@ -4,10 +4,12 @@ import { SaveButton } from '@/components/SaveButton';
 import { storyAge } from '@/components/StoryCard';
 import { getReels, isSaved } from '@/lib/library';
 import { TabBar } from '@/components/TabBar';
+import { ReelKeys } from '@/components/ReelKeys';
 
 export const dynamic = 'force-dynamic';
 
-/** Full-screen vertical stack. CSS scroll-snap does the paging — no JS needed. */
+/** Full-screen vertical stack. Scroll-snap pages it for a thumb; ReelKeys does
+ *  the same for a keyboard, which snap alone leaves with nothing but Tab. */
 export default async function Reels() {
   const stories = await getReels(20);
   const savedFlags = await Promise.all(stories.map((s) => isSaved(s.id)));
@@ -15,6 +17,7 @@ export default async function Reels() {
   return (
     <>
     <div className="reels">
+      <ReelKeys />
       <Link href="/" className="reels__close" aria-label="Back to feed"><Back /></Link>
 
       {stories.map((s, i) => (

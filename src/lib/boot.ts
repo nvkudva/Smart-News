@@ -12,8 +12,35 @@
 export const NAV_KEY = 'sn_nav';
 export const THEME_KEY = 'sn_theme';
 
+/**
+ * Each theme's ground, as the browser and standalone chrome need it. Not
+ * derivable from the stylesheet here — this runs before any CSS has loaded —
+ * so the four values are repeated, and `viewport.themeColor` is deliberately
+ * absent from the layout: two sources would race and the loser wins at random.
+ */
+export const THEME_CHROME: Record<string, string> = {
+  frost: '#f7f7fa',
+  pastel: '#f8f8fa',
+  broadsheet: '#f9f6f0',
+  ambient: '#1a120d',
+};
+
+export function paintChrome(theme: string) {
+  const c = THEME_CHROME[theme] ?? THEME_CHROME.frost;
+  let m = document.querySelector('meta[name="theme-color"]');
+  if (!m) {
+    m = document.createElement('meta');
+    m.setAttribute('name', 'theme-color');
+    document.head.appendChild(m);
+  }
+  m.setAttribute('content', c);
+}
+
 export const BOOT =
   `try{var d=document.documentElement,n=localStorage.getItem('${NAV_KEY}');` +
   `if(n==='bottom'||n==='side')d.dataset.nav=n;` +
   `var t=localStorage.getItem('${THEME_KEY}');` +
-  `if(t&&t!=='frost')d.dataset.theme=t}catch(e){}`;
+  `if(t&&t!=='frost')d.dataset.theme=t;` +
+  `var c=${JSON.stringify(THEME_CHROME)}[t||'frost']||'#f7f7fa';` +
+  `var m=document.createElement('meta');m.name='theme-color';m.content=c;` +
+  `document.head.appendChild(m)}catch(e){}`;

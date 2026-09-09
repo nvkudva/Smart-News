@@ -14,7 +14,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#f7f7fa',
+  // themeColor is not declared here on purpose: BOOT writes the meta tag from
+  // the reader's stored theme before first paint, and a static one would race it.
   viewportFit: 'cover',
   width: 'device-width',
   initialScale: 1,
