@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getStory } from '@/lib/feed';
 import { CoverageSplit } from '@/components/CoverageSplit';
 import { StoryFraming } from '@/components/StoryFraming';
-import { RelatedCard } from '@/components/RelatedCard';
+import { StoryCard } from '@/components/StoryCard';
 import { isSaved } from '@/lib/library';
 import { storyAge } from '@/components/StoryCard';
 import { Back, Photo } from '@/components/icons';
@@ -100,7 +100,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
               <h2 className="sectitle">Related</h2>
               <div className="story__relgrid">
                 {related.map((r) => (
-                  <RelatedCard key={r.id} row={r} category={cluster.category} />
+                  <StoryCard key={r.id} story={r} variant="compact" />
                 ))}
               </div>
             </section>

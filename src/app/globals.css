@@ -57,6 +57,10 @@
      the wordmark, the feed and the tabs all land on the same two edges — change
      it here and the page changes together instead of in three places. */
   --content: 100%;
+
+  /* 10 + 44 + 10 of padding and row, plus the hairline. The header is fixed, so
+     the page has to reserve this itself. */
+  --appbar-h: calc(65px + env(safe-area-inset-top));
 }
 
 /* Pastel — a tinted Frosted Stack. The same geometry with the glass coloured: a
@@ -168,6 +172,7 @@
 
 html { background: var(--ground); }
 body {
+  padding-top: var(--appbar-h);
   background: var(--ground);
   color: var(--ink);
   font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
@@ -574,6 +579,11 @@ body {
     /* Clears the header above and the dock below, both of which outrank the
        stack's z-index and would otherwise sit on the text. */
     padding: 84px 28px 108px;
+    /* min-height, not height: the unclamped summary is occasionally taller than
+       a laptop screen, and the alternative — letting the text column scroll —
+       puts a second scroll container under the cursor, which then swallows the
+       wheel and the whole stack stops snapping. A tall reel is simply tall. */
+    height: auto; min-height: 100dvh;
   }
   .reel__photo {
     position: relative; inset: auto; order: 2;
@@ -586,10 +596,6 @@ body {
   .reel__body {
     order: 1; padding: 0; gap: 14px; background: none;
     max-width: none; justify-self: stretch;
-    /* The summary is unclamped on purpose, and on a short laptop screen the
-       longest of them is a dozen pixels taller than the cell. It scrolls rather
-       than being cut, and the scrollbar only exists on the ones that need it. */
-    max-height: 100%; overflow-y: auto;
   }
   .reel__body::before { content: none; }
   .reel__body h2 { font-size: var(--t-9); }
@@ -624,7 +630,7 @@ body {
   .detail__main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
   .detail__side { display: flex; flex-direction: column; gap: 14px; }
   .detail h1 { font-size: var(--t-9); max-width: 18em; }
-  .detail .panel p { font-size: var(--t-5); line-height: 1.62; max-width: 62ch; }
+  .detail .panel p { font-size: var(--t-5); line-height: 1.62; max-width: 78ch; }
 }
 
 /* Named areas rather than source order: the page reads head → summary → how it
@@ -632,13 +638,15 @@ body {
    masthead, a body-and-rail row, and two full-width bands on a desktop. */
 @media (min-width: 1024px) {
   .detail {
-    display: grid; grid-template-columns: minmax(0, 1fr) 320px;
-    grid-template-areas: "head head" "main side" "cover cover" "rel rel";
-    column-gap: 36px; row-gap: 34px; align-items: start;
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "main" "side" "cover" "rel";
+    row-gap: 30px; align-items: start;
   }
   .detail__main { grid-area: main; }
-  .detail__side { grid-area: side; position: sticky; top: 32px; }
-  .detail h1 { font-size: var(--t-10); max-width: 15em; }
+  /* The outlet list stops being a sticky rail beside the summary and becomes a
+     band under it: it is a credit, read once, not a companion to the reading. */
+  .detail__side { grid-area: side; position: static; top: auto; }
+  .detail h1 { font-size: var(--t-10); max-width: none; }
 }
 
 /* ── Exploration marker ────────────────────────────────────────────────────
@@ -807,10 +815,7 @@ body {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 10px 10px 14px;
   border-radius: var(--r-md); border: 1px solid var(--bar-edge);
-  /* Near the ground rather than the dock's tint: the header sits under the page
-     and should read as the page's own edge, where the dock is a floating object
-     on top of it. Derived so it follows the mode without a second token. */
-  background: color-mix(in oklab, var(--ground) 84%, transparent);
+  background: var(--bar);
   -webkit-backdrop-filter: blur(28px) saturate(190%); backdrop-filter: blur(28px) saturate(190%);
   box-shadow: 0 12px 30px -12px rgba(30, 38, 60, .45);
   animation: updatebar-in .32s cubic-bezier(.22, .7, .25, 1) both;
@@ -1279,21 +1284,28 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* ── App header ────────────────────────────────────────────────────────────
    The wordmark lived in the rail; with the rail gone this is where it goes. */
 .appbar {
-  position: sticky; top: 0; z-index: 15;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 15;
   display: flex; justify-content: center;
   padding-block: calc(10px + env(safe-area-inset-top)) 10px;
-  background: var(--bar);
+  /* Near the ground rather than the dock's tint: the header is the page's own
+     top edge, where the dock is an object floating over it. */
+  background: color-mix(in oklab, var(--ground) 84%, transparent);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
   backdrop-filter: blur(28px) saturate(190%);
   border-bottom: 1px solid var(--glass-edge);
 }
 .appbar__brand {
-  display: flex; align-items: center; gap: 9px;
+  display: flex; align-items: center; gap: 9px; line-height: 1.1;
   font-weight: 700; font-size: var(--t-8); letter-spacing: -0.02em;
   color: var(--ink); text-decoration: none;
 }
 .appbar__inner {
   width: 100%; max-width: var(--content); margin: 0 auto;
+  /* A fixed height, not a floor: --appbar-h is a constant the page reserves, so
+     anything that can make the row taller — the wordmark's line box grows past
+     44px once it takes the display size at 700 — silently puts the header over
+     the first paragraph. 44px is the mode toggle's target, the tallest control. */
+  height: 44px;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
 }
@@ -1810,8 +1822,9 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 @media (min-width: 1024px) {
   .story__head {
     grid-area: head; display: grid; align-items: center; gap: 32px;
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 40%);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
   }
+  .story__title { max-width: none; }
   .story__head .plate--detail { max-height: 288px; }
   .story__stats { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
 
@@ -1819,10 +1832,17 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
      prose and takes everything left over. */
   .story__coverage {
     grid-area: cover; display: grid; align-items: start;
-    grid-template-columns: 340px minmax(0, 1fr); gap: 36px;
+    grid-template-columns: 320px minmax(0, 1fr); gap: 32px;
   }
+  .story__framings { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 26px; }
   .story__related { grid-area: rel; }
+  /* Six cards, two rows of three. A compact card is a row with its own thumbnail,
+     so three across is already half the width each card wants. */
   .story__relgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .story__rel { min-height: 0; }
 }
 .story__sides { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .story__rail { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 1024px) {
+  .story__rail { flex-direction: row; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+}

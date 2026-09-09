@@ -266,10 +266,13 @@ export async function getStory(id: string) {
        FROM articles a JOIN sources s ON s.id = a.source_id
       WHERE a.cluster_id = ? ORDER BY a.published_at ASC`, [id]);
 
-  const related = await d.all<{ id: string; headline: string; source_count: number; last_seen: number }>(
-    `SELECT id, headline, source_count, last_seen FROM clusters
+  // The whole row, not four columns: the related list renders real cards now, so
+  // it needs the crux, the photograph and the place the card foot reads. Six of
+  // them on one indexed category filter is not a query worth economising on.
+  const related = await d.all<Story>(
+    `SELECT * FROM clusters
       WHERE category = ? AND id != ? AND headline IS NOT NULL
-      ORDER BY last_seen DESC LIMIT 3`, [cluster.category, id]);
+      ORDER BY last_seen DESC LIMIT 6`, [cluster.category, id]);
 
   return { cluster, articles, related, coverage: coverageOf(articles) };
 }
