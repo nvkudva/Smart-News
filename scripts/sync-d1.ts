@@ -3,6 +3,7 @@ config({ path: '.env.local', quiet: true });
 
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { d1, type D1 } from '../src/lib/d1';
 import { applySchema } from './d1-schema';
 
@@ -48,6 +49,28 @@ async function push(table: string, cols: string[], rows: Record<string, unknown>
     process.stdout.write(`\r  ${table}: ${done}/${rows.length}`);
   }
   process.stdout.write(`\r  ${table}: ${done}/${rows.length}\n`);
+}
+
+/**
+ * The seed tables — sources and the gazetteer — move only when someone edits
+ * the seed, but INSERT OR REPLACE bills a row write whether or not the value
+ * changed. At 96 cycles a day those three tables alone were 131k writes against
+ * D1's 100k free daily limit, which is the whole of the overage. Fingerprint
+ * them and push only when the content actually differs from what D1 last got.
+ * The fingerprint lives in D1 because the runner keeps nothing between cycles.
+ */
+async function pushSeed(d: D1, table: string, cols: string[], rows: Record<string, unknown>[]) {
+  const fingerprint = createHash('sha256')
+    .update(JSON.stringify(rows.map((r) => cols.map((c) => r[c] ?? null))))
+    .digest('hex');
+  const key = `fingerprint:${table}`;
+
+  if (process.env.SYNC_FULL !== '1') {
+    const seen = await d.get<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', [key]);
+    if (seen?.value === fingerprint) { console.log(`  ${table}: unchanged`); return; }
+  }
+  await push(table, cols, rows);
+  await d.run('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)', [key, fingerprint]);
 }
 
 /** Start of the cycle whose output we are pushing; null means push the window. */
@@ -117,16 +140,16 @@ async function main() {
   const t0 = cycleStart(dbPath);
 
   console.log(t0 ? `Pushing what changed since ${new Date(t0).toISOString().slice(11, 19)}…` : 'Pushing the full window…');
-  await push('sources', ['id', 'name', 'feed_url', 'homepage', 'country', 'category', 'bias'],
+  await pushSeed(d, 'sources', ['id', 'name', 'feed_url', 'homepage', 'country', 'category', 'bias'],
     all('SELECT id,name,feed_url,homepage,country,category,bias FROM sources'));
 
-  // The gazetteer is a few hundred rows and only changes when someone edits the
-  // seed, so it goes up whole rather than carrying a changed-since column. It
-  // goes up before clusters, which point into it.
+  // The gazetteer goes up whole or not at all — a changed-since column would
+  // not pay for itself on a few hundred rows — but it goes up only when its
+  // fingerprint moved. It precedes clusters, which point into it.
   const placeCols = ['id','kind','name','label','country','admin1_id','parent_id','lat','lon','population','updated_at'];
-  await push('places', placeCols, all(`SELECT ${placeCols.join(',')} FROM places`));
+  await pushSeed(d, 'places', placeCols, all(`SELECT ${placeCols.join(',')} FROM places`));
   const aliasCols = ['alias','country','place_id','source','confidence','updated_at'];
-  await push('place_aliases', aliasCols, all(`SELECT ${aliasCols.join(',')} FROM place_aliases`));
+  await pushSeed(d, 'place_aliases', aliasCols, all(`SELECT ${aliasCols.join(',')} FROM place_aliases`));
 
   const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,
             framing_left,framing_centre,framing_right,

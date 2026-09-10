@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS saved (
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, cluster_id TEXT NOT NULL,
   kind TEXT NOT NULL, dwell_ms INTEGER, ts INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS sync_meta (
+  key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS clusters_last_seen ON clusters(last_seen DESC);
 CREATE INDEX IF NOT EXISTS clusters_category ON clusters(category, last_seen DESC);
 CREATE INDEX IF NOT EXISTS clusters_country ON clusters(country, last_seen DESC);
