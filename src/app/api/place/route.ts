@@ -12,9 +12,11 @@ const countryName = (code: string) => { try { return REGION.of(code) ?? code; } 
 export async function GET() {
   const prefs = await getPrefs();
   const places = await getPlaces(effectivePlaceIds(prefs).slice(0, 1));
-  // A canonical place if there is one, the reader's own words if that is all
-  // they gave us, and the country as the last resort.
-  const here = places[0]?.label ?? prefs.places[0] ?? countryName(prefs.country);
+  // A canonical place if there is one — named as the reader would write it,
+  // city and two-letter country, not the full administrative label — the
+  // reader's own words if that is all they gave us, and the country last.
+  const place = places[0];
+  const here = place ? `${place.name}, ${place.country}` : prefs.places[0] ?? countryName(prefs.country);
   return NextResponse.json({ here },
     { headers: { 'cache-control': 'public, max-age=60, stale-while-revalidate=600' } });
 }

@@ -19,7 +19,7 @@ export function HeaderAside() {
   const [here, setHere] = useState('');
 
   useEffect(() => {
-    setToday(new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' }));
+    setToday(new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }));
     try { setHere(localStorage.getItem(KEY) ?? ''); } catch { /* first visit */ }
 
     let live = true;

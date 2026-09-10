@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Back, Photo } from '@/components/icons';
 import { SaveButton } from '@/components/SaveButton';
-import { storyAge } from '@/components/StoryCard';
+import { storyWhen } from '@/components/StoryCard';
 import { getReels, isSaved } from '@/lib/library';
 import { TabBar } from '@/components/TabBar';
 import { ReelKeys } from '@/components/ReelKeys';
@@ -24,6 +24,7 @@ export default async function Reels() {
         <section key={s.id} className="reel">
           <div className="reel__photo">
             {s.image_url ? <img src={s.image_url} alt="" loading={i < 2 ? 'eager' : 'lazy'} /> : <Photo size={34} />}
+            {s.image_url && s.image_source && <span className="credit">Source : {s.image_source}</span>}
           </div>
           <div className="reel__scrim" />
 
@@ -47,13 +48,8 @@ export default async function Reels() {
             <div className="kicker">
               <span>{s.category}</span>
               {s.place && <><span className="sep">·</span><span>{s.place}</span></>}
-              {/* A developing story's age carries two more segments. Kept as one
-                  span they cannot wrap, so the row shrank every span and clipped
-                  the category and place as well. */}
-              {storyAge(s).split(' · ').flatMap((part, j) => [
-                <span className="sep" key={`sep${j}`}>·</span>,
-                <span key={part}>{part}</span>,
-              ])}
+              <span className="sep">·</span>
+              <span>{storyWhen(s)}</span>
             </div>
             <div className="reel__actions">
               <Link href={`/story/${encodeURIComponent(s.id)}`} className="reel__sources">

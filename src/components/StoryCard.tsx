@@ -43,17 +43,22 @@ export type Variant = 'lead' | 'stack' | 'compact';
  */
 export function variantFor(story: Story, index: number): Variant {
   if (index === 0) return 'lead';
-  // Both signals, not either: the model rates almost everything 4-5, so
-  // importance alone makes every card full size. Corroboration is what
-  // actually separates a big story from a routine one.
+  // Two ways in, because the two signals fail in opposite directions. The model
+  // rates almost everything 4-5, so importance alone makes every card full size
+  // — hence the corroboration floor beside it. But importance is also one guess
+  // from a dozen article bodies, and it reads a scheduled product launch as
+  // routine: the second clause is the crowd overruling it, because sixty
+  // outlets independently running a story is the stronger claim that it matters.
   if (story.importance >= 4 && story.source_count >= 3) return 'stack';
+  if (story.source_count >= 12) return 'stack';
   return 'compact';
 }
 
-function Plate({ kind, src }: { kind: 'hero' | 'thumb'; src: string | null }) {
+function Plate({ kind, src, credit }: { kind: 'hero' | 'thumb'; src: string | null; credit?: string | null }) {
   return (
     <div className={`plate plate--${kind}`}>
       {src ? <img src={src} alt="" loading="lazy" /> : <Photo size={kind === 'hero' ? 26 : 19} />}
+      {src && credit && <span className="credit">Source : {credit}</span>}
     </div>
   );
 }
@@ -102,7 +107,7 @@ export function StoryCard({ story, variant = 'compact' }: { story: Story; varian
           </>
         ) : (
           <>
-            {!textOnly && <Plate kind="hero" src={story.image_url} />}
+            {!textOnly && <Plate kind="hero" src={story.image_url} credit={story.image_source} />}
             {head}{crux}{foot}
           </>
         )}

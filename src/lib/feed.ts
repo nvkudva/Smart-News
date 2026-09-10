@@ -121,7 +121,7 @@ const HALF_LIFE_H = 9;
 function score(s: Story, prefs: Prefs, inside: Set<string> | null): number {
   const ageH = (Date.now() - s.last_seen) / 3_600_000;
   const recency = Math.pow(0.5, ageH / HALF_LIFE_H);
-  const corroboration = Math.log1p(s.source_count) / Math.log(25);
+  const corroboration = Math.min(1, Math.log1p(s.source_count) / Math.log(25));
   let interest = 0.55;
   if (prefs.categories.includes(s.category)) interest = 1;
   if (s.country && s.country === prefs.country) interest = Math.max(interest, 0.95);
@@ -130,7 +130,11 @@ function score(s: Story, prefs: Prefs, inside: Set<string> | null): number {
   } else if (s.place && prefs.places.some((p) => s.place!.toLowerCase().includes(p.toLowerCase()))) {
     interest = 1.15;
   }
-  return recency * (0.35 + 0.65 * corroboration) * (s.importance / 5) * interest;
+  // importance/5 would span 0.2-1.0 — a 5x swing that decides the order on its
+  // own and leaves the other three terms arguing over the remainder. Mapped to
+  // 0.6-1.0 it still sorts, but a widely-run story can now outrank a lightly-run
+  // one the model happened to like better.
+  return recency * (0.35 + 0.65 * corroboration) * (0.5 + 0.1 * s.importance) * interest;
 }
 
 /**
