@@ -14,9 +14,16 @@
  * This module runs inside the deployed Worker, so it may import only ./d1 and
  * standard web globals — no Node builtins, and nothing out of db.ts. The
  * pipeline's synchronous equivalent lives in places-local.ts.
+ *
+ * None of the gazetteer reads touch D1 any more. The 338 places and their
+ * aliases are compiled into gazetteer.gen.ts and indexed here at module load,
+ * because they answered the same questions on every request from rows that only
+ * change when someone edits the seed and redeploys. What is left of d1 here is
+ * placesReady, which asks about columns on OTHER tables.
  */
 
 import { d1 } from './d1';
+import { ALIASES, PLACES, type PlaceRow } from './gazetteer.gen';
 
 export type PlaceKind = 'city' | 'admin1' | 'country';
 
@@ -26,7 +33,27 @@ export type Place = {
   lat: number | null; lon: number | null; population: number | null;
 };
 
-const COLS = 'id,kind,name,label,country,admin1_id,parent_id,lat,lon,population';
+const fromRow = (r: PlaceRow): Place => ({
+  id: r[0], kind: r[1], name: r[2], label: r[3], country: r[4],
+  admin1_id: r[5], parent_id: r[6], lat: r[7], lon: r[8], population: r[9],
+});
+
+/** Built once per isolate, then shared by every request it serves. */
+const ALL: Place[] = PLACES.map(fromRow);
+const BY_ID = new Map(ALL.map((p) => [p.id, p]));
+const BY_ADMIN1 = new Map<string, Place[]>();
+const BY_COUNTRY = new Map<string, Place[]>();
+for (const p of ALL) {
+  if (p.admin1_id) (BY_ADMIN1.get(p.admin1_id) ?? BY_ADMIN1.set(p.admin1_id, []).get(p.admin1_id)!).push(p);
+  (BY_COUNTRY.get(p.country) ?? BY_COUNTRY.set(p.country, []).get(p.country)!).push(p);
+}
+// The SQL keyed on (alias, country) with '' as the global scope; so does this.
+const BY_ALIAS = new Map<string, string>(ALIASES.map((a) => [`${a[0]}\u0000${a[1]}`, a[2]]));
+
+/** The label the feed used to get from a LEFT JOIN on every candidate row. */
+export function placeLabel(id: string | null): string | null {
+  return id ? BY_ID.get(id)?.label ?? null : null;
+}
 
 /** Combining marks left behind by NFD, so "Ocaña" and "Ocana" are one string. */
 const MARKS = /[̀-ͯ]/g;
@@ -65,8 +92,6 @@ export function haversineKm(a: { lat: number; lon: number }, b: { lat: number; l
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-const holes = (n: number) => Array.from({ length: n }, () => '?').join(',');
-
 /**
  * Whether the store has the v1.5 gazetteer at all.
  *
@@ -97,11 +122,7 @@ export async function placesReady(): Promise<boolean> {
 
 /** Rows in the order the caller asked for; ids the gazetteer does not know are dropped. */
 export async function getPlaces(ids: string[]): Promise<Place[]> {
-  if (!ids.length || !(await placesReady())) return [];
-  const db = await d1();
-  const rows = await db.all<Place>(`SELECT ${COLS} FROM places WHERE id IN (${holes(ids.length)})`, ids);
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  return ids.map((id) => byId.get(id)).filter((p): p is Place => !!p);
+  return ids.map((id) => BY_ID.get(id)).filter((p): p is Place => !!p);
 }
 
 /**
@@ -115,7 +136,7 @@ export async function getPlaces(ids: string[]): Promise<Place[]> {
  */
 export async function resolvePlaceName(raw: string, country?: string | null): Promise<Place | null> {
   const text = (raw ?? '').trim();
-  if (!text || !(await placesReady())) return null;
+  if (!text) return null;
   const cc = country && /^[A-Za-z]{2}$/.test(country.trim()) ? country.trim().toUpperCase() : '';
 
   const segments = text.split(',').map((s) => s.trim()).filter(Boolean);
@@ -130,50 +151,31 @@ export async function resolvePlaceName(raw: string, country?: string | null): Pr
   if (!aliases.length) return null;
 
   const countries = cc ? [cc, ''] : [''];
-  const db = await d1();
-  const rows = await db.all<Place & { _alias: string; _country: string }>(
-    `SELECT p.${COLS.split(',').join(',p.')}, a.alias AS _alias, a.country AS _country
-       FROM place_aliases a JOIN places p ON p.id = a.place_id
-      WHERE a.alias IN (${holes(aliases.length)}) AND a.country IN (${holes(countries.length)})`,
-    [...aliases, ...countries],
-  );
-  if (!rows.length) return null;
-
-  // One round trip returns every match; the priority order is applied here.
+  // Same priority order the SQL's caller applied to its rows: alias candidates
+  // outermost, country-scoped before global.
   for (const alias of aliases) {
     for (const c of countries) {
-      const hit = rows.find((r) => r._alias === alias && r._country === c);
-      if (hit) return strip(hit);
+      const id = BY_ALIAS.get(`${alias}\u0000${c}`);
+      const hit = id ? BY_ID.get(id) : undefined;
+      if (hit) return hit;
     }
   }
   return null;
 }
 
-function strip(row: Place & Record<string, unknown>): Place {
-  return {
-    id: row.id, kind: row.kind, name: row.name, label: row.label, country: row.country,
-    admin1_id: row.admin1_id, parent_id: row.parent_id,
-    lat: row.lat, lon: row.lon, population: row.population,
-  };
-}
-
 /** Type-ahead for the profile screen. Cities first — that is what people mean. */
 export async function searchPlaces(q: string, limit = 8): Promise<Place[]> {
-  const term = q.trim();
-  if (!term || !(await placesReady())) return [];
-  const db = await d1();
-  const like = `%${term.replace(/[%_]/g, '')}%`;
-  const prefix = `${term.replace(/[%_]/g, '')}%`;
-  return db.all<Place>(
-    `SELECT ${COLS} FROM places
-      WHERE name LIKE ? OR label LIKE ?
-      ORDER BY CASE kind WHEN 'city' THEN 0 WHEN 'admin1' THEN 1 ELSE 2 END,
-               CASE WHEN name LIKE ? THEN 0 ELSE 1 END,
-               COALESCE(population, 0) DESC,
-               name
-      LIMIT ?`,
-    [like, like, prefix, Math.max(1, limit)],
-  );
+  const term = q.trim().toLowerCase();
+  if (!term) return [];
+  const rank = { city: 0, admin1: 1, country: 2 } as const;
+  return ALL
+    .filter((p) => p.name.toLowerCase().includes(term) || p.label.toLowerCase().includes(term))
+    .sort((a, b) =>
+      rank[a.kind] - rank[b.kind]
+      || Number(!a.name.toLowerCase().startsWith(term)) - Number(!b.name.toLowerCase().startsWith(term))
+      || (b.population ?? 0) - (a.population ?? 0)
+      || a.name.localeCompare(b.name))
+    .slice(0, Math.max(1, limit));
 }
 
 /**
@@ -183,19 +185,14 @@ export async function searchPlaces(q: string, limit = 8): Promise<Place[]> {
  */
 export async function expandPlaceIds(ids: string[]): Promise<string[]> {
   if (!ids.length) return [];
-  if (!(await placesReady())) return [];
-  const db = await d1();
-  // Self-join instead of two trips: q is the reader's places, p the candidates.
-  const rows = await db.all<{ id: string }>(
-    `SELECT DISTINCT p.id AS id
-       FROM places p JOIN places q ON q.id IN (${holes(ids.length)})
-      WHERE p.id = q.id
-         OR (q.kind = 'admin1'  AND p.admin1_id = q.id)
-         OR (q.kind = 'country' AND p.country   = q.country)`,
-    ids,
-  );
-  const out = new Set(rows.map((r) => r.id));
-  for (const id of ids) out.add(id);      // an id we do not hold still means itself
+  const out = new Set<string>(ids);       // an id we do not hold still means itself
+  for (const id of ids) {
+    const q = BY_ID.get(id);
+    if (!q) continue;
+    out.add(q.id);
+    if (q.kind === 'admin1') for (const p of BY_ADMIN1.get(q.id) ?? []) out.add(p.id);
+    if (q.kind === 'country') for (const p of BY_COUNTRY.get(q.country) ?? []) out.add(p.id);
+  }
   return [...out];
 }
 
@@ -205,27 +202,29 @@ export async function expandPlaceIds(ids: string[]): Promise<string[]> {
  * when it wants somewhere new rather than something new.
  */
 export async function geoAdjacentPlaceIds(ids: string[], limit = 60): Promise<string[]> {
-  if (!ids.length || !(await placesReady())) return [];
-  const db = await d1();
-  // Sharing an admin1 implies sharing a country, so one WHERE covers both, and
-  // the subtree is excluded in the HAVING rather than in a second query.
-  const rows = await db.all<{ id: string }>(
-    `SELECT p.id AS id,
-            MAX(CASE WHEN p.id = q.id
-                       OR (q.kind = 'admin1'  AND p.admin1_id = q.id)
-                       OR (q.kind = 'country' AND p.country   = q.country)
-                     THEN 1 ELSE 0 END) AS sub,
-            MAX(CASE WHEN p.admin1_id IS NOT NULL AND p.admin1_id = q.admin1_id
-                     THEN 1 ELSE 0 END) AS near
-       FROM places p JOIN places q ON q.id IN (${holes(ids.length)})
-      WHERE p.country = q.country
-      GROUP BY p.id
-     HAVING sub = 0
-      ORDER BY near DESC, COALESCE(p.population, 0) DESC
-      LIMIT ?`,
-    [...ids, Math.max(1, limit)],
-  );
-  return rows.map((r) => r.id);
+  if (!ids.length) return [];
+  const qs = ids.map((id) => BY_ID.get(id)).filter((p): p is Place => !!p);
+  if (!qs.length) return [];
+
+  // Sharing an admin1 implies sharing a country, so the candidates are the
+  // countries the reader is in; the subtree is then subtracted rather than
+  // asked for a second time.
+  const sub = new Set(await expandPlaceIds(ids));
+  const admin1s = new Set(qs.map((q) => q.admin1_id).filter((a): a is string => !!a));
+  const seen = new Set<string>();
+  const out: Place[] = [];
+  for (const q of qs) {
+    for (const p of BY_COUNTRY.get(q.country) ?? []) {
+      if (sub.has(p.id) || seen.has(p.id)) continue;
+      seen.add(p.id);
+      out.push(p);
+    }
+  }
+  const near = (p: Place) => (p.admin1_id && admin1s.has(p.admin1_id) ? 1 : 0);
+  return out
+    .sort((a, b) => near(b) - near(a) || (b.population ?? 0) - (a.population ?? 0))
+    .slice(0, Math.max(1, limit))
+    .map((p) => p.id);
 }
 
 /**
@@ -235,20 +234,16 @@ export async function geoAdjacentPlaceIds(ids: string[], limit = 60): Promise<st
  */
 export async function nearestPlace(lat: number, lon: number, maxKm = 150): Promise<Place | null> {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (!(await placesReady())) return null;
   const dLat = maxKm / 111;
   // Longitude degrees shrink towards the poles; near them the box degenerates,
   // so fall back to the whole longitude range rather than dividing by ~0.
   const cos = Math.cos(rad(lat));
   const dLon = cos > 0.01 ? maxKm / (111 * cos) : 180;
 
-  const db = await d1();
-  const rows = await db.all<Place>(
-    `SELECT ${COLS} FROM places
-      WHERE lat IS NOT NULL AND lon IS NOT NULL
-        AND lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?`,
-    [lat - dLat, lat + dLat, lon - dLon, lon + dLon],
-  );
+  const rows = ALL.filter((p) =>
+    p.lat !== null && p.lon !== null
+    && p.lat >= lat - dLat && p.lat <= lat + dLat
+    && p.lon >= lon - dLon && p.lon <= lon + dLon);
 
   let best: Place | null = null;
   let bestKm = Infinity;

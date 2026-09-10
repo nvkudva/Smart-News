@@ -1,6 +1,6 @@
 import { d1 } from './d1';
 import {
-  getFeed, getLocalFeed, getPrefs, storyCols, storyFrom, type Story,
+  getFeed, getLocalFeed, getPrefs, storyCols, storyFrom, withPlaceLabels, type Story,
 } from './feed';
 import { placesReady } from './places';
 import { categoryBySlug, type Section } from './taxonomy';
@@ -31,12 +31,12 @@ const stamp = (rows: Story[]): Story[] =>
 
 async function bySql(where: string, params: unknown[], limit: number): Promise<Story[]> {
   const ready = await placesReady();
-  const rows = await (await d1()).all<Story>(
+  const rows = withPlaceLabels(await (await d1()).all<Story>(
     `SELECT ${storyCols(ready)}
        ${storyFrom(ready)}
       WHERE c.headline IS NOT NULL AND c.last_seen >= ? AND ${where}
       ORDER BY c.importance DESC, c.last_seen DESC LIMIT ${limit}`,
-    [Date.now() - WINDOW_MS, ...params]);
+    [Date.now() - WINDOW_MS, ...params]));
   return stamp(rows);
 }
 

@@ -1,6 +1,6 @@
 import { d1 } from './d1';
 import { SOURCES, type Bias } from './sources';
-import { expandPlaceIds, geoAdjacentPlaceIds, placesReady } from './places';
+import { expandPlaceIds, geoAdjacentPlaceIds, placeLabel, placesReady } from './places';
 
 export type Story = {
   id: string; headline: string; crux: string; category: string;
@@ -37,11 +37,22 @@ export const DEFAULT_PREFS: Prefs = {
  * pipeline serves pre-v1.5 stories instead of nothing at all.
  */
 export const storyCols = (ready: boolean) => `c.id, c.headline, c.crux, c.category, c.place, c.country,
-       ${ready ? 'c.place_id, p.label AS place_label' : 'NULL AS place_id, NULL AS place_label'},
+       ${ready ? 'c.place_id' : 'NULL AS place_id'}, NULL AS place_label,
        c.importance, c.image_url, c.image_source,
        c.article_count, c.source_count, c.first_seen, c.last_seen`;
-export const storyFrom = (ready: boolean) =>
-  ready ? `FROM clusters c LEFT JOIN places p ON p.id = c.place_id` : `FROM clusters c`;
+export const storyFrom = (_ready: boolean) => `FROM clusters c`;
+
+/**
+ * The label the LEFT JOIN used to supply. It was one indexed lookup per
+ * candidate row — 87 of the 237 rows a feed query billed — for a string that
+ * has been in the bundle since gazetteer.gen.ts existed. Every query built from
+ * storyCols passes its rows through here instead.
+ */
+export function withPlaceLabels<T extends { place_id: string | null; place_label: string | null }>(
+  rows: T[],
+): T[] {
+  return rows.map((r) => (r.place_id ? { ...r, place_label: placeLabel(r.place_id) } : r));
+}
 
 /**
  * D1 caps a statement at ~90 bound parameters and a place subtree can be longer
@@ -161,12 +172,12 @@ export async function getFeed(limit = 30, userId = 'local'): Promise<Story[]> {
   const adjacent = effective.length ? new Set(await geoAdjacentPlaceIds(effective)) : null;
 
   const ready = await placesReady();
-  const rows = await (await d1()).all<Story>(
+  const rows = withPlaceLabels(await (await d1()).all<Story>(
     `SELECT ${storyCols(ready)}
        ${storyFrom(ready)}
       WHERE c.headline IS NOT NULL AND c.last_seen >= ?
       ORDER BY c.last_seen DESC LIMIT 150`,
-    [Date.now() - CANDIDATE_WINDOW_H * 3_600_000]);
+    [Date.now() - CANDIDATE_WINDOW_H * 3_600_000]));
 
   const scored = rows.map((s) => ({ s, k: score(s, prefs, inside) })).sort((a, b) => b.k - a.k);
   const known = scored.filter(({ s }) => prefs.categories.includes(s.category));
@@ -261,7 +272,7 @@ export async function getLocalFeed(limit = 30, userId = 'local'): Promise<Story[
       return [];
     }
 
-    return rows.map((s) => ({ s, k: score(s, prefs, inside) }))
+    return withPlaceLabels(rows).map((s) => ({ s, k: score(s, prefs, inside) }))
       .sort((a, b) => b.k - a.k)
       .slice(0, limit)
       .map(({ s }) => ({ ...s, exploration: 0 as const, exploration_kind: null }));
@@ -272,7 +283,7 @@ export async function getLocalFeed(limit = 30, userId = 'local'): Promise<Story[
 
 export async function getStory(id: string) {
   const d = await d1();
-  const cluster = await d.get<Story>('SELECT * FROM clusters WHERE id = ?', [id]);
+  const cluster = withPlaceLabels(await d.all<Story>('SELECT * FROM clusters WHERE id = ?', [id]))[0];
   if (!cluster) return null;
   const articles = await d.all<{ title: string; url: string; published_at: number;
                                  source: string; homepage: string; bias: Bias | null }>(
@@ -283,10 +294,10 @@ export async function getStory(id: string) {
   // The whole row, not four columns: the related list renders real cards now, so
   // it needs the crux, the photograph and the place the card foot reads. Six of
   // them on one indexed category filter is not a query worth economising on.
-  const related = await d.all<Story>(
+  const related = withPlaceLabels(await d.all<Story>(
     `SELECT * FROM clusters
       WHERE category = ? AND id != ? AND headline IS NOT NULL
-      ORDER BY last_seen DESC LIMIT 6`, [cluster.category, id]);
+      ORDER BY last_seen DESC LIMIT 6`, [cluster.category, id]));
 
   return { cluster, articles, related, coverage: coverageOf(articles) };
 }

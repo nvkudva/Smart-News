@@ -1,5 +1,5 @@
 import { d1 } from './d1';
-import { storyCols, storyFrom, type Story } from './feed';
+import { storyCols, storyFrom, withPlaceLabels, type Story } from './feed';
 import { expandPlaceIds, placesReady, type PlaceKind } from './places';
 
 // Shape shared with the feed, so an unmigrated store degrades identically here.
@@ -27,12 +27,12 @@ export async function toggleSaved(clusterId: string, userId = 'local'): Promise<
 
 export async function getSaved(userId = 'local'): Promise<(Story & { saved_at: number })[]> {
   const ready = await placesReady();
-  return (await d1()).all<Story & { saved_at: number }>(
+  return withPlaceLabels(await (await d1()).all<Story & { saved_at: number }>(
     `SELECT ${cols(ready)}, sv.saved_at
        ${storyFrom(ready)}
        JOIN saved sv ON sv.cluster_id = c.id
       WHERE sv.user_id = ?
-      ORDER BY sv.saved_at DESC`, [userId]);
+      ORDER BY sv.saved_at DESC`, [userId]));
 }
 
 // -------------------------------------------------------------- explore ---
@@ -49,12 +49,12 @@ export async function getCategoryFacets(): Promise<CategoryFacet[]> {
 
   // One query for every category's lead story, rather than one round trip each.
   const ready = await placesReady();
-  const leads = await d.all<Story & { rn: number }>(
+  const leads = withPlaceLabels(await d.all<Story & { rn: number }>(
     `SELECT * FROM (
        SELECT ${cols(ready)}, ROW_NUMBER() OVER (
          PARTITION BY c.category ORDER BY c.importance DESC, c.source_count DESC, c.last_seen DESC) AS rn
          ${storyFrom(ready)} WHERE c.headline IS NOT NULL AND c.last_seen >= ?
-     ) WHERE rn = 1`, [since]);
+     ) WHERE rn = 1`, [since]));
   const leadBy = new Map(leads.map((l) => [l.category, l]));
 
   return rows.map((r) => ({ ...r, lead: leadBy.get(r.category) ?? null }));
@@ -83,23 +83,23 @@ export async function getByPlace(placeId: string, limit = 40): Promise<Story[]> 
   const ids = await expandPlaceIds([placeId]);
   if (!ids.length) return [];
   const list = ids.map((id) => `'${id.replace(/'/g, "''")}'`).join(',');
-  return (await d1()).all<Story>(
+  return withPlaceLabels(await (await d1()).all<Story>(
     `${select(true)} WHERE c.headline IS NOT NULL AND c.place_id IN (${list})
-       ORDER BY c.last_seen DESC LIMIT ?`, [limit]);
+       ORDER BY c.last_seen DESC LIMIT ?`, [limit]));
 }
 
 export async function getByCategory(category: string, limit = 40): Promise<Story[]> {
   const ready = await placesReady();
-  return (await d1()).all<Story>(
+  return withPlaceLabels(await (await d1()).all<Story>(
     `${select(ready)} WHERE c.headline IS NOT NULL AND c.category = ?
-       ORDER BY c.last_seen DESC LIMIT ?`, [category, limit]);
+       ORDER BY c.last_seen DESC LIMIT ?`, [category, limit]));
 }
 
 export async function getByCountry(country: string, limit = 40): Promise<Story[]> {
   const ready = await placesReady();
-  return (await d1()).all<Story>(
+  return withPlaceLabels(await (await d1()).all<Story>(
     `${select(ready)} WHERE c.headline IS NOT NULL AND c.country = ?
-       ORDER BY c.last_seen DESC LIMIT ?`, [country, limit]);
+       ORDER BY c.last_seen DESC LIMIT ?`, [country, limit]));
 }
 
 // ----------------------------------------------------------------- reels ---
@@ -107,10 +107,10 @@ export async function getByCountry(country: string, limit = 40): Promise<Story[]
 /** Reels wants the biggest stories, image-first, newest — not the ranked feed. */
 export async function getReels(limit = 20): Promise<Story[]> {
   const ready = await placesReady();
-  return (await d1()).all<Story>(
+  return withPlaceLabels(await (await d1()).all<Story>(
     `${select(ready)} WHERE c.headline IS NOT NULL AND c.last_seen >= ?
        ORDER BY (c.image_url IS NOT NULL) DESC, c.importance DESC, c.source_count DESC, c.last_seen DESC
-       LIMIT ?`, [Date.now() - 48 * 3_600_000, limit]);
+       LIMIT ?`, [Date.now() - 48 * 3_600_000, limit]));
 }
 
 // ----------------------------------------------------------------- stats ---

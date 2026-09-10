@@ -11,10 +11,12 @@
     "build:check": "tsc --noEmit && tsc -p deploy/cron-worker",
     "cycle": "tsx scripts/cycle.ts",
     "gazetteer": "tsx scripts/build-gazetteer.ts",
+    "gazetteer:gen": "tsx scripts/gen-gazetteer.ts",
     "sync": "tsx scripts/sync-d1.ts",
     "migrate:d1": "tsx scripts/migrate-d1.ts",
     "deploy": "opennextjs-cloudflare build && wrangler deploy",
-    "hydrate": "tsx scripts/hydrate-d1.ts"
+    "hydrate": "tsx scripts/hydrate-d1.ts",
+    "prebuild": "tsx scripts/gen-gazetteer.ts"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
