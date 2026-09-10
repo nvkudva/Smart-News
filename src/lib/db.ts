@@ -80,6 +80,7 @@ function migrate(d: DatabaseSync) {
       country        TEXT,
       importance     INTEGER DEFAULT 3,
       image_url      TEXT,
+      image_source   TEXT,
       article_count  INTEGER NOT NULL DEFAULT 0,
       source_count   INTEGER NOT NULL DEFAULT 0,
       first_seen     INTEGER NOT NULL,
@@ -137,6 +138,8 @@ function migrate(d: DatabaseSync) {
   add('clusters', 'framing_left', 'framing_left TEXT');
   add('clusters', 'framing_centre', 'framing_centre TEXT');
   add('clusters', 'framing_right', 'framing_right TEXT');
+  // Which outlet's feed the chosen image came from, so it can be credited.
+  add('clusters', 'image_source', 'image_source TEXT');
   add('prefs', 'place_ids', 'place_ids TEXT');
   add('prefs', 'geo_consent', 'geo_consent INTEGER NOT NULL DEFAULT 0');
   add('prefs', 'geo_place_id', 'geo_place_id TEXT');

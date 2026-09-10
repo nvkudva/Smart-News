@@ -151,7 +151,7 @@ async function main() {
   const aliasCols = ['alias','country','place_id','source','confidence','updated_at'];
   await pushSeed(d, 'place_aliases', aliasCols, all(`SELECT ${aliasCols.join(',')} FROM place_aliases`));
 
-  const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,
+  const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,image_source,
             framing_left,framing_centre,framing_right,
             article_count,source_count,first_seen,last_seen,summarised_at,summarised_n,attempts`;
   const clusters = t0
@@ -159,7 +159,7 @@ async function main() {
         `SELECT ${clusterCols} FROM clusters WHERE last_seen >= ? AND ${TOUCHED}`, since, t0, t0, t0)
     : all<Record<string, unknown>>(`SELECT ${clusterCols} FROM clusters WHERE last_seen >= ?`, since);
   await push('clusters',
-    ['id','headline','crux','category','place','country','place_id','importance','image_url',
+    ['id','headline','crux','category','place','country','place_id','importance','image_url','image_source',
      'framing_left','framing_centre','framing_right',
      'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'],
     clusters);

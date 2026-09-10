@@ -11,6 +11,38 @@ type Row = {
   content_hash: string | null; cluster_id: string | null;
 };
 
+const THUMB = /(thumb|thumbnail|[/_-]small[/_-]|[/_-]s\.|icon|logo|sprite|placeholder|avatar|[/_-]150x|[/_-]?square)/;
+
+/**
+ * Ranks candidates by what the URL admits about the file. Feeds routinely ship
+ * a 90px thumbnail for the same event another source publishes at 1200px, and
+ * the cluster only gets to show one, so prefer the one that will not blur.
+ */
+function imageScore(url: string): number {
+  const u = url.toLowerCase();
+  let px = 0;
+  const q = u.match(/[?&](?:w|width|maxwidth|imwidth|resize)=(\d{2,5})/);
+  if (q) px = Number(q[1]);
+  const dim = u.match(/[/_-](\d{2,5})x(\d{2,5})[._/-]/);
+  if (dim) px = Math.max(px, Number(dim[1]));
+  let score = px ? Math.min(px, 2400) / 100 : 0;
+  if (THUMB.test(u)) score -= 8;
+  if (u.includes('.svg')) score -= 8;
+  if (u.includes('.gif')) score -= 4;
+  if (!u.startsWith('https:')) score -= 1;
+  return score;
+}
+
+function bestImage(members: Row[]): Row | null {
+  let best: Row | null = null, bestScore = -Infinity;
+  for (const m of members) {
+    if (!m.image_url) continue;
+    const s = imageScore(m.image_url);
+    if (s > bestScore) { best = m; bestScore = s; }
+  }
+  return best;
+}
+
 /**
  * Greedy single-pass agglomeration. Each article joins the nearest existing
  * centroid above threshold, otherwise starts a cluster. Cheap, order-dependent,
@@ -61,15 +93,20 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
   }
 
   const upsert = d.prepare(
-    `INSERT INTO clusters (id, image_url, article_count, source_count, first_seen, last_seen)
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO clusters (id, image_url, image_source, article_count, source_count, first_seen, last_seen)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
-       image_url = COALESCE(clusters.image_url, excluded.image_url),
+       image_url    = COALESCE(excluded.image_url, clusters.image_url),
+       image_source = COALESCE(excluded.image_source, clusters.image_source),
        article_count = excluded.article_count,
        source_count  = excluded.source_count,
        last_seen     = excluded.last_seen`,
   );
   const assign = d.prepare('UPDATE articles SET cluster_id = ? WHERE id = ?');
+  const sourceNames = new Map(
+    (d.prepare('SELECT id, name FROM sources').all() as unknown as { id: string; name: string }[])
+      .map((s) => [s.id, s.name]),
+  );
 
   let assigned = 0;
   for (const g of groups) {
@@ -85,8 +122,9 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
     const id = inherited ?? `c_${members[0].id}`;
     const sources = new Set(members.map((m) => m.source_id));
     const hashes = new Set(members.map((m) => m.content_hash ?? m.id));
-    const image = members.find((m) => m.image_url)?.image_url ?? null;
-    upsert.run(id, image, hashes.size, sources.size,
+    const image = bestImage(members);
+    upsert.run(id, image?.image_url ?? null, image ? sourceNames.get(image.source_id) ?? null : null,
+               hashes.size, sources.size,
                Math.min(...members.map((m) => m.published_at)),
                Math.max(...members.map((m) => m.published_at)));
     for (const m of members) { assign.run(id, m.id); assigned++; }

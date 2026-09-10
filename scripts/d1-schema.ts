@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS sources (
   homepage TEXT, country TEXT, category TEXT, bias TEXT);
 CREATE TABLE IF NOT EXISTS clusters (
   id TEXT PRIMARY KEY, headline TEXT, crux TEXT, category TEXT, place TEXT,
-  country TEXT, importance INTEGER DEFAULT 3, image_url TEXT,
+  country TEXT, importance INTEGER DEFAULT 3, image_url TEXT, image_source TEXT,
   article_count INTEGER NOT NULL DEFAULT 0, source_count INTEGER NOT NULL DEFAULT 0,
   first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
   summarised_at INTEGER, summarised_n INTEGER DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0,
@@ -68,6 +68,7 @@ export const ADDED_COLUMNS: Record<string, [string, string][]> = {
     ['framing_left', 'framing_left TEXT'],
     ['framing_centre', 'framing_centre TEXT'],
     ['framing_right', 'framing_right TEXT'],
+    ['image_source', 'image_source TEXT'],
   ],
   prefs: [
     ['place_ids', 'place_ids TEXT'],

@@ -16,6 +16,9 @@
   --kicker-near:   oklch(0.52 0.09 252);
   --kicker-new:    oklch(0.52 0.09 68);
   --accent:        oklch(0.52 0.13 252);
+  /* The reels disc keeps the light accent in both modes: it is the one lit
+     object in the bar, and a dark-mode accent turns the ball pale. */
+  --reels-accent:  oklch(0.52 0.13 252);
   --glass:         rgba(255, 255, 255, 0.58);
   --glass-edge:    rgba(255, 255, 255, 0.78);
   --glass-warm:    linear-gradient(140deg, rgba(255,252,244,0.74), rgba(255,247,238,0.52));
@@ -74,6 +77,7 @@
   --bar-edge:   oklch(0.76 0.090 268 / 0.90);
   --ground:     oklch(0.977 0.004 258);
   --accent:     oklch(0.50 0.165 268);
+  --reels-accent: oklch(0.50 0.165 268);
   --glass:      oklch(0.990 0.010 258 / 0.66);
   --glass-edge: oklch(0.965 0.016 258 / 0.85);
   --rule:       oklch(0.905 0.012 258);
@@ -236,10 +240,23 @@ body {
 .foot .kicker { flex: 1 1 0; min-width: min(100%, 9.5em); }
 .foot .meta { font-size: var(--t-1); color: var(--ink-3); min-width: 0; }
 
-.plate { background: var(--plate); border: 1px solid rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.plate { position: relative; background: var(--plate); border: 1px solid rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .plate img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .plate--hero  { height: 168px; border-radius: var(--r-sm); margin: -2px -2px 2px; }
 .plate--thumb { width: 76px; height: 76px; border-radius: var(--r-sm); flex: 0 0 auto; }
+
+/* Attribution, not a caption: it sits on the photograph's own bottom-right and
+   is meant to be legible only when looked for. The shadow, not a plate, is what
+   keeps it readable over a light frame — a pill here would read as a control. */
+.credit {
+  position: absolute; right: 6px; bottom: 5px; z-index: 1;
+  font-size: 9px; line-height: 1.2; letter-spacing: 0.01em;
+  color: rgba(255,255,255,0.62);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+  pointer-events: none; max-width: 70%; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.plate--thumb .credit { display: none; }
 
 /* A floating glass pill rather than a full-width band: the disc breaks the top
    edge, so the bar needs its own outline all the way round for the break to
@@ -272,19 +289,19 @@ body {
   width: 54px; height: 54px; margin-top: -24px; flex: 0 0 auto; border-radius: 50%;
   background:
     radial-gradient(115% 115% at 32% 26%, rgba(255,255,255,.70), rgba(255,255,255,0) 56%),
-    linear-gradient(150deg, color-mix(in oklab, var(--accent) 62%, white),
-                            var(--accent) 58%,
-                            color-mix(in oklab, var(--accent) 78%, black));
-  border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
+    linear-gradient(150deg, color-mix(in oklab, var(--reels-accent) 62%, white),
+                            var(--reels-accent) 58%,
+                            color-mix(in oklab, var(--reels-accent) 78%, black));
+  border: 1px solid color-mix(in oklab, var(--reels-accent) 55%, transparent);
   box-shadow: inset 0 1px 1px rgba(255,255,255,.5),
-              0 8px 20px -8px color-mix(in oklab, var(--accent) 66%, transparent);
+              0 8px 20px -8px color-mix(in oklab, var(--reels-accent) 66%, transparent);
   display: flex; align-items: center; justify-content: center; color: #fff;
   transition: transform .18s cubic-bezier(.32,.72,0,1), box-shadow .18s;
 }
 .reelsbtn:active {
   transform: scale(.955);
   box-shadow: inset 0 1px 1px rgba(255,255,255,.5),
-              0 4px 12px -8px color-mix(in oklab, var(--accent) 66%, transparent);
+              0 4px 12px -8px color-mix(in oklab, var(--reels-accent) 66%, transparent);
 }
 .reelsbtn svg { transform: translateY(-1px); }
 
@@ -1348,6 +1365,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   --kicker-near:   oklch(0.44 0.09 158);
   --kicker-new:    oklch(0.48 0.11 32);
   --accent:        oklch(0.48 0.11 32);
+  --reels-accent:  oklch(0.48 0.11 32);
   --glass:         transparent;
   --glass-edge:    oklch(0.89 0.010 72);
   --glass-warm:    none;
@@ -1391,6 +1409,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   --kicker-near:   oklch(0.46 0.09 158);
   --kicker-new:    oklch(0.50 0.11 44);
   --accent:        oklch(0.52 0.13 48);
+  --reels-accent:  oklch(0.52 0.13 48);
   --glass:         oklch(0.995 0.010 70 / 0.62);
   --glass-edge:    oklch(0.94 0.020 70 / 0.85);
   --glass-warm:    linear-gradient(140deg, rgba(255,251,242,0.76), rgba(255,245,232,0.54));

@@ -7,7 +7,8 @@ export type Story = {
   place: string | null; country: string | null;
   place_id: string | null; place_label: string | null;
   importance: number;
-  image_url: string | null; article_count: number; source_count: number;
+  image_url: string | null; image_source: string | null;
+  article_count: number; source_count: number;
   first_seen: number; last_seen: number;
   framing_left: string | null; framing_centre: string | null; framing_right: string | null;
   exploration: 0 | 1; exploration_kind: 'category' | 'place' | null;
@@ -37,7 +38,7 @@ export const DEFAULT_PREFS: Prefs = {
  */
 export const storyCols = (ready: boolean) => `c.id, c.headline, c.crux, c.category, c.place, c.country,
        ${ready ? 'c.place_id, p.label AS place_label' : 'NULL AS place_id, NULL AS place_label'},
-       c.importance, c.image_url,
+       c.importance, c.image_url, c.image_source,
        c.article_count, c.source_count, c.first_seen, c.last_seen`;
 export const storyFrom = (ready: boolean) =>
   ready ? `FROM clusters c LEFT JOIN places p ON p.id = c.place_id` : `FROM clusters c`;

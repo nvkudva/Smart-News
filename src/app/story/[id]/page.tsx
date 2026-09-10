@@ -63,6 +63,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
 
             <div className="plate plate--detail">
               {cluster.image_url ? <img src={cluster.image_url} alt="" /> : <Photo size={30} />}
+              {cluster.image_url && cluster.image_source && <span className="credit">Source : {cluster.image_source}</span>}
             </div>
           </div>
 

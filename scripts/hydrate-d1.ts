@@ -109,7 +109,7 @@ async function main() {
     console.warn(`\n  ! gazetteer not in D1 yet (${(e as Error).message}) — run \`npm run gazetteer && npm run sync\``);
   }
 
-  const clusterCols = ['id','headline','crux','category','place','country','place_id','importance','image_url',
+  const clusterCols = ['id','headline','crux','category','place','country','place_id','importance','image_url','image_source',
     'framing_left','framing_centre','framing_right',
     'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'];
   const haveClusterCols = (await columns('clusters', clusterCols)).join(',');

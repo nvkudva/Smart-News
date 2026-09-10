@@ -8,7 +8,7 @@
     "start": "next start -H 0.0.0.0",
     "ingest": "tsx scripts/ingest.ts",
     "pipeline": "tsx scripts/pipeline.ts",
-    "build:check": "tsc --noEmit",
+    "build:check": "tsc --noEmit && tsc -p deploy/cron-worker",
     "cycle": "tsx scripts/cycle.ts",
     "gazetteer": "tsx scripts/build-gazetteer.ts",
     "sync": "tsx scripts/sync-d1.ts",
@@ -28,6 +28,7 @@
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260910.1",
     "@opennextjs/cloudflare": "^1.20.6",
     "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^30.0.0",
