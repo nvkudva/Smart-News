@@ -5,28 +5,39 @@ only writer of news; a Cloudflare Worker serves the site and is the only writer
 of reader state. Cloudflare D1 sits between them.
 
 ```mermaid
-graph LR
-  subgraph clock[Clock]
-    W[Worker cron<br/>*/15 * * * *]
-  end
-  subgraph ci[GitHub Actions runner · ephemeral]
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'14px','lineColor':'#8a8f98','primaryTextColor':'#1b1f23','edgeLabelBackground':'#ffffff'}}}%%
+flowchart LR
+  RSS[38 RSS feeds]:::ext
+  W[Worker cron<br/>every 15 min]:::cloud
+
+  subgraph CI[GitHub Actions runner · ephemeral]
     H[hydrate] --> C[cycle] --> S[sync]
-    C -.-> L[(local SQLite<br/>scratch)]
-    H -.-> L
-    S -.-> L
+    L[(local SQLite<br/>scratch)]:::scratch
+    C -.- L
   end
-  subgraph cf[Cloudflare]
-    D[(D1 · durable)]
-    A[Next.js on Workers<br/>OpenNext]
-    AI[Workers AI]
+
+  subgraph CF[Cloudflare]
+    D[(D1 · durable)]:::store
+    AI[Workers AI]:::cloud
+    A[Next.js on Workers]:::cloud
   end
-  RSS[38 RSS feeds] --> C
-  W -->|workflow_dispatch| ci
-  D --> H
-  S --> D
-  D --> A
+
+  W -->|workflow_dispatch| H
+  RSS --> C
   C --> AI
-  A --> U[Reader]
+  D -->|pull window| H
+  S -->|push changes| D
+  D --> A
+  A --> U[Reader]:::ext
+
+  class H,C,S runner
+  classDef ext fill:#eceff1,stroke:#78909c,color:#263238
+  classDef runner fill:#fdf0d5,stroke:#b8860b,color:#3d2c00
+  classDef cloud fill:#e3f0fb,stroke:#2c6fad,color:#10314d
+  classDef store fill:#e4f3e7,stroke:#3f8f52,stroke-width:1.5px,color:#14361f
+  classDef scratch fill:#f4f4f5,stroke:#b0b4ba,color:#3f4145,stroke-dasharray:3 3
+  style CI fill:#fffdf6,stroke:#e3cf9a,color:#3d2c00
+  style CF fill:#f7fbff,stroke:#bcd7ee,color:#10314d
 ```
 
 ## Why the pipeline is not in the Worker
@@ -46,10 +57,11 @@ workflow has no `schedule` trigger at all.
 
 ```mermaid
 sequenceDiagram
+  autonumber
   participant W as Worker cron
   participant G as GitHub Actions
   participant D as D1
-  W->>G: POST workflow_dispatch (ref main)
+  W->>G: workflow_dispatch (ref main)
   G->>D: hydrate — pull 5-day window
   G->>G: cycle — ingest, cluster, summarise
   G->>D: sync — push what changed
@@ -59,19 +71,28 @@ sequenceDiagram
 ## One cycle
 
 ```mermaid
-flowchart TD
-  F[38 feeds<br/>src/lib/sources.ts] --> I[ingest<br/>items newer than 72h]
-  I --> R[Readability + jsdom<br/>full text where reachable]
-  R --> AR[(articles)]
-  AR --> CL[clusterRecent<br/>48h window]
-  CL --> G[greedy single-pass agglomeration<br/>tf-idf cosine ≥ 0.19<br/>entity overlap ≥ 0.52]
-  G --> CS[(clusters)]
-  CS --> SU{≥ 2 sources?<br/>changed since last summary?}
-  SU -->|yes| LLM[llama-3.2-3b via Workers AI<br/>≤ 6 articles, 2600 chars each<br/>≤ 40 clusters per cycle]
-  SU -->|no| SK[skip]
-  LLM --> OUT[headline · crux · framing by lean]
-  LLM -.->|failure, 3 attempts| EX[extractive fallback<br/>first 5 sentences]
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'14px','lineColor':'#8a8f98','primaryTextColor':'#1b1f23','edgeLabelBackground':'#ffffff'}}}%%
+flowchart TB
+  F[38 feeds]:::ext --> I[ingest<br/>newer than 72h]:::runner
+  I --> R[Readability + jsdom<br/>full text where reachable]:::runner
+  R --> AR[(articles)]:::store
+  AR --> CL[clusterRecent<br/>48h window]:::runner
+  CL --> G[greedy agglomeration<br/>cosine ≥ 0.19 · entities ≥ 0.52]:::runner
+  G --> CS[(clusters)]:::store
+  CS --> SU{≥ 2 sources<br/>and changed?}:::gate
+  SU -->|no| SK[skip]:::scratch
+  SU -->|yes| LLM[llama-3.2-3b · Workers AI<br/>≤ 6 articles · 2600 chars each<br/>≤ 40 clusters per cycle]:::cloud
+  LLM --> OUT[headline · crux · framing by lean]:::runner
+  LLM -.->|3 failures| EX[extractive fallback<br/>first 5 sentences]:::gate
+  EX --> OUT
   OUT --> CS
+
+  classDef ext fill:#eceff1,stroke:#78909c,color:#263238
+  classDef runner fill:#fdf0d5,stroke:#b8860b,color:#3d2c00
+  classDef cloud fill:#e3f0fb,stroke:#2c6fad,color:#10314d
+  classDef store fill:#e4f3e7,stroke:#3f8f52,stroke-width:1.5px,color:#14361f
+  classDef gate fill:#fbe6e6,stroke:#b5504f,color:#4a1414
+  classDef scratch fill:#f4f4f5,stroke:#b0b4ba,color:#3f4145,stroke-dasharray:3 3
 ```
 
 Clustering is order-dependent and re-runs from scratch each cycle over the
@@ -96,15 +117,26 @@ The expensive direction is the push, because D1 bills row writes and
 keep it small.
 
 ```mermaid
-flowchart TD
-  T{".t0 stamp present?"} -->|no — cycle died, or SYNC_FULL=1| FULL[push the whole 5-day window]
-  T -->|yes| INC[push only what this cycle touched]
-  INC --> SEED{seed tables:<br/>fingerprint changed?}
-  SEED -->|no| SKIP[skip — 0 writes]
-  SEED -->|yes| PUSHSEED[push whole table<br/>store new hash in sync_meta]
-  INC --> TOUCH[clusters: re-summarised,<br/>or last_seen moved,<br/>or an article fetched this run joined]
-  TOUCH --> ART[articles: fetched this run,<br/>or belonging to a touched cluster]
-  ART --> REAP[reap ghosts]
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'14px','lineColor':'#8a8f98','primaryTextColor':'#1b1f23','edgeLabelBackground':'#ffffff'}}}%%
+flowchart TB
+  T{.t0 stamp present?}:::gate
+  T -->|no — cycle died, or SYNC_FULL=1| FULL[push the whole 5-day window]:::scratch
+  T -->|yes| INC[push only what this cycle touched]:::runner
+
+  INC --> SEED{seed fingerprint<br/>changed?}:::gate
+  SEED -->|no| SKIP[skip · 0 writes]:::store
+  SEED -->|yes| PUSHSEED[push whole table<br/>store hash in sync_meta]:::runner
+
+  INC --> TOUCH[clusters — re-summarised,<br/>last_seen moved, or gained<br/>an article fetched this run]:::runner
+  TOUCH --> ART[articles — fetched this run,<br/>or inside a touched cluster]:::runner
+  ART --> REAP[reap ghost clusters]:::runner
+
+  classDef ext fill:#eceff1,stroke:#78909c,color:#263238
+  classDef runner fill:#fdf0d5,stroke:#b8860b,color:#3d2c00
+  classDef cloud fill:#e3f0fb,stroke:#2c6fad,color:#10314d
+  classDef store fill:#e4f3e7,stroke:#3f8f52,stroke-width:1.5px,color:#14361f
+  classDef gate fill:#fbe6e6,stroke:#b5504f,color:#4a1414
+  classDef scratch fill:#f4f4f5,stroke:#b0b4ba,color:#3f4145,stroke-dasharray:3 3
 ```
 
 **1 · The `.t0` stamp.** `cycle` writes its start time next to the database on
@@ -128,11 +160,23 @@ store that was never hydrated is indistinguishable from "everything merged".
 ## Who writes what
 
 ```mermaid
-graph TD
-  P[pipeline] -->|writes| T1[sources · places · place_aliases<br/>clusters · articles]
-  A[web app] -->|writes| T2[prefs · saved · events]
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'14px','lineColor':'#8a8f98','primaryTextColor':'#1b1f23','edgeLabelBackground':'#ffffff'}}}%%
+flowchart TB
+  P[pipeline]:::runner
+  A[web app]:::cloud
+  T1[(sources · places · place_aliases<br/>clusters · articles)]:::store
+  T2[(prefs · saved · events)]:::store
+  P -->|writes| T1
   A -->|reads| T1
+  A -->|writes| T2
   P -.->|never touches| T2
+
+  classDef ext fill:#eceff1,stroke:#78909c,color:#263238
+  classDef runner fill:#fdf0d5,stroke:#b8860b,color:#3d2c00
+  classDef cloud fill:#e3f0fb,stroke:#2c6fad,color:#10314d
+  classDef store fill:#e4f3e7,stroke:#3f8f52,stroke-width:1.5px,color:#14361f
+  classDef gate fill:#fbe6e6,stroke:#b5504f,color:#4a1414
+  classDef scratch fill:#f4f4f5,stroke:#b0b4ba,color:#3f4145,stroke-dasharray:3 3
 ```
 
 `prefs` is deliberately not synced: the app is its only writer, and carrying
