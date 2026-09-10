@@ -47,9 +47,17 @@ CREATE TABLE IF NOT EXISTS events (
   kind TEXT NOT NULL, dwell_ms INTEGER, ts INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS sync_meta (
   key TEXT PRIMARY KEY, value TEXT NOT NULL);
-CREATE INDEX IF NOT EXISTS clusters_last_seen ON clusters(last_seen DESC);
-CREATE INDEX IF NOT EXISTS clusters_category ON clusters(category, last_seen DESC);
-CREATE INDEX IF NOT EXISTS clusters_country ON clusters(country, last_seen DESC);
+-- Only a quarter of clusters are ever summarised, and every query that orders
+-- by last_seen also filters headline IS NOT NULL, so the index walk was
+-- stepping over three unsummarised rows for each one it could use. New names
+-- rather than a rebuild of the old: both the DROPs and the CREATEs then settle
+-- into no-ops on every run after the first.
+DROP INDEX IF EXISTS clusters_last_seen;
+DROP INDEX IF EXISTS clusters_category;
+DROP INDEX IF EXISTS clusters_country;
+CREATE INDEX IF NOT EXISTS clusters_live_last_seen ON clusters(last_seen DESC) WHERE headline IS NOT NULL;
+CREATE INDEX IF NOT EXISTS clusters_live_category ON clusters(category, last_seen DESC) WHERE headline IS NOT NULL;
+CREATE INDEX IF NOT EXISTS clusters_live_country ON clusters(country, last_seen DESC) WHERE headline IS NOT NULL;
 CREATE INDEX IF NOT EXISTS articles_cluster ON articles(cluster_id);
 CREATE INDEX IF NOT EXISTS articles_published ON articles(published_at DESC);
 CREATE INDEX IF NOT EXISTS places_country ON places(country, kind);

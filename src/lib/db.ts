@@ -91,9 +91,14 @@ function migrate(d: DatabaseSync) {
       place_id       TEXT REFERENCES places(id),
       framing_left   TEXT, framing_centre TEXT, framing_right  TEXT
     );
-    CREATE INDEX IF NOT EXISTS clusters_last_seen ON clusters(last_seen DESC);
-    CREATE INDEX IF NOT EXISTS clusters_category  ON clusters(category, last_seen DESC);
-    CREATE INDEX IF NOT EXISTS clusters_country   ON clusters(country, last_seen DESC);
+    -- Partial: a quarter of clusters are summarised, and every last_seen-ordered
+    -- query filters on that, so the other three quarters were being walked over.
+    DROP INDEX IF EXISTS clusters_last_seen;
+    DROP INDEX IF EXISTS clusters_category;
+    DROP INDEX IF EXISTS clusters_country;
+    CREATE INDEX IF NOT EXISTS clusters_live_last_seen ON clusters(last_seen DESC) WHERE headline IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS clusters_live_category  ON clusters(category, last_seen DESC) WHERE headline IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS clusters_live_country   ON clusters(country, last_seen DESC) WHERE headline IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS prefs (
       user_id      TEXT PRIMARY KEY,

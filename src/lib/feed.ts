@@ -113,6 +113,15 @@ export function effectivePlaceIds(p: Prefs): string[] {
 const HALF_LIFE_H = 9;
 
 /**
+ * How far back the ranker is willing to look. Every row in here is a row D1
+ * bills, and the half-life above is what makes the far end worthless: at 24
+ * hours recency is already 0.16, at 48 it is 0.024, so the second day was
+ * paying for candidates the score had buried anyway. The LIMIT beside it is set
+ * to bind — at 400 it never did, so the window alone decided the cost.
+ */
+const CANDIDATE_WINDOW_H = 24;
+
+/**
  * `inside` is the reader's places expanded down the hierarchy. It is null when
  * they have not picked a canonical place yet — every reader until they re-save
  * prefs — and then the place term stays the free-text substring test, so their
@@ -156,8 +165,8 @@ export async function getFeed(limit = 30, userId = 'local'): Promise<Story[]> {
     `SELECT ${storyCols(ready)}
        ${storyFrom(ready)}
       WHERE c.headline IS NOT NULL AND c.last_seen >= ?
-      ORDER BY c.last_seen DESC LIMIT 400`,
-    [Date.now() - 48 * 3_600_000]);
+      ORDER BY c.last_seen DESC LIMIT 150`,
+    [Date.now() - CANDIDATE_WINDOW_H * 3_600_000]);
 
   const scored = rows.map((s) => ({ s, k: score(s, prefs, inside) })).sort((a, b) => b.k - a.k);
   const known = scored.filter(({ s }) => prefs.categories.includes(s.category));
