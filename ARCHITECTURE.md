@@ -107,8 +107,7 @@ flowchart TB
   SU -->|no| SK[skip]:::scratch
   SU -->|yes| LLM[llama-3.2-3b · Workers AI<br/>≤ 6 articles · 2600 chars each<br/>≤ 40 clusters per cycle]:::cloud
   LLM --> OUT[headline · crux · framing by lean]:::runner
-  LLM -.->|3 failures| EX[extractive fallback<br/>first 5 sentences]:::gate
-  EX --> OUT
+  LLM -.->|3 attempts, still failing| GIVE[left unsummarised]:::gate
   OUT --> CS
 
   classDef ext fill:#eceff1,stroke:#78909c,color:#263238
@@ -118,6 +117,12 @@ flowchart TB
   classDef gate fill:#fbe6e6,stroke:#b5504f,color:#4a1414
   classDef scratch fill:#f4f4f5,stroke:#b0b4ba,color:#3f4145,stroke-dasharray:3 3
 ```
+
+The extractive placeholder in `summarise.ts` is *not* a failure fallback: it
+runs only when no LLM provider is configured at all, so the app is usable
+before anyone signs up for a key. It quotes one source verbatim, which is
+exactly what the product exists not to do — and never runs in production,
+where the workflow always sets `LLM_PROVIDER`.
 
 Clustering is order-dependent and re-runs from scratch each cycle over the
 48-hour window: an article joins the nearest centroid above threshold, or
