@@ -5,39 +5,63 @@ only writer of news; a Cloudflare Worker serves the site and is the only writer
 of reader state. Cloudflare D1 sits between them.
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui, sans-serif','fontSize':'14px','lineColor':'#8a8f98','primaryTextColor':'#1b1f23','edgeLabelBackground':'#ffffff'}}}%%
+---
+config:
+  theme: base
+  themeVariables:
+    fontFamily: ui-sans-serif, system-ui, sans-serif
+    fontSize: 14px
+    lineColor: '#8a8f98'
+    primaryTextColor: '#1b1f23'
+    edgeLabelBackground: '#ffffff'
+    nodeSpacing: 150
+    rankSpacing: 80
+  layout: fixed
+---
 flowchart LR
-  RSS[38 RSS feeds]:::ext
-  W[Worker cron<br/>every 15 min]:::cloud
-
-  subgraph CI[GitHub Actions runner · ephemeral]
-    H[hydrate] --> C[cycle] --> S[sync]
-    L[(local SQLite<br/>scratch)]:::scratch
+ subgraph IN["Sources & scheduling"]
+        RSS("38 RSS feeds")
+        W("Worker cron<br>every 15 min")
+  end
+ subgraph CI["GitHub Actions runner · ephemeral"]
+        S("sync")
+        C("cycle")
+        H("hydrate")
+        L[("local SQLite<br>scratch")]
+  end
+ subgraph CF["Cloudflare"]
+        D[("D1 · durable")]
+        AI("Workers AI")
+        A("Next.js on Workers")
+  end
+    H --> C
+    C --> S & AI
     C -.- L
-  end
+    W -- dispatch --> H
+    RSS --> C
+    D -- pull window --> H
+    S -- push changes --> D
+    D --> A
+    A --> U("Reader")
 
-  subgraph CF[Cloudflare]
-    D[(D1 · durable)]:::store
-    AI[Workers AI]:::cloud
-    A[Next.js on Workers]:::cloud
-  end
-
-  W -->|workflow_dispatch| H
-  RSS --> C
-  C --> AI
-  D -->|pull window| H
-  S -->|push changes| D
-  D --> A
-  A --> U[Reader]:::ext
-
-  class H,C,S runner
-  classDef ext fill:#eceff1,stroke:#78909c,color:#263238
-  classDef runner fill:#fdf0d5,stroke:#b8860b,color:#3d2c00
-  classDef cloud fill:#e3f0fb,stroke:#2c6fad,color:#10314d
-  classDef store fill:#e4f3e7,stroke:#3f8f52,stroke-width:1.5px,color:#14361f
-  classDef scratch fill:#f4f4f5,stroke:#b0b4ba,color:#3f4145,stroke-dasharray:3 3
-  style CI fill:#fffdf6,stroke:#e3cf9a,color:#3d2c00
-  style CF fill:#f7fbff,stroke:#bcd7ee,color:#10314d
+     RSS:::ext
+     W:::cloud
+     S:::runner
+     C:::runner
+     H:::runner
+     L:::scratch
+     D:::store
+     AI:::cloud
+     A:::cloud
+     U:::ext
+    classDef ext fill:#eceff1,stroke:#78909c,color:#263238
+    classDef runner fill:#fdf0d5,stroke:#b8860b,color:#3d2c00
+    classDef cloud fill:#e3f0fb,stroke:#2c6fad,color:#10314d
+    classDef store fill:#e4f3e7,stroke:#3f8f52,stroke-width:1.5px,color:#14361f
+    classDef scratch fill:#f4f4f5,stroke:#b0b4ba,color:#3f4145,stroke-dasharray:3 3
+    style IN fill:#fafafa,stroke:#c8ccd1,color:#263238
+    style CI fill:#fffdf6,stroke:#e3cf9a,color:#3d2c00
+    style CF fill:#f7fbff,stroke:#bcd7ee,color:#10314d
 ```
 
 ## Why the pipeline is not in the Worker
