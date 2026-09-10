@@ -183,13 +183,25 @@ async function main() {
   // sync that carried the hydrated copy back up would revert whatever the
   // reader changed while the cycle was running.
 
-  const counts = await d.get<Record<string, number>>(
-    `SELECT (SELECT COUNT(*) FROM sources) AS sources,
-            (SELECT COUNT(*) FROM clusters) AS clusters,
-            (SELECT COUNT(*) FROM articles) AS articles,
-            (SELECT COUNT(*) FROM places) AS places,
-            (SELECT COUNT(*) FROM place_aliases) AS aliases`);
-  console.log('\nD1 now holds:', JSON.stringify(counts));
+  // The stamp every cached response is validated against. It has to change
+  // exactly when the readable feed could have changed and not one cycle sooner,
+  // so it is derived from the data rather than from the clock: a cycle that
+  // pushed nothing leaves it alone, and every client keeps its cache.
+  //
+  // MAX(last_seen) alone would miss a ghost merge, which deletes a cluster
+  // without moving the maximum; the count catches that. Both read the partial
+  // index rather than the table.
+  const state = await d.get<{ n: number; m: number }>(
+    `SELECT COUNT(*) AS n, COALESCE(MAX(last_seen), 0) AS m
+       FROM clusters WHERE headline IS NOT NULL`);
+  const cycle = `${state?.n ?? 0}-${state?.m ?? 0}`;
+  const seen = await d.get<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', ['cycle']);
+  if (seen?.value !== cycle) {
+    await d.run('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)', ['cycle', cycle]);
+    console.log(`\nCycle stamp: ${cycle}`);
+  } else {
+    console.log(`\nCycle stamp: ${cycle} (unchanged)`);
+  }
 }
 
 main().then(() => process.exit(0));
