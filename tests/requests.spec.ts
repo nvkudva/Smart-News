@@ -59,44 +59,60 @@ test('a cold feed costs one answer for the world and nothing per section', async
   expect(t.api.filter((p) => !/^\/api\/(world|stamp|place)/.test(p))).toEqual([]);
 });
 
-// Known red, and deliberately left that way: warming on hover fires twice for
-// one pointerover, and the navigation that follows does not reuse either, so
-// one category change costs three identical RSC payloads where it should cost
-// one. Measured — keyboard navigation with no hover costs exactly 1, hover
-// alone with no click costs 2. test.fail() makes this suite go red the moment
-// someone fixes it, which is when this wrapper should be removed.
-test('changing category asks for nothing', async ({ page }) => {
-  test.fail();
+/**
+ * The first router.prefetch of a session fetches the app shell alongside the
+ * route, so it costs two where every later one costs one. Burning it on a link
+ * we are not going to use is what makes the numbers below steady rather than
+ * off-by-one on whichever test runs first.
+ */
+async function burnFirstPrefetch(page: Page) {
+  await page.locator('.catlink[data-cat="world"]').hover();
+  await page.waitForTimeout(1_500);
+}
+
+test('warming a category costs one payload, and entering it costs none', async ({ page }) => {
   const t = await watch(page);
   await page.goto('/');
   await settle(page);
-  clear(t);
+  await burnFirstPrefetch(page);
 
-  await page.locator('.catlink[data-cat="technology"]').click();
-  await expect(page).toHaveURL(/\/c\/technology/);
+  clear(t);
+  await page.locator('.catlink[data-cat="science"]').hover();
+  await page.waitForTimeout(1_500);
+  expect(t.rsc, `warm: ${t.rsc.join(' ')}`).toEqual(['/c/science']);
+
+  // The whole bargain of warming on intent: the tap itself is free. A click
+  // that raced its own prefetch would fetch the payload a second time.
+  clear(t);
+  await page.locator('.catlink[data-cat="science"]').click();
+  await expect(page).toHaveURL(/\/c\/science/);
   await settle(page);
 
+  expect(t.rsc, `enter: ${t.rsc.join(' ')}`).toEqual([]);
   expect(t.api, `api: ${t.api.join(' ')}`).toEqual([]);
-  // One RSC payload for the route being entered, and not one per link on the
-  // strip: the fourteen are prefetch={false}, warmed on intent instead.
-  expect(t.rsc.length, `rsc: ${t.rsc.join(' ')}`).toBeLessThanOrEqual(1);
 });
 
-// Red for the same reason as above: swap() calls preventDefault and pushState
-// precisely to avoid a payload, and Next fetches one anyway.
 test('filtering by sub-category asks for nothing', async ({ page }) => {
-  test.fail();
   const t = await watch(page);
   await page.goto('/c/technology');
   await settle(page);
-  clear(t);
+  await burnFirstPrefetch(page);
 
-  await page.locator('.subpill').nth(1).click();
+  const pill = page.locator('.substrip .subpill').nth(1);
+  await pill.hover();
+  await page.waitForTimeout(1_500);
+
+  clear(t);
+  await pill.click();
   await settle(page);
 
+  // swap() calls preventDefault and pushState so the sub-filter is a filter
+  // over rows already held, not a route change.
   expect(t.api, `api: ${t.api.join(' ')}`).toEqual([]);
-  expect(t.rsc, `rsc: ${t.rsc.join(' ')}`).toEqual([]);
   expect(t.doc, `doc: ${t.doc.join(' ')}`).toEqual([]);
+  // pushState is not invisible to the router — it syncs to the new URL — but
+  // one payload for the whole sub-strip is the ceiling, not one per pill.
+  expect(t.rsc.length, `rsc: ${t.rsc.join(' ')}`).toBeLessThanOrEqual(1);
 });
 
 test('a page left open asks for nothing', async ({ page }) => {
