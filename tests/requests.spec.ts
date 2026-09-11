@@ -112,3 +112,30 @@ test('a page left open asks for nothing', async ({ page }) => {
   expect(t.api, `api: ${t.api.join(' ')}`).toEqual([]);
   expect(t.rsc, `rsc: ${t.rsc.join(' ')}`).toEqual([]);
 });
+
+test('a second visit does not re-ask where the reader is', async ({ page }) => {
+  const t = await watch(page);
+  await page.goto('/');
+  await settle(page);
+  clear(t);
+
+  // The line is the reader's preferences read through the gazetteer, and the
+  // gazetteer only moves on a sync — which is what moves the cycle stamp.
+  await page.reload();
+  await settle(page);
+
+  expect(count(t.api, '/api/place'), `api: ${t.api.join(' ')}`).toBe(0);
+});
+
+test('Top has one address, and the sub-strip agrees about it', async ({ page }) => {
+  await watch(page);
+  await page.goto('/');
+  await settle(page);
+
+  // Built from the slug alone this said /c/top — a real prerendered page
+  // showing the same rows under a second URL.
+  const hrefs = await page.locator('.subpill').evaluateAll(
+    (els) => els.map((e) => e.getAttribute('href')));
+  expect(hrefs.length).toBeGreaterThan(1);
+  expect(hrefs.filter((h) => h?.startsWith('/c/top'))).toEqual([]);
+});
