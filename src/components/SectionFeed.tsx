@@ -216,7 +216,11 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
 
   return (
     <>
-      <SubcategoryStrip cat={cat} label={name} base={`/c/${cat}`}
+      {/* Top lives at /, the way CategoryStrip has always sent it. Building
+          the base from the slug alone gave the section a second URL at
+          /c/top — a real prerendered page showing the same rows, so shared
+          links disagreed and both payloads were fetched and held apart. */}
+      <SubcategoryStrip cat={cat} label={name} base={cat === 'top' ? '/' : `/c/${cat}`}
                         subs={data.subs} active={active} />
       {shown.length === 0 ? (
         <div className="panel">
