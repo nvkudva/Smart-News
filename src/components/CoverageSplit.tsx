@@ -1,5 +1,5 @@
 import type { Bias } from '@/lib/sources';
-import type { Coverage } from '@/lib/feed';
+import type { Coverage } from '@/lib/coverage';
 
 const SIDES: { key: Bias; label: string }[] = [
   { key: 'left', label: 'Left' },

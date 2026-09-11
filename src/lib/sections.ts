@@ -1,7 +1,7 @@
 import { d1 } from './d1';
 import {
-  getFeed, getLocalFeed, getPrefs, prefsFingerprint, storyCols, storyFrom,
-  withPlaceLabels, withoutHidden, type Story,
+  getFeed, getLocalFeed, getPrefs, idList, prefsFingerprint, storyCols, storyFrom,
+  withPlaceLabels, withoutHidden, type Outlet, type Story,
 } from './feed';
 import { cycleStamp } from './cycle';
 import { placesReady } from './places';
@@ -27,6 +27,35 @@ export const SECTION_LIMIT = 200;
  *  reader needs the first few screens, and rendering all 200 was most of what
  *  made switching categories feel slow. */
 export const SECTION_PAGE = 48;
+
+/**
+ * The outlets behind a page of stories, keyed by cluster.
+ *
+ * One query for forty-eight clusters rather than forty-eight queries: this is
+ * the detail page's whole remaining payload, so shipping it with the section is
+ * what lets a story open without asking the server anything.
+ *
+ * One row per masthead, not per article, and three columns rather than six.
+ * The page renders a deduped list of outlet names and derives the bias split
+ * from the same list; it never shows an article's title or its timestamp, and
+ * the count it prints is c.article_count, which the card already carries.
+ * Sending whole articles tripled the section for fields nothing reads.
+ */
+export async function outletsFor(ids: string[]): Promise<Map<string, Outlet[]>> {
+  const by = new Map<string, Outlet[]>();
+  if (!ids.length) return by;
+  const rows = await (await d1()).all<Outlet & { cluster_id: string }>(
+    `SELECT a.cluster_id, s.name AS source, s.bias, min(a.url) AS url
+       FROM articles a JOIN sources s ON s.id = a.source_id
+      WHERE a.cluster_id IN (${idList(ids)})
+      GROUP BY a.cluster_id, s.name
+      ORDER BY min(a.published_at) ASC`);
+  for (const { cluster_id, ...o } of rows) {
+    const held = by.get(cluster_id);
+    if (held) held.push(o); else by.set(cluster_id, [o]);
+  }
+  return by;
+}
 
 const stamp = (rows: Story[]): Story[] =>
   rows.map((s) => ({ ...s, exploration: 0 as const, exploration_kind: null }));
