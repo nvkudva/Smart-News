@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 config({ path: '.env.local', quiet: true });
 
 import { d1 } from '../src/lib/d1';
-import { applySchema, missingColumns, ADDED_COLUMNS } from './d1-schema';
+import { applySchema, indexDrift, missingColumns, ADDED_COLUMNS } from './d1-schema';
 
 /**
  * Bring the live D1 database up to the current schema, without touching rows.
@@ -14,6 +14,11 @@ import { applySchema, missingColumns, ADDED_COLUMNS } from './d1-schema';
  * to see what a live database is missing.
  */
 
+/**
+ * d1-schema.ts says it mirrors migrate() in db.ts. It said so while three
+ * indexes were missing from it, one of them on the deployed read path, because
+ * nothing ever compared the two. Now something does.
+ */
 async function main() {
   const check = process.argv.includes('--check');
   const d = await d1();
@@ -24,10 +29,14 @@ async function main() {
     console.log(`${table}: ${cols.length ? cols.map((c) => c.name).join(', ') : '(no such table)'}`);
   }
 
+  const drift = indexDrift();
+  if (drift.length) console.log(`\nIn db.ts but not in d1-schema.ts: ${drift.join(', ')}`);
+
   if (check) {
     console.log(missing.length
-      ? `\nMissing: ${missing.map(([t, n]) => `${t}.${n}`).join(', ')}`
-      : '\nUp to date.');
+      ? `\nMissing columns: ${missing.map(([t, n]) => `${t}.${n}`).join(', ')}`
+      : '\nColumns up to date.');
+    if (drift.length) process.exitCode = 1;
     return;
   }
 

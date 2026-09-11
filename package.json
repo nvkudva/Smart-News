@@ -10,7 +10,7 @@
     "ingest": "tsx scripts/ingest.ts",
     "pipeline": "tsx scripts/pipeline.ts",
     "pipeline:local": "LLM_PROVIDER=openai LLM_BASE_URL=http://localhost:1234/v1 LLM_MODEL=ornith-1.5-9b-mlx LLM_API_KEY=lm-studio LLM_CONCURRENCY=4 LLM_JSON_MODE=text tsx scripts/pipeline.ts",
-    "build:check": "tsc --noEmit && tsc -p deploy/cron-worker",
+    "build:check": "tsc --noEmit && tsc -p deploy/cron-worker && tsx scripts/check-schema.ts",
     "cycle": "tsx scripts/cycle.ts",
     "cycle:local": "LLM_PROVIDER=openai LLM_BASE_URL=http://localhost:1234/v1 LLM_MODEL=ornith-1.5-9b-mlx LLM_API_KEY=lm-studio LLM_CONCURRENCY=4 LLM_JSON_MODE=text tsx scripts/cycle.ts",
     "gazetteer": "tsx scripts/build-gazetteer.ts",

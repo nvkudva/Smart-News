@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { D1 } from '../src/lib/d1';
 
 /**
@@ -9,7 +11,10 @@ import type { D1 } from '../src/lib/d1';
  * Keeping the DDL here lets `npm run migrate:d1` apply it on its own, without
  * a local SQLite file and without pushing a single row.
  *
- * Mirrors migrate() in src/lib/db.ts. Both must change together.
+ * Mirrors migrate() in src/lib/db.ts. Both must change together — and that was
+ * an aspiration rather than a fact until `npm run build:check` started
+ * comparing them: three indexes had drifted out of this file, one of them on
+ * the deployed read path. See indexNames() and the check in migrate-d1.ts.
  */
 
 export const SCHEMA = `
@@ -60,6 +65,13 @@ CREATE INDEX IF NOT EXISTS clusters_live_category ON clusters(category, last_see
 CREATE INDEX IF NOT EXISTS clusters_live_country ON clusters(country, last_seen DESC) WHERE headline IS NOT NULL;
 CREATE INDEX IF NOT EXISTS articles_cluster ON articles(cluster_id);
 CREATE INDEX IF NOT EXISTS articles_published ON articles(published_at DESC);
+-- Missing from D1 until now, though db.ts has had it since place_id existed.
+-- getLocalFeed and getByPlace both filter on c.place_id, so the Local
+-- tab and every Explore place tile were falling back to the last_seen index
+-- and filtering. The drift went unnoticed because the pipeline reads places
+-- from the local file, so only the deployed read path ever paid for it.
+CREATE INDEX IF NOT EXISTS clusters_place ON clusters(place_id, last_seen DESC);
+CREATE INDEX IF NOT EXISTS events_user ON events(user_id, ts DESC);
 CREATE INDEX IF NOT EXISTS places_country ON places(country, kind);
 CREATE INDEX IF NOT EXISTS places_admin1 ON places(admin1_id);
 `;
@@ -84,6 +96,27 @@ export const ADDED_COLUMNS: Record<string, [string, string][]> = {
     ['geo_place_id', 'geo_place_id TEXT'],
   ],
 };
+
+/** Index names this schema declares, for the drift check against db.ts. */
+export function indexNames(): string[] {
+  return [...SCHEMA.matchAll(/CREATE INDEX IF NOT EXISTS (\w+)/g)].map((m) => m[1]).sort();
+}
+
+const LOCAL_ONLY = new Set([
+  // content_hash is read only while clustering, which runs against the local
+  // file. An index D1 never queries would still cost a write on every synced
+  // article, and D1 bills those.
+  'articles_hash',
+]);
+
+export function indexDrift(): string[] {
+  const local = readFileSync(resolve(process.cwd(), 'src/lib/db.ts'), 'utf8');
+  const declared = new Set(indexNames());
+  const inLocal = [...local.matchAll(/CREATE INDEX IF NOT EXISTS (\w+)/g)].map((m) => m[1]);
+  // One direction only: db.ts also indexes columns the site never reads, and
+  // the partial cluster indexes are named the same in both.
+  return [...new Set(inLocal)].filter((n) => !declared.has(n) && !LOCAL_ONLY.has(n)).sort();
+}
 
 /** Which of ADDED_COLUMNS are not on the live database yet, table by table. */
 export async function missingColumns(d: D1): Promise<[string, string, string][]> {
