@@ -6,13 +6,14 @@ import type { Story } from '@/lib/feed';
 import type { SubCount } from '@/lib/taxonomy';
 import { StoryCard, variantFor } from './StoryCard';
 import { SubcategoryStrip } from './SubcategoryStrip';
+import { readEntry, sessionStamp, writeEntry } from '@/lib/store';
 
 /** What one category answers with. `active` is gone: the sub-filter is the
  *  client's business now, and the rows carry the verdicts to do it with. */
 export type SectionStory = Story & { subs: string[] };
 export type SectionData = {
   stamp: string | null; name: string; subs: SubCount[];
-  total: number; stories: SectionStory[];
+  total: number; ids: string[]; stories: SectionStory[];
 };
 
 /**
@@ -24,6 +25,9 @@ export type SectionData = {
 const cache = new Map<string, { at: number; data: Promise<SectionData> }>();
 const TTL_MS = 60_000;
 
+/** Synchronously resolved cache entries only — used to skip the skeleton. */
+const settled = new Map<string, SectionData>();
+
 /** One URL per category, with no sub in it — that is the point. */
 export function sectionUrl(cat: string) {
   return `/api/section/${encodeURIComponent(cat)}`;
@@ -34,13 +38,75 @@ export function loadSection(cat: string): Promise<SectionData> {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
 
-  const data = fetch(key).then((r) => {
-    if (!r.ok) throw new Error(String(r.status));
-    return r.json() as Promise<SectionData>;
-  });
+  const data = resolve(cat, key);
   cache.set(key, { at: Date.now(), data });
   data.catch(() => { if (cache.get(key)?.data === data) cache.delete(key); });
+  data.then((d) => settled.set(key, d)).catch(() => {});
   return data;
+}
+
+/**
+ * Stored copy first, and no request at all when it is still current.
+ *
+ * The stamp is one small answer for the whole app, so asking it and finding it
+ * unchanged settles every section this browser holds at once. Only when it has
+ * moved — at most every fifteen minutes, usually less — does a section cost
+ * anything, and then only the one being looked at.
+ */
+async function resolve(cat: string, key: string): Promise<SectionData> {
+  const [stamp, stored] = await Promise.all([
+    sessionStamp(),
+    readEntry<SectionData>(key),
+  ]);
+  const held = stored?.data;
+  if (held && stamp && stored.stamp === stamp) return held;
+
+  // When we hold a copy, ask only for what has changed since the newest thing
+  // in it. A cycle usually moves a handful of stories, not forty-eight.
+  const since = held?.stories.length
+    ? Math.max(...held.stories.map((s) => s.last_seen))
+    : 0;
+  const res = await fetch(since ? `${key}?since=${since}` : key);
+  if (!res.ok) {
+    // A section we hold is a better answer than an error, even a stale one.
+    if (held) return held;
+    throw new Error(String(res.status));
+  }
+
+  const fresh = await res.json() as SectionData;
+  const merged = since ? await merge(held!, fresh) : fresh;
+  writeEntry(key, merged.stamp, merged);
+  return merged;
+}
+
+/**
+ * The delta's ordered ids, filled from whatever body we can find for each —
+ * the changed ones the server just sent, then the ones already here. An id in
+ * neither was evicted from storage, and only those are asked for.
+ */
+async function merge(held: SectionData, delta: SectionData): Promise<SectionData> {
+  const bodies = new Map<string, SectionStory>();
+  for (const s of held.stories) bodies.set(s.id, s);
+  for (const s of delta.stories) bodies.set(s.id, s);
+
+  const gaps = delta.ids.filter((id) => !bodies.has(id));
+  if (gaps.length) {
+    try {
+      const res = await fetch(`/api/stories?ids=${gaps.map(encodeURIComponent).join(',')}`);
+      if (res.ok) {
+        const { stories } = await res.json() as { stories: SectionStory[] };
+        // Backfilled rows carry no sub verdicts — that endpoint does not know
+        // which section asked. The strip still counts them; only the sub filter
+        // cannot place them, which is the right way round for a rare gap.
+        for (const s of stories) bodies.set(s.id, { ...s, subs: s.subs ?? [] });
+      }
+    } catch { /* an id with no body is simply dropped below */ }
+  }
+
+  return {
+    ...delta,
+    stories: delta.ids.map((id) => bodies.get(id)).filter((s): s is SectionStory => !!s),
+  };
 }
 
 /**
@@ -114,8 +180,6 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
   );
 }
 
-/** Synchronously resolved cache entries only — used to skip the skeleton. */
-const settled = new Map<string, SectionData>();
 function peek(cat: string): SectionData | null {
   const key = sectionUrl(cat);
   const hit = cache.get(key);

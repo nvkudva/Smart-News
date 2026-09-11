@@ -25,6 +25,10 @@ export async function GET(
   if (!category) return NextResponse.json({ error: 'unknown category' }, { status: 404 });
 
   const userId = await currentUserId();
+  // The newest last_seen the caller already holds. Everything at or below it is
+  // a body they have; everything above it either appeared or grew, which is the
+  // same thing as far as a reader is concerned and the same comparison here.
+  const since = Number(new URL(request.url).searchParams.get('since') ?? 0) || 0;
 
   // What this answer varies by, beyond the cycle. A topic section is the same
   // rows for every reader, so it is not scoped by one; the four that rank
@@ -32,8 +36,8 @@ export async function GET(
   // build it costs nothing the ranking below was not already going to pay —
   // getPrefs is request-scoped.
   const scope = category.kind === 'topic'
-    ? category.slug
-    : `${category.slug}.${prefsFingerprint(await getPrefs(userId))}`;
+    ? `${category.slug}.${since}`
+    : `${category.slug}.${since}.${prefsFingerprint(await getPrefs(userId))}`;
   const version = await conditional(request, scope);
   const headers = cacheHeaders(version, 15, 300);
   // The whole point: the pipeline moves every fifteen minutes, so most requests
@@ -50,11 +54,21 @@ export async function GET(
   // request: every story carries the sub slugs it matches and the client filters
   // on them. The keyword lists stay here, where they live next to the taxonomy —
   // what ships is the verdict, not the rules.
-  const stories = rows.slice(0, SECTION_PAGE)
+  const tagged = rows.slice(0, SECTION_PAGE)
     .map((s) => ({ ...s, subs: subSlugsFor(category.slug, s) }));
 
+  // The order always ships in full; the bodies do not.
+  //
+  // A section is ranked against the reader, not sorted by time, so a delta of
+  // bare rows could not be merged without shipping the scorer to the browser.
+  // Forty-eight ids is a couple of KB and the bodies are what cost — and an id
+  // that stops appearing in this list is how the client learns that reap or the
+  // prune has removed a story, which a `since` alone could never say.
+  const ids = tagged.map((s) => s.id);
+  const stories = since > 0 ? tagged.filter((s) => s.last_seen > since) : tagged;
+
   return NextResponse.json(
-    { stamp: version.stamp, name: category.name, subs, total: stories.length, stories },
+    { stamp: version.stamp, name: category.name, subs, total: ids.length, ids, stories },
     { headers },
   );
 }

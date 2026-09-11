@@ -10,7 +10,7 @@
  *   · documents go network first with a cached fallback, so an offline open
  *     lands on the last page seen rather than the browser's error
  */
-const VERSION = 'v3';   // bumped so the unbounded media-v2 is dropped on activate
+const VERSION = 'v4';   // bumped: /api/* is no longer cached here, see below
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const MEDIA = `media-${VERSION}`;
@@ -104,7 +104,27 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  if (url.pathname.startsWith('/api/')) { e.respondWith(swr(request, DATA, 60_000)); return; }
+  // /api/* is network-first now, and the cache here is only the offline answer.
+  //
+  // It used to be stale-while-revalidate on a sixty-second clock, which was a
+  // third cache guessing at freshness underneath two that know: the client
+  // holds each section in IndexedDB against the cycle stamp and does not ask
+  // at all while the stamp is unchanged, so by the time a request reaches here
+  // it is one we actually want the answer to.
+  if (url.pathname.startsWith('/api/')) {
+    e.respondWith((async () => {
+      try {
+        const res = await fetch(request);
+        if (res.ok) (await caches.open(DATA)).put(request, res.clone());
+        return res;
+      } catch {
+        const hit = await (await caches.open(DATA)).match(request);
+        if (hit) return hit;
+        throw new Error('offline and uncached');
+      }
+    })());
+    return;
+  }
   if (request.destination === 'image') { e.respondWith(swr(request, MEDIA, 86_400_000)); return; }
 
   // Documents are network-first, and this is not negotiable: an HTML page names
