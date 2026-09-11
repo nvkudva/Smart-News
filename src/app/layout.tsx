@@ -48,8 +48,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // themeColor is not declared here on purpose: BOOT writes the meta tag from
-  // the reader's stored theme before first paint, and a static one would race it.
+  // One static value, which BOOT overwrites in place before the first paint. It
+  // exists so an installed app's status bar has the page's own ground to sit on
+  // from the moment the document is parsed rather than the manifest's colour.
+  themeColor: '#f7f7fa',
   viewportFit: 'cover',
   width: 'device-width',
   initialScale: 1,

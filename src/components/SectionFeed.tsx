@@ -39,6 +39,13 @@ export function loadSection(cat: string, sub: string | null): Promise<SectionDat
   return data;
 }
 
+/**
+ * Empty the map outright. Saving preferences re-ranks four of the fourteen
+ * sections, and the entries here were filled before the save; a TTL would let
+ * the old order stand for up to a minute after the reader watched it change.
+ */
+export function clearSections() { cache.clear(); }
+
 /** Warm without rendering — the strip calls this on hover and on touch-down. */
 export function warmSection(cat: string) {
   void loadSection(cat, null).catch(() => {});

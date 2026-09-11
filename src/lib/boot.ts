@@ -16,8 +16,9 @@ export const MODE_KEY = 'sn_mode';
 /**
  * Each theme's ground, as the browser and standalone chrome need it. Not
  * derivable from the stylesheet here — this runs before any CSS has loaded —
- * so the values are repeated, and `viewport.themeColor` is deliberately
- * absent from the layout: two sources would race and the loser wins at random.
+ * so the values are repeated. The layout declares one static theme-color so the
+ * status bar of an installed app has a value at parse time; this overwrites that
+ * one tag rather than appending a second, which the browser would ignore.
  */
 export const THEME_CHROME: Record<string, string> = {
   frost: '#f7f7fa',
@@ -68,5 +69,6 @@ export const BOOT =
   `(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');` +
   `d.dataset.mode=k;` +
   `var c=${JSON.stringify(THEME_CHROME)}[k==='dark'?t+'-dark':t]||'#f7f7fa';` +
-  `var m=document.createElement('meta');m.name='theme-color';m.content=c;` +
-  `document.head.appendChild(m)}catch(e){}`;
+  `var m=document.querySelector('meta[name="theme-color"]');` +
+  `if(!m){m=document.createElement('meta');m.name='theme-color';` +
+  `document.head.appendChild(m)}m.content=c}catch(e){}`;

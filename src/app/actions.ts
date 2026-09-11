@@ -8,16 +8,14 @@ import { currentUserId } from '@/lib/session';
 
 /**
  * Kept as the one place that knows a preference change has to reach the reader,
- * but it no longer calls revalidatePath. Those calls did nothing: every route
- * they named is force-dynamic, so there was no cached render to invalidate, and
- * the incremental cache is the read-only static-assets one, which cannot be
- * written at runtime.
+ * but there is nothing left for it to do. revalidatePath did nothing: every
+ * route it named is force-dynamic, so there was no cached render to invalidate,
+ * and the incremental cache is the read-only static-assets one.
  *
- * What actually delays the change is three 60-second caches the save does not
- * touch, and they compose: the per-isolate map in sections.ts, the per-tab map
- * in SectionFeed, and the service worker's stale-while-revalidate on /api/*.
- * Worst case is close to three minutes. Fixing that means keying those maps on
- * a stamp the save can bump, which is a change to all three and not this one.
+ * The three caches that actually delayed the change now invalidate themselves:
+ * the isolate map in sections.ts is keyed on a fingerprint of the prefs row,
+ * and PrefsPurge empties the per-tab map and the service worker's /api/* cache
+ * on submit. What was close to three minutes is now the round trip.
  */
 function revalidatePrefs() {
   // Intentionally empty — see above.

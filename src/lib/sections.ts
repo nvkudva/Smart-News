@@ -1,6 +1,7 @@
 import { d1 } from './d1';
 import {
-  getFeed, getLocalFeed, getPrefs, storyCols, storyFrom, withPlaceLabels, type Story,
+  getFeed, getLocalFeed, getPrefs, storyCols, storyFrom, withPlaceLabels,
+  type Prefs, type Story,
 } from './feed';
 import { placesReady } from './places';
 import { categoryBySlug, type Section } from './taxonomy';
@@ -73,6 +74,25 @@ export function getTopicSection(category: string, limit = SECTION_LIMIT): Promis
 const TTL_MS = 60_000;
 const warm = new Map<string, { at: number; rows: Promise<Story[]> }>();
 
+/**
+ * A fingerprint of the preferences a section was ranked against, so a save
+ * invalidates by changing the key rather than by waiting out a TTL. Before this
+ * the reader could change their interests and watch the old ranking for a
+ * minute here, another in the client's map, and a third behind the service
+ * worker — additively, close to three minutes.
+ *
+ * The prefs row is a primary-key lookup, and getFeed and the place sections
+ * read it anyway; the cost of naming it in the key is one round trip against
+ * two queries and two hundred rows.
+ */
+function prefsStamp(p: Prefs): string {
+  const flat = `${p.country}|${p.categories.join(',')}|${p.places.join(',')}`
+             + `|${p.placeIds.join(',')}|${p.geoConsent ? 1 : 0}|${p.geoPlaceId ?? ''}`;
+  let h = 5381;
+  for (let i = 0; i < flat.length; i++) h = ((h * 33) ^ flat.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
 function cached(key: string, run: () => Promise<Story[]>): Promise<Story[]> {
   const hit = warm.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.rows;
@@ -97,9 +117,15 @@ export async function getSection(
   const category = categoryBySlug(slug);
   if (!category) return null;
 
+  // A topic section is the same rows for everyone, so it is keyed without a
+  // reader at all; the four that rank against preferences carry their stamp.
+  const key = category.kind === 'topic'
+    ? `${slug}:${limit}`
+    : `${slug}:${limit}:${userId}:${prefsStamp(await getPrefs(userId))}`;
+
   let stories: Story[] = [];
   try {
-    stories = await cached(`${slug}:${limit}:${userId}`, () => {
+    stories = await cached(key, () => {
       if (category.kind === 'topic') return getTopicSection(category.name, limit);
       if (category.slug === 'top') return getFeed(limit, userId);
       if (category.slug === 'local') return getLocalSection(limit, userId);

@@ -111,6 +111,57 @@ async function reap(d: D1, local: DatabaseSync, since: number) {
   console.log(`  clusters: ${ghosts.length} merged away, deleted`);
 }
 
+/**
+ * Delete what fell out of the window. `sync` has always pushed a five-day slice
+ * and `hydrate` has always read the same slice back, but nothing removed the
+ * far side, so article rows — bodies included, up to 8000 characters each —
+ * accumulated for the life of the database. Everything downstream paid for it:
+ * D1 bills rows read, and the table only ever grew.
+ *
+ * Ids are collected before anything is deleted rather than issuing one
+ * `DELETE ... WHERE published_at < ?`: D1 caps how long a statement may run and
+ * how much it may touch, and the first prune against a store that has been
+ * growing since the beginning has months to remove, not days.
+ *
+ * Clusters go first for the reverse of reap's reason. A cluster whose articles
+ * are all outside the window has nothing left to re-summarise from, and leaving
+ * it would strand a headline over an empty source list.
+ */
+async function prune(d: D1, since: number) {
+  const stale: string[] = [];
+  let after = '';
+  for (;;) {
+    const page = await d.all<{ id: string }>(
+      `SELECT id FROM articles WHERE published_at < ? AND id > ? ORDER BY id LIMIT 400`,
+      [since, after]);
+    stale.push(...page.map((r) => r.id));
+    if (page.length < 400) break;
+    after = page[page.length - 1].id;
+    // One prune is a cycle step with fourteen minutes of company. Anything this
+    // run does not reach, the next one does, and the window only moves forward.
+    if (stale.length >= 20_000) break;
+  }
+  if (!stale.length) return;
+
+  for (let i = 0; i < stale.length; i += MAX_PARAMS) {
+    const batch = stale.slice(i, i + MAX_PARAMS);
+    const marks = batch.map(() => '?').join(',');
+    await d.run(`DELETE FROM articles WHERE id IN (${marks})`, batch);
+  }
+
+  // Clusters the prune just emptied. Counted rather than joined: D1 has no
+  // foreign-key cascade here, and article_count is the column the site reads.
+  const orphans = await d.all<{ id: string }>(
+    `SELECT id FROM clusters WHERE last_seen < ?
+       AND id NOT IN (SELECT cluster_id FROM articles WHERE cluster_id IS NOT NULL)`,
+    [since]);
+  for (let i = 0; i < orphans.length; i += MAX_PARAMS) {
+    const batch = orphans.slice(i, i + MAX_PARAMS).map((r) => r.id);
+    await d.run(`DELETE FROM clusters WHERE id IN (${batch.map(() => '?').join(',')})`, batch);
+  }
+  console.log(`  pruned: ${stale.length} articles, ${orphans.length} emptied clusters`);
+}
+
 /** Cluster ids D1 holds inside the window, paged because D1 caps a result set. */
 async function remoteClusterIds(d: D1, since: number): Promise<string[]> {
   const out: string[] = [];
@@ -181,6 +232,8 @@ async function main() {
     ['id','source_id','url','title','lead','body','image_url','published_at',
      'fetched_at','content_hash','cluster_id'], articles);
 
+  await prune(d, since);
+
   // prefs are deliberately not pushed: the web app is the only writer, and a
   // sync that carried the hydrated copy back up would revert whatever the
   // reader changed while the cycle was running.
@@ -199,8 +252,7 @@ async function main() {
 
   // The profile counters, computed here rather than on every profile render.
   // getStats used to COUNT(*) two whole tables per page view, and D1 bills rows
-  // read — a cost that grew for the life of the database, since nothing
-  // deletes articles. The local file is open and counts there are free.
+  // read. The local file is open and counts there are free.
   const counts = local.prepare(
     `SELECT (SELECT COUNT(*) FROM articles) AS articles,
             (SELECT COUNT(*) FROM clusters) AS clusters,

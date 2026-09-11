@@ -1,4 +1,5 @@
 import { savePrefsAction } from '@/app/actions';
+import { PrefsPurge } from '@/components/PrefsPurge';
 import { GeoConsent } from '@/components/GeoConsent';
 import { ThemeControl } from '@/components/Theme';
 import { ModeControl } from '@/components/Mode';
@@ -71,6 +72,7 @@ export default async function Profile() {
               <PlacePicker initial={picked} />
             </div>
 
+            <PrefsPurge />
             <button type="submit" className="btn setsave">Save preferences</button>
           </form>
 

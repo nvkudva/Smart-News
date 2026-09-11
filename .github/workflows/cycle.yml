@@ -17,7 +17,10 @@ concurrency:
 jobs:
   cycle:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Below the 15-minute cron period, not equal to it: at 15 a slow run is
+    # still alive when the Worker dispatches its successor, and the queue that
+    # concurrency builds never drains.
+    timeout-minutes: 12
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -46,5 +49,16 @@ jobs:
       - name: Fetch, cluster, summarise
         run: npm run cycle 40
 
+      # The runner's disk is scratch, so a failed sync throws away everything
+      # the summarise step just paid Workers AI for, and the next run starts
+      # again from D1's older state. It is the one step worth retrying.
       - name: Push results back to D1
-        run: npm run sync
+        run: npm run sync || (sleep 20 && npm run sync)
+
+      # A cycle that dies silently looks exactly like a quiet news day. The
+      # stamp sync already writes is the liveness signal; this turns a stall
+      # into a failed run on the Actions tab rather than a feed nobody notices
+      # has stopped moving.
+      - name: Fail loudly if the cycle went nowhere
+        if: failure()
+        run: echo "::error::news cycle failed — the feed is now as stale as its last successful sync"
