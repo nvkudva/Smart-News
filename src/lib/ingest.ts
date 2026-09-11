@@ -10,6 +10,14 @@ import { robotsVerdict } from './robots';
 const MAX_AGE_MS = 72 * 60 * 60 * 1000;
 const UA = 'smartnews/0.1 (personal news aggregator)';
 
+/**
+ * How long a body-less article stays worth retrying. The cycle is fifteen
+ * minutes, so this is roughly four more attempts — enough to outlast a
+ * restart or a rate-limit, and short enough that a genuinely unreadable page
+ * stops costing fetches within the hour.
+ */
+const RETRY_WINDOW_MS = 60 * 60 * 1000;
+
 type Item = {
   title?: string; link?: string; isoDate?: string; pubDate?: string;
   contentSnippet?: string; content?: string; enclosure?: { url?: string };
@@ -120,13 +128,25 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
     console.log(`  ${s.id.padEnd(20)} ${String(added).padStart(3)} new / ${feed.items?.length ?? 0}`);
   })));
 
-  console.log(`\n${pending.length} new articles (${seen} seen). Extracting full text…`);
+  // A body that failed once was never tried again: `pending` holds only rows
+  // this run inserted. That made every transient failure permanent — and with
+  // a robots.txt 5xx read as a refusal, one blip on a publisher's server
+  // silently cost that source its text for good. Recent misses get another go.
+  const retry = d.prepare(
+    `SELECT id, url FROM articles
+      WHERE body IS NULL AND fetched_at >= ? AND fetched_at < ?
+      ORDER BY fetched_at DESC LIMIT 200`,
+  ).all(now - RETRY_WINDOW_MS, now) as unknown as { id: string; url: string }[];
+
+  const work = [...pending, ...retry];
+  console.log(`\n${pending.length} new articles (${seen} seen)`
+              + `${retry.length ? `, ${retry.length} earlier misses retried` : ''}. Extracting full text…`);
 
   const bodyLimit = pLimit(6);
   const setBody = d.prepare('UPDATE articles SET body = ? WHERE id = ?');
   let got = 0;
   let blocked = 0;
-  await Promise.all(pending.map((a) => bodyLimit(async () => {
+  await Promise.all(work.map((a) => bodyLimit(async () => {
     const body = await extractBody(a.url);
     if (body === 'blocked') { blocked++; return; }
     if (body) { setBody.run(body, a.id); got++; }
@@ -134,6 +154,6 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
 
   // Worth its own number rather than folding into the misses: a rising count
   // here is a publisher changing their policy, not the extractor failing.
-  console.log(`Full text for ${got}/${pending.length}.${blocked ? ` ${blocked} disallowed by robots.txt.` : ''}`);
+  console.log(`Full text for ${got}/${work.length}.${blocked ? ` ${blocked} disallowed by robots.txt.` : ''}`);
   return { added: pending.length, withBody: got };
 }
