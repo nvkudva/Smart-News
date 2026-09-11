@@ -81,9 +81,9 @@ npm run dev                         # http://localhost:3000
 
 ## How it works
 
-`scripts/ingest.ts` reads the feed list in `src/lib/sources.ts`, normalises URLs, and pulls full article text with jsdom and Readability — summaries come from the article, not the RSS blurb. `src/lib/cluster.ts` builds a TF-IDF vector per article (title weighted 3x) and does single-link agglomeration inside a 48-hour window. `src/lib/summarise.ts` takes up to six articles, one per source, and asks the model in `src/lib/llm.ts` for a headline, a short crux, a category, a place and an importance score. `src/lib/feed.ts` ranks on recency, corroboration, importance and stated interest, reserving every fourth slot for a story outside your chosen categories.
+Every fifteen minutes: read the feeds, cluster what is the same story, summarise each cluster once, push the results to D1. The browser then reads those results without waking a server for most of it. Each stage is below, in order.
 
-The pipeline and the site use different stores. The pipeline writes local SQLite because a cluster run issues thousands of statements; the site reads D1 through `src/lib/d1.ts`. `scripts/hydrate-d1.ts` pulls the working window down and `scripts/sync-d1.ts` pushes results back, which is why `.github/workflows/cycle.yml` can run `hydrate` → `cycle` → `sync` every 15 minutes on a runner with no persistent disk.
+The pipeline and the site deliberately use different stores. The pipeline writes local SQLite because a cluster run issues thousands of statements, each of which would otherwise be an HTTP round trip; the site reads D1 through `src/lib/d1.ts`. `scripts/hydrate-d1.ts` pulls the working window down and `scripts/sync-d1.ts` pushes results back, which is what lets `.github/workflows/cycle.yml` run `hydrate` → `cycle` → `sync` on a runner with no persistent disk.
 
 `deploy/install-schedule.sh` installs the same 15-minute cycle as a launchd agent. It is macOS only — on Linux, or anywhere else, use the GitHub Actions workflow instead. Do not run both against one D1: two concurrent cycles clobber each other's cluster assignments.
 
@@ -109,7 +109,6 @@ The pipeline and the site use different stores. The pipeline writes local SQLite
 
 **Storing**
 
-- The pipeline writes local SQLite, because a cluster run issues thousands of statements and each would otherwise be an HTTP round trip.
 - `scripts/sync-d1.ts` pushes finished rows to D1 in batches, fingerprinting the tables that rarely change so unchanged rows are not rewritten, and paging by key rather than `OFFSET` — `OFFSET n` makes SQLite walk and discard n rows, which alone was costing millions of reads a day.
 
 **Serving**
