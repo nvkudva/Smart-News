@@ -89,7 +89,9 @@ export async function savePrefsAction(formData: FormData) {
  * independent and takes effect on its own. Returning the new list lets the
  * control render from the answer rather than from a guess about it.
  */
-export async function toggleInterestAction(category: string): Promise<string[]> {
+export async function toggleInterestAction(
+  category: string,
+): Promise<{ hidden: string[]; categories: string[] }> {
   const uid = await currentUserId();
   const prefs = await getPrefs(uid);
   const on = prefs.categories.includes(category);
@@ -98,9 +100,12 @@ export async function toggleInterestAction(category: string): Promise<string[]> 
     : [...prefs.categories, category];
   // An empty set leaves the ranker and the exploration reserve with nothing to
   // work against, so the last interest cannot be removed.
-  if (categories.length === 0) return prefs.categories;
-  await savePrefs({ ...prefs, categories }, uid);
-  return categories;
+  if (categories.length === 0) return { hidden: prefs.hidden, categories: prefs.categories };
+  // The mirror of hiding un-picking: you cannot be interested in a subject you
+  // have hidden, so saying you are takes it back off the hidden list.
+  const hidden = on ? prefs.hidden : prefs.hidden.filter((c) => c !== category);
+  await savePrefs({ ...prefs, categories, hidden }, uid);
+  return { hidden, categories };
 }
 
 /** Hiding a category also stops it being an interest: it cannot be both. */

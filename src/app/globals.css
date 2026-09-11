@@ -1843,16 +1843,16 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .setgroup > .panel > .chips {
   gap: 3px; padding: 3px;
   border-radius: var(--r-md); background: var(--track); border: 1px solid var(--glass-edge);
-  /* Sized by its options, not by the page. A track wider than the words it
-     holds stops reading as a choice between them. */
-  max-width: 420px;
+  /* Sized by its options, not by the page — and all three the same, because
+     three tracks stacked in one group at three widths read as a ragged edge
+     rather than as three settings. The widest set decides it; the others have
+     fewer segments, which simply makes each segment roomier. */
+  max-width: 480px;
 }
-/* Five options rather than three, so it gets the room five need — and below
-   that, two rows of the full width, because a segmented control that has
-   wrapped one option onto a second line is no longer a segmented control. */
-.setgroup > .panel > .chips[data-track="theme"] { max-width: 520px; }
+/* Below that, two rows of the full width: a segmented control that has wrapped
+   one option onto a second line is no longer a segmented control. */
 @media (max-width: 419.98px) {
-  .setgroup > .panel > .chips[data-track="theme"] {
+  .setgroup > .panel > .chips {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1868,6 +1868,35 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* A grid, not a wrapped row. Ten category names of very different lengths
    ragged themselves into a shape that read as decoration; equal cells make the
    set look like the closed list of ten it is, and the eye can count it. */
+/* A settings row that opens. The closed state has to read as a row like any
+   other — same height, same padding, the value on the right — so the marker is
+   ours rather than the browser's triangle, which sits at the wrong end and at
+   the wrong size. */
+.setdrop > summary {
+  cursor: pointer; list-style: none; gap: 10px;
+}
+.setdrop > summary::-webkit-details-marker { display: none; }
+.setdrop > summary::after {
+  content: ''; flex: 0 0 auto; width: 7px; height: 7px; margin-left: 2px;
+  border-right: 1.8px solid var(--ink-3); border-bottom: 1.8px solid var(--ink-3);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform .18s cubic-bezier(.32,.72,0,1);
+}
+.setdrop[open] > summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+.setdrop > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+
+/* The chosen set, said in the row itself: a settings row that hides its own
+   value makes the reader open it to find out whether they need to. */
+.setdrop__value {
+  margin-left: auto; min-width: 0; text-align: right;
+  font-size: var(--t-2); color: var(--ink-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.setdrop__body { padding: 0 14px 13px; display: flex; flex-direction: column; gap: 9px; }
+.setdrop__body > p {
+  margin: 0; max-width: 65ch; font-size: var(--t-2); line-height: 1.45; color: var(--ink-3);
+}
+
 .setchips {
   display: grid; gap: 7px;
   grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
