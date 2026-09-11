@@ -46,13 +46,15 @@ export default async function Reels() {
             {/* Under the summary, not over the headline: it is what the story
                 turned out to be filed as, which is only worth knowing once you
                 have read what the story is. */}
-            <div className="kicker">
+            {/* One line, not two: category, place, age and source count are all
+                the same kind of fact about the story, and stacking the count on
+                its own right-aligned row read as a separate control. */}
+            <div className="kicker kicker--reel">
               <span>{s.category}</span>
-              {s.place && <><span className="sep">·</span><span>{s.place}</span></>}
+              {s.place && <><span className="sep">·</span><span className="kicker__place">{s.place}</span></>}
               <span className="sep">·</span>
               <span>{storyWhen(s)}</span>
-            </div>
-            <div className="reel__actions">
+              <span className="sep">·</span>
               <Link href={`/story/${encodeURIComponent(s.id)}`} className="reel__sources">
                 {s.source_count} sources
               </Link>

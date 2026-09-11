@@ -12,30 +12,28 @@ Shown in the Pastel theme, where each card takes a quiet tint from its category.
 Three others ship with it — Frosted, Broadsheet and Ambient — and the picker is
 under Profile.
 
+| Mobile — the feed | Mobile — a category |
+|---|---|
+| <img src="docs/screenshots/mobile-home.jpg" alt="The feed on a phone, in the Pastel theme" width="300"> | <img src="docs/screenshots/mobile-sports.jpg" alt="The Sports category on a phone, in the Pastel theme" width="300"> |
+
+A phone is where news is read, so it is the size the design is drawn at and the
+one these shots lead with. The bar sits at the bottom at every width — thumb
+first, and unchanged on a desktop rather than relegated to a corner — and the
+category strip is one horizontal row that holds the selected category against
+the left edge.
+
+The same two screens with room to spread out:
+
 | Desktop — the feed | Desktop — a category |
 |---|---|
 | ![The feed on a desktop, in the Pastel theme](docs/screenshots/desktop-home.jpg) | ![The Sports category on a desktop, in the Pastel theme](docs/screenshots/desktop-sports.jpg) |
-
-<p align="center">
-  <img src="docs/screenshots/mobile-home.jpg" alt="The feed on a phone, in the Pastel theme" width="300">
-  <img src="docs/screenshots/mobile-sports.jpg" alt="The Sports category on a phone, in the Pastel theme" width="300">
-</p>
-
-The bar sits at the bottom at every width, and the category strip is one
-horizontal row that holds the selected category against the left edge.
 
 ### The other three
 
 | Frosted — the default | Broadsheet | Ambient |
 |---|---|---|
-| ![The feed in the Frosted theme](docs/screenshots/desktop-frost.jpg) | ![The feed in the Broadsheet theme](docs/screenshots/desktop-broadsheet.jpg) | ![The feed in the Ambient theme](docs/screenshots/desktop-ambient.jpg) |
+| <img src="docs/screenshots/mobile-frost.jpg" alt="The feed on a phone, in the Frosted theme" width="260"> | <img src="docs/screenshots/mobile-broadsheet.jpg" alt="The feed on a phone, in the Broadsheet theme" width="260"> | <img src="docs/screenshots/mobile-ambient.jpg" alt="The feed on a phone, in the Ambient theme" width="260"> |
 | White glass over a soft wash. | Paper, serif headlines, hairlines instead of cards. | Dark and warm, on an ember palette. |
-
-<p align="center">
-  <img src="docs/screenshots/mobile-frost.jpg" alt="The feed on a phone, in the Frosted theme" width="240">
-  <img src="docs/screenshots/mobile-broadsheet.jpg" alt="The feed on a phone, in the Broadsheet theme" width="240">
-  <img src="docs/screenshots/mobile-ambient.jpg" alt="The feed on a phone, in the Ambient theme" width="240">
-</p>
 
 Frosted is the shipped design; Broadsheet and Ambient were drawn beside it on
 the same canvas and carry its geometry with their own colour and type. The

@@ -536,6 +536,24 @@ body {
    row wraps at the separators rather than clipping category and place too. */
 .reel__body .kicker { flex-wrap: wrap; row-gap: 3px; overflow: visible; color: var(--kicker); }
 .reel__body .kicker > span { overflow: visible; }
+
+/* Four facts on one line inside a phone's width. Set smaller, with the tracking
+   that suits a two-word kicker wound back — at this size the extra
+   letter-spacing is most of what pushes it to wrap. Scoped under .reel__body to
+   outrank the wrapping rule above rather than fight it with !important. */
+.reel__body .kicker--reel {
+  font-size: 0.5625rem; letter-spacing: .02em; gap: 4px;
+  flex-wrap: nowrap; min-width: 0;
+}
+/* The place is the only part that can be arbitrarily long — "Cupertino,
+   California" against a category and a source count that are both short — so it
+   is the only part that gives way. Everything else holds its width, otherwise
+   flex shrinks all four proportionally and clips the category to "TECHNOL…". */
+.reel__body .kicker--reel > * { flex: 0 0 auto; }
+.reel__body .kicker--reel .kicker__place {
+  flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
+.reel__body .kicker--reel .sep { opacity: .55; }
 .reel__body h2 {
   margin: 0; font-size: var(--t-8); line-height: 1.18; font-weight: 700;
   letter-spacing: -0.026em; color: var(--ink); text-wrap: pretty;
@@ -554,12 +572,11 @@ body {
 
 /* Bottom right and quiet: it is a second way to the same place the whole reel
    already goes, so it names the thing rather than asking to be pressed. */
-.reel__actions { display: flex; justify-content: flex-end; margin-top: 2px; }
 .reel__sources {
-  display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px;
-  font-size: var(--t-2); font-weight: 600; color: var(--ink-3);
+  display: inline-flex; align-items: center; padding: 0;
+  font: inherit; letter-spacing: inherit; color: inherit; white-space: nowrap;
   text-decoration: underline; text-underline-offset: 3px;
-  text-decoration-color: color-mix(in oklab, var(--ink-3) 45%, transparent);
+  text-decoration-color: color-mix(in oklab, currentColor 45%, transparent);
 }
 @media (hover: hover) { .reel__sources:hover { color: var(--ink-2); } }
 
