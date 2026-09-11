@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { BOOT } from '@/lib/boot';
 import { AppHeader } from '@/components/AppHeader';
 import { ServiceWorker } from '@/components/ServiceWorker';
+import { StoryWarm } from '@/components/StoryWarm';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import './globals.css';
 
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="wash" aria-hidden><i /><i /><i /></div>
         <AppHeader />
         {children}
+        <StoryWarm />
         <ServiceWorker />
         <UpdateBanner />
       </body>

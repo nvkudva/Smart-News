@@ -351,21 +351,29 @@ export async function getStory(id: string) {
   const d = await d1();
   const cluster = withPlaceLabels(await d.all<Story>('SELECT * FROM clusters WHERE id = ?', [id]))[0];
   if (!cluster) return null;
-  const articles = await d.all<{ title: string; url: string; published_at: number;
-                                 source: string; homepage: string; bias: Bias | null }>(
-    `SELECT a.title, a.url, a.published_at, s.name AS source, s.homepage, s.bias
-       FROM articles a JOIN sources s ON s.id = a.source_id
-      WHERE a.cluster_id = ? ORDER BY a.published_at ASC`, [id]);
 
-  // The whole row, not four columns: the related list renders real cards now, so
-  // it needs the crux, the photograph and the place the card foot reads. Six of
-  // them on one indexed category filter is not a query worth economising on.
-  const related = withPlaceLabels(await d.all<Story>(
-    `SELECT * FROM clusters
-      WHERE category = ? AND id != ? AND headline IS NOT NULL
-      ORDER BY last_seen DESC LIMIT 6`, [cluster.category, id]));
+  // Issued together. Neither needs the other's answer — related needs only the
+  // category, which the cluster row already gave us — and each is a round trip
+  // to a database on the far side of the network, so awaiting them in turn was
+  // paying that distance twice to learn two unrelated facts.
+  const [articles, related] = await Promise.all([
+    d.all<{ title: string; url: string; published_at: number;
+            source: string; homepage: string; bias: Bias | null }>(
+      `SELECT a.title, a.url, a.published_at, s.name AS source, s.homepage, s.bias
+         FROM articles a JOIN sources s ON s.id = a.source_id
+        WHERE a.cluster_id = ? ORDER BY a.published_at ASC`, [id]),
+    // The whole row, not four columns: the related list renders real cards now,
+    // so it needs the crux, the photograph and the place the card foot reads.
+    // Six of them on one indexed category filter is not worth economising on.
+    d.all<Story>(
+      `SELECT * FROM clusters
+        WHERE category = ? AND id != ? AND headline IS NOT NULL
+        ORDER BY last_seen DESC LIMIT 6`, [cluster.category, id]),
+  ]);
 
-  return { cluster, articles, related, coverage: coverageOf(articles) };
+  return {
+    cluster, articles, related: withPlaceLabels(related), coverage: coverageOf(articles),
+  };
 }
 
 export type Coverage = {

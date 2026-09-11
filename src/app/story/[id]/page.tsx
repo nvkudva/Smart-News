@@ -16,13 +16,16 @@ export const dynamic = 'force-dynamic';
 export default async function StoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const decoded = decodeURIComponent(id);
-  const story = await getStory(decoded);
-  // A dead story link has to answer 404, not 200. Next commits the status the
-  // moment the body starts streaming, and a Suspense fallback anywhere above
-  // this call starts it first -- so no loading.tsx may sit on this route or any
-  // of its ancestors, root included.
+  // Started together, not one after the other: whether this reader saved the
+  // story has nothing to do with what the story is, and awaiting it down in the
+  // markup meant it did not even begin until every other query had finished.
+  const [story, userId] = await Promise.all([getStory(decoded), currentUserId()]);
+  // notFound() still renders the not-found screen; it no longer sets the status,
+  // because loading.tsx on this route starts the body before this line runs.
+  // That is deliberate — see the note there. The reader sees the right page.
   if (!story) notFound();
   const { cluster, articles, related, coverage } = story;
+  const saved = await isSaved(cluster.id, userId);
 
   const outlets = [...new Map(articles.map((a) => [a.source, a])).values()];
   // Two sentences per paragraph reads better than one wall of prose.
@@ -48,7 +51,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
             <span>{outlets.length} outlet{outlets.length === 1 ? '' : 's'}</span>
           </div>
           <div className="story__save">
-            <SaveButton clusterId={cluster.id} initial={await isSaved(cluster.id, await currentUserId())} iconOnly />
+            <SaveButton clusterId={cluster.id} initial={saved} iconOnly />
           </div>
         </header>
 
