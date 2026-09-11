@@ -40,7 +40,6 @@ export default async function Reels() {
             <div className="reel__count" aria-hidden><b>{i + 1}</b> / {stories.length}</div>
             <div className="reel__head">
               <h2>{s.headline}</h2>
-              <SaveButton clusterId={s.id} initial={saved.has(s.id)} iconOnly />
             </div>
             <p>{s.crux}</p>
             {/* Under the summary, not over the headline: it is what the story
@@ -49,15 +48,18 @@ export default async function Reels() {
             {/* One line, not two: category, place, age and source count are all
                 the same kind of fact about the story, and stacking the count on
                 its own right-aligned row read as a separate control. */}
-            <div className="kicker kicker--reel">
-              <span>{s.category}</span>
-              {s.place && <><span className="sep">·</span><span className="kicker__place">{s.place}</span></>}
-              <span className="sep">·</span>
-              <span>{storyWhen(s)}</span>
-              <span className="sep">·</span>
-              <Link href={`/story/${encodeURIComponent(s.id)}`} className="reel__sources">
-                {s.source_count} sources
-              </Link>
+            <div className="reel__foot">
+              <div className="kicker kicker--reel">
+                <span>{s.category}</span>
+                {s.place && <><span className="sep">·</span><span className="kicker__place">{s.place}</span></>}
+                <span className="sep">·</span>
+                <span>{storyWhen(s)}</span>
+                <span className="sep">·</span>
+                <Link href={`/story/${encodeURIComponent(s.id)}`} className="reel__sources">
+                  {s.source_count} sources
+                </Link>
+              </div>
+              <SaveButton clusterId={s.id} initial={saved.has(s.id)} iconOnly />
             </div>
           </div>
         </section>

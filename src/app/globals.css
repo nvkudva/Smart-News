@@ -435,11 +435,10 @@ body {
   display: inline-flex; align-items: center; gap: 7px;
   height: 38px; padding: 0 14px; border-radius: var(--r-md); cursor: pointer;
   font: inherit; font-size: var(--t-2); font-weight: 600;
-  background: rgba(255,255,255,0.62); border: 1px solid var(--glass-edge);
-  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  background: none; border: 0;
   color: var(--ink-2);
 }
-.savebtn[data-saved="true"] { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+.savebtn[data-saved="true"] { color: var(--accent); }
 .savebtn--icon { width: 38px; padding: 0; justify-content: center; }
 @media (pointer: coarse) { .savebtn--icon { width: 44px; } }
 .savebtn:disabled { opacity: .55; }
@@ -564,11 +563,15 @@ body {
 .reel__body p {
   margin: 0; font-size: var(--t-4); line-height: 1.56; color: var(--ink-2); text-wrap: pretty;
 }
-/* Headline and its one control on the same line, the control shrink-proof so a
-   long headline wraps under itself rather than squeezing the bookmark away. */
 .reel__head { display: flex; align-items: flex-start; gap: 12px; }
 .reel__head h2 { flex: 1 1 auto; min-width: 0; }
-.reel__head .savebtn--icon { flex: 0 0 auto; margin-top: 2px; }
+
+/* The kicker line and the bookmark share the last row: the control sits at the
+   bottom right corner of the body, clear of the headline, and the kicker keeps
+   the width it gives up. Shrink-proof so a long place name ellipses instead. */
+.reel__foot { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.reel__foot .kicker--reel { flex: 1 1 auto; }
+.reel__foot .savebtn--icon { flex: 0 0 auto; margin-right: -10px; }
 
 /* Bottom right and quiet: it is a second way to the same place the whole reel
    already goes, so it names the thing rather than asking to be pressed. */
@@ -587,16 +590,14 @@ body {
    the photograph by document order and its raised children still outrank the
    link, which is the whole arrangement. */
 .reel__open { position: absolute; inset: 0; z-index: 3; }
-.reel__head .savebtn--icon, .reel__sources { position: relative; z-index: 4; }
+.reel__foot .savebtn--icon, .reel__sources { position: relative; z-index: 4; }
 .reel__count {
   display: none; font-size: var(--t-1); font-weight: 700; letter-spacing: .08em;
   color: var(--ink-3); font-variant-numeric: tabular-nums;
 }
 .reel__count b { color: var(--ink); font-weight: 700; }
-.reel .savebtn {
-  background: var(--glass); border-color: var(--glass-edge); color: var(--ink);
-}
-.reel .savebtn[data-saved="true"] { background: var(--accent); border-color: transparent; }
+.reel .savebtn { color: var(--ink); }
+.reel .savebtn[data-saved="true"] { color: var(--accent); }
 
 /* The side-by-side split needs real width: at 1024 the text column still lands
    near 290px and the headline wraps to five lines, so the stacked layout holds
@@ -1598,7 +1599,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 :root[data-mode="dark"] .panel,
 :root[data-mode="dark"] .chip,
 :root[data-mode="dark"] .pinchip,
-:root[data-mode="dark"] .savebtn,
 :root[data-mode="dark"] .relrow,
 :root[data-mode="dark"] .subpill[data-active="true"],
 :root[data-mode="dark"] .subpill[aria-current="page"] {
