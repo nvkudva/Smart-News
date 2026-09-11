@@ -122,19 +122,38 @@ const TOPIC_SUBS: Record<Category, SubCategory[]> = {
   ],
 };
 
-/** Scope first, then the ten topics in their stored order. */
+/** Scope widens outward-in: everything, then abroad, then home, then here. */
 export const SCOPE_CATEGORIES: Section[] = [
   { kind: 'scope', name: 'Top', slug: 'top', subs: null },
-  { kind: 'scope', name: 'Local', slug: 'local', subs: null },
-  { kind: 'scope', name: 'National', slug: 'national', subs: null },
   { kind: 'scope', name: 'International', slug: 'international', subs: null },
+  { kind: 'scope', name: 'National', slug: 'national', subs: null },
+  { kind: 'scope', name: 'Local', slug: 'local', subs: null },
 ];
 
-export const TOPIC_CATEGORIES: Section[] = CATEGORIES.map((name) => ({
+/**
+ * Topics the strip does not show. World and India say what the scope tabs
+ * already say — International and National are the same cut, drawn from the
+ * country the cluster carries rather than from a summariser's label. The names
+ * stay in CATEGORIES because they are stored values: the summariser still
+ * writes them and old rows still hold them, they just have no tab of their own.
+ */
+const HIDDEN_TOPICS: readonly string[] = ['World', 'India'];
+
+/** Declared strip order. Technology leads; the rest keep their stored order. */
+const TOPIC_ORDER: readonly Category[] = ['Technology'];
+
+const shown = CATEGORIES.filter((name) => !HIDDEN_TOPICS.includes(name));
+
+export const VISIBLE_CATEGORIES: Category[] = [
+  ...TOPIC_ORDER.filter((name) => shown.includes(name)),
+  ...shown.filter((name) => !TOPIC_ORDER.includes(name)),
+];
+
+export const TOPIC_CATEGORIES: Section[] = VISIBLE_CATEGORIES.map((name) => ({
   kind: 'topic' as const, name, slug: slug(name), subs: TOPIC_SUBS[name],
 }));
 
-/** Declared order is render order: scope first, then the ten topics. */
+/** Declared order is render order: scope first, then the visible topics. */
 export const TAXONOMY: Section[] = [...SCOPE_CATEGORIES, ...TOPIC_CATEGORIES];
 
 export function categoryBySlug(s: string): Section | null {
@@ -187,10 +206,10 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
   if (cat.kind === 'scope') {
     const seen = new Map<string, number>();
     for (const s of stories) seen.set(s.category, (seen.get(s.category) ?? 0) + 1);
-    const present = CATEGORIES
+    const present = VISIBLE_CATEGORIES
       .map((name) => ({ name, slug: slug(name), count: seen.get(name) ?? 0 }))
       .filter((s) => s.count > 0);
-    // A scope's subs are the ten topics, and on a busy day nine of them qualify —
+    // A scope's subs are the visible topics, and on a busy day nine of them qualify —
     // a second strip as long as the first, saying the same words. The thinnest
     // are dropped by count, then declared order is restored so the pills keep
     // their places instead of reshuffling as the feed moves under them.
@@ -236,7 +255,7 @@ export function filterBySub<T extends Matchable>(
   const cat = categoryBySlug(categorySlug);
   if (!cat) return [...stories];
   if (cat.kind === 'scope') {
-    const name = CATEGORIES.find((c) => slug(c) === subSlug);
+    const name = VISIBLE_CATEGORIES.find((c) => slug(c) === subSlug);
     return name ? stories.filter((s) => s.category === name) : [...stories];
   }
   const re = MATCHERS.get(`${cat.slug}/${subSlug}`);
