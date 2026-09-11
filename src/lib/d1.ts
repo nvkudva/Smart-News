@@ -69,6 +69,30 @@ function fromHttp(accountId: string, databaseId: string, token: string): D1 {
   };
 }
 
+/**
+ * The pipeline's own SQLite file, standing in for D1.
+ *
+ * Development reads the deployed rows on purpose, which is right until the day
+ * D1 stops answering — an exhausted daily read limit takes the whole site down
+ * until midnight UTC, and with it every local page. `SMARTNEWS_LOCAL_D1=1`
+ * points `next dev` at data/smartnews.db instead, which the pipeline has been
+ * filling all along. Off by default: the divergence this avoids is real, and
+ * worth accepting only deliberately.
+ */
+async function fromSqlite(): Promise<D1> {
+  const { db } = await import('./db');
+  const d = db();
+  const rows = <T,>(sql: string, params: unknown[]) =>
+    d.prepare(sql).all(...(params as never[])) as T[];
+  return {
+    all: async <T,>(sql: string, params: unknown[] = []) => rows<T>(sql, params),
+    get: async <T,>(sql: string, params: unknown[] = []) => rows<T>(sql, params)[0],
+    run: async (sql: string, params: unknown[] = []) => {
+      d.prepare(sql).run(...(params as never[]));
+    },
+  };
+}
+
 let cached: D1 | null = null;
 
 export async function d1(): Promise<D1> {
@@ -88,6 +112,8 @@ export async function d1(): Promise<D1> {
       if (env?.DB) return (cached = fromBinding(env.DB));
     } catch { /* fall through to HTTP */ }
   }
+
+  if (process.env.SMARTNEWS_LOCAL_D1 === '1') return (cached = await fromSqlite());
 
   const account = process.env.CLOUDFLARE_ACCOUNT_ID;
   const database = process.env.CLOUDFLARE_D1_ID;
