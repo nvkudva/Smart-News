@@ -77,3 +77,56 @@ export function titleFingerprint(title: string): string {
   const t = tokenise(title).sort();
   return t.slice(0, 12).join('.');
 }
+
+/**
+ * Above this, two articles are the same piece of journalism rather than two
+ * accounts of one event. See distinctByText for why it is Jaccard and not the
+ * cosine the clustering uses.
+ */
+export const NEAR_DUPLICATE = 0.5;
+
+const SHINGLE = 5;
+
+/** Overlapping word n-grams. Republished copy shares long exact runs; two
+ *  newsrooms writing up the same event essentially never do. */
+function shingles(text: string): Set<string> {
+  const t = tokenise(text);
+  if (t.length < SHINGLE) return new Set(t.length ? [t.join(' ')] : []);
+  const out = new Set<string>();
+  for (let i = 0; i + SHINGLE <= t.length; i++) out.add(t.slice(i, i + SHINGLE).join(' '));
+  return out;
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (!a.size || !b.size) return 0;
+  let shared = 0;
+  const [small, large] = a.size <= b.size ? [a, b] : [b, a];
+  for (const x of small) if (large.has(x)) shared++;
+  return shared / (a.size + b.size - shared);
+}
+
+/**
+ * Indices of the texts that are not republications of an earlier one.
+ *
+ * Wire copy is the case this exists for: an agency story carried by five
+ * outlets is one newsroom's work, and counting it five times would inflate
+ * corroboration — which decides both a story's rank and the size of its card.
+ * Order matters, so callers should pass their preferred article first; the
+ * survivor of a duplicate pair is the earlier index.
+ *
+ * Deliberately NOT the TF-IDF cosine the clustering uses. IDF is computed over
+ * the documents in hand, and here that is a handful from one cluster — so the
+ * text they share, which is the entire signal, is the text IDF weights toward
+ * zero. Three copies of one wire story scored as unrelated under it. Jaccard
+ * over five-word shingles asks the question directly and does not care how many
+ * documents it is given.
+ */
+export function distinctByText(texts: string[], threshold = NEAR_DUPLICATE): number[] {
+  if (texts.length < 2) return texts.map((_, i) => i);
+  const grams = texts.map(shingles);
+  const kept: number[] = [];
+  for (let i = 0; i < texts.length; i++) {
+    if (kept.every((k) => jaccard(grams[i], grams[k]) < threshold)) kept.push(i);
+  }
+  return kept;
+}

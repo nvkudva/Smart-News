@@ -3,6 +3,7 @@ import { CATEGORIES, db } from './db';
 import type { Bias } from './sources';
 import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } from './llm';
 import { resolvePlaceLocal } from './places-local';
+import { distinctByText } from './text';
 
 const MAX_ARTICLES = 6;
 const MAX_ATTEMPTS = 3;
@@ -60,7 +61,13 @@ export async function summariseCluster(members: Member[]): Promise<LlmOutcome<Su
   for (const m of [...members].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))) {
     if (!bySource.has(m.source_id)) bySource.set(m.source_id, m);
   }
-  const picked = [...bySource.values()].slice(0, MAX_ARTICLES);
+  // Then drop republished copy. Five outlets carrying one agency story is one
+  // account, and sending it five times spends input tokens to tell the model
+  // the same thing again — while looking, to it, like five outlets agreeing.
+  const candidates = [...bySource.values()];
+  const distinct = distinctByText(candidates.map((m) => `${m.title} ${m.body ?? m.lead ?? ''}`))
+    .map((i) => candidates[i]);
+  const picked = distinct.slice(0, MAX_ARTICLES);
   if (!picked.length) return { ok: false, reason: 'content' };
 
   const corpus = picked.map((m, i) =>

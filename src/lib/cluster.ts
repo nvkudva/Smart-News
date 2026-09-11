@@ -1,5 +1,5 @@
 import { db } from './db';
-import { cosine, entities, idf, termFreq, tokenise, vector } from './text';
+import { cosine, distinctByText, entities, idf, termFreq, tokenise, vector } from './text';
 
 const WINDOW_MS = 48 * 60 * 60 * 1000;
 
@@ -48,6 +48,35 @@ function bestImage(members: Row[]): Row | null {
  * centroid above threshold, otherwise starts a cluster. Cheap, order-dependent,
  * and good enough while a run only ever sees ~2k articles.
  */
+/**
+ * How many newsrooms actually covered this, which is not the same as how many
+ * outlets carried it. A wire story republished by five sites is one piece of
+ * reporting, and counting it five times would manufacture the corroboration
+ * that decides both rank and card size.
+ *
+ * Compared on the body, not the headline the clustering uses: an outlet running
+ * agency copy rewrites the headline and keeps the text, so the title is the one
+ * part that reliably differs.
+ */
+function independentSources(members: Row[]): number {
+  // One per outlet first — the same outlet's follow-up is not a second source
+  // however different it reads — longest body first so the comparison has text.
+  const bySource = new Map<string, Row>();
+  for (const m of [...members].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))) {
+    if (!bySource.has(m.source_id)) bySource.set(m.source_id, m);
+  }
+  const picked = [...bySource.values()];
+  if (picked.length < 2) return picked.length;
+
+  // Without a body there is nothing to compare, so those keep their own count
+  // rather than being collapsed on a headline that was never the signal.
+  const withText = picked.filter((m) => (m.body ?? '').length > 240);
+  const without = picked.length - withText.length;
+  if (withText.length < 2) return picked.length;
+
+  return without + distinctByText(withText.map((m) => m.body!)).length;
+}
+
 export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assigned: number } {
   const THRESHOLD = opts.threshold ?? 0.19;
   const ENTITY_FLOOR = opts.entityFloor ?? 0.52;
@@ -120,11 +149,11 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
     for (const m of members) if (m.cluster_id) tally.set(m.cluster_id, (tally.get(m.cluster_id) ?? 0) + 1);
     const inherited = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
     const id = inherited ?? `c_${members[0].id}`;
-    const sources = new Set(members.map((m) => m.source_id));
+    const sources = independentSources(members);
     const hashes = new Set(members.map((m) => m.content_hash ?? m.id));
     const image = bestImage(members);
     upsert.run(id, image?.image_url ?? null, image ? sourceNames.get(image.source_id) ?? null : null,
-               hashes.size, sources.size,
+               hashes.size, sources,
                Math.min(...members.map((m) => m.published_at)),
                Math.max(...members.map((m) => m.published_at)));
     for (const m of members) { assign.run(id, m.id); assigned++; }
