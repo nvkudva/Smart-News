@@ -81,6 +81,58 @@ export async function savePrefsAction(formData: FormData) {
   revalidatePrefs();
 }
 
+/**
+ * One toggle, one write.
+ *
+ * The form these used to live in had a Save button because a form does, not
+ * because anything here needs a transaction: each of these settings is
+ * independent and takes effect on its own. Returning the new list lets the
+ * control render from the answer rather than from a guess about it.
+ */
+export async function toggleInterestAction(category: string): Promise<string[]> {
+  const uid = await currentUserId();
+  const prefs = await getPrefs(uid);
+  const on = prefs.categories.includes(category);
+  const categories = on
+    ? prefs.categories.filter((c) => c !== category)
+    : [...prefs.categories, category];
+  // An empty set leaves the ranker and the exploration reserve with nothing to
+  // work against, so the last interest cannot be removed.
+  if (categories.length === 0) return prefs.categories;
+  await savePrefs({ ...prefs, categories }, uid);
+  return categories;
+}
+
+/** Hiding a category also stops it being an interest: it cannot be both. */
+export async function toggleHiddenAction(category: string): Promise<{ hidden: string[]; categories: string[] }> {
+  const uid = await currentUserId();
+  const prefs = await getPrefs(uid);
+  const off = prefs.hidden.includes(category);
+  const hidden = off
+    ? prefs.hidden.filter((c) => c !== category)
+    : [...prefs.hidden, category];
+  const categories = off ? prefs.categories : prefs.categories.filter((c) => c !== category);
+  await savePrefs({ ...prefs, hidden, categories: categories.length ? categories : prefs.categories }, uid);
+  return { hidden, categories };
+}
+
+export async function setCountryAction(code: string): Promise<string> {
+  const uid = await currentUserId();
+  const prefs = await getPrefs(uid);
+  const country = code.toUpperCase().slice(0, 2);
+  if (!/^[A-Z]{2}$/.test(country)) return prefs.country;
+  await savePrefs({ ...prefs, country }, uid);
+  return country;
+}
+
+/** The picker owns both arrays: everything typed, and what the gazetteer knew. */
+export async function setPlacesAction(labels: string[], ids: string[]): Promise<void> {
+  const uid = await currentUserId();
+  const prefs = await getPrefs(uid);
+  const places = labels.map((p) => p.trim()).filter(Boolean).slice(0, 12);
+  await savePrefs({ ...prefs, places, placeIds: await resolveLabels(places, ids) }, uid);
+}
+
 export async function searchPlacesAction(q: string): Promise<Place[]> {
   const query = q.trim();
   if (query.length < 2) return [];

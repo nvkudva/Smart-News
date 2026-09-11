@@ -10,6 +10,17 @@
  * with no server round trip, and a phone and a laptop can disagree.
  */
 export const NAV_KEY = 'sn_nav';
+/**
+ * Categories the reader switched off, mirrored out of prefs so the strip can
+ * honour them.
+ *
+ * The rail is part of fifteen prerendered shells — that is what makes a
+ * category switch cost no invocation — so the server that builds it cannot
+ * know who is reading. Written here on save and applied before first paint,
+ * the same bargain theme, mode and nav placement already take. Prefs remain
+ * the record; this is a copy the shell can read.
+ */
+export const HIDDEN_KEY = 'sn_hidden';
 export const THEME_KEY = 'sn_theme';
 export const MODE_KEY = 'sn_mode';
 
@@ -24,12 +35,10 @@ export const THEME_CHROME: Record<string, string> = {
   frost: '#f7f7fa',
   pastel: '#f8f8fa',
   broadsheet: '#f9f6f0',
-  ambient: '#fdf8ef',
   fjord: '#e9efef',
   'frost-dark': '#15171c',
   'pastel-dark': '#16161f',
   'broadsheet-dark': '#141310',
-  'ambient-dark': '#1a120d',
   'fjord-dark': '#0d1618',
 };
 
@@ -63,11 +72,15 @@ export const BOOT =
   `try{var d=document.documentElement,n=localStorage.getItem('${NAV_KEY}');` +
   `if(n==='bottom'||n==='side')d.dataset.nav=n;` +
   `var t=localStorage.getItem('${THEME_KEY}')||'frost';` +
+  // A theme that has since been removed would otherwise be stamped onto <html>
+  // with no stylesheet behind it. Checked against the one list that knows.
+  `if(!${JSON.stringify(THEME_CHROME)}[t])t='frost';` +
   `if(t!=='frost')d.dataset.theme=t;` +
   `var s=localStorage.getItem('${MODE_KEY}');` +
   `var k=(s==='light'||s==='dark')?s:` +
   `(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');` +
   `d.dataset.mode=k;` +
+  `var h=localStorage.getItem('${HIDDEN_KEY}');if(h)d.dataset.hidden=h;` +
   `var c=${JSON.stringify(THEME_CHROME)}[k==='dark'?t+'-dark':t]||'#f7f7fa';` +
   `var m=document.querySelector('meta[name="theme-color"]');` +
   `if(!m){m=document.createElement('meta');m.name='theme-color';` +

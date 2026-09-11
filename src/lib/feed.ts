@@ -19,6 +19,13 @@ export type Story = {
 export type Prefs = {
   country: string; categories: string[]; places: string[];
   placeIds: string[]; geoConsent: boolean; geoPlaceId: string | null;
+  /**
+   * Categories the reader has switched off, which is a different question from
+   * the ones they are interested in. `categories` only ever ranked — an
+   * unchecked category still appeared, deliberately, because a quarter of the
+   * feed is reserved for what the reader has not asked for. This removes.
+   */
+  hidden: string[];
 };
 
 export const DEFAULT_PREFS: Prefs = {
@@ -28,6 +35,7 @@ export const DEFAULT_PREFS: Prefs = {
   placeIds: [],
   geoConsent: false,
   geoPlaceId: null,
+  hidden: [],
 };
 
 /**
@@ -81,7 +89,8 @@ function parseJsonArray(raw: string | null | undefined): string[] {
  */
 export function prefsFingerprint(p: Prefs): string {
   const flat = `${p.country}|${p.categories.join(',')}|${p.places.join(',')}`
-             + `|${p.placeIds.join(',')}|${p.geoConsent ? 1 : 0}|${p.geoPlaceId ?? ''}`;
+             + `|${p.placeIds.join(',')}|${p.geoConsent ? 1 : 0}|${p.geoPlaceId ?? ''}`
+             + `|${p.hidden.join(',')}`;
   let h = 5381;
   for (let i = 0; i < flat.length; i++) h = ((h * 33) ^ flat.charCodeAt(i)) >>> 0;
   return h.toString(36);
@@ -99,7 +108,8 @@ async function uncachedGetPrefs(userId: string): Promise<Prefs> {
   const row = await (await d1()).get<{
     country: string; categories: string; places: string;
     place_ids?: string | null; geo_consent?: number | null; geo_place_id?: string | null;
-  }>(`SELECT country, categories, places${ready ? ', place_ids, geo_consent, geo_place_id' : ''}
+    hidden?: string | null;
+  }>(`SELECT country, categories, places${ready ? ', place_ids, geo_consent, geo_place_id, hidden' : ''}
         FROM prefs WHERE user_id = ?`, [userId]);
   if (!row) return DEFAULT_PREFS;
   return {
@@ -109,6 +119,7 @@ async function uncachedGetPrefs(userId: string): Promise<Prefs> {
     placeIds: parseJsonArray(row.place_ids),
     geoConsent: Boolean(row.geo_consent),
     geoPlaceId: row.geo_place_id ?? null,
+    hidden: parseJsonArray(row.hidden),
   };
 }
 
@@ -125,14 +136,15 @@ export async function savePrefs(p: Prefs, userId: string) {
     return;
   }
   await (await d1()).run(
-    `INSERT INTO prefs (user_id, country, categories, places, place_ids, geo_consent, geo_place_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO prefs (user_id, country, categories, places, place_ids, geo_consent, geo_place_id, hidden)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id) DO UPDATE SET country=excluded.country,
        categories=excluded.categories, places=excluded.places,
        place_ids=excluded.place_ids, geo_consent=excluded.geo_consent,
-       geo_place_id=excluded.geo_place_id`,
+       geo_place_id=excluded.geo_place_id, hidden=excluded.hidden`,
     [userId, p.country, JSON.stringify(p.categories), JSON.stringify(p.places),
-     JSON.stringify(p.placeIds), p.geoConsent ? 1 : 0, p.geoPlaceId]);
+     JSON.stringify(p.placeIds), p.geoConsent ? 1 : 0, p.geoPlaceId,
+     JSON.stringify(p.hidden)]);
 }
 
 /** The places the feed ranks against: the stated ones plus, only with consent,
@@ -224,6 +236,23 @@ function score(s: Story, prefs: Prefs, inside: Set<string> | null): number {
 }
 
 /**
+ * Drop the categories the reader switched off.
+ *
+ * Applied to the rows rather than folded into each WHERE: three queries would
+ * each need the clause and the list is usually empty, so the cost is one pass
+ * over rows already in hand against three more bound parameters on every read.
+ *
+ * Not applied to a topic section. Asking for /c/sports is an explicit request
+ * for sports, and answering it with nothing because sports is hidden would be
+ * obtuse — the category simply does not appear in the strip to be asked for.
+ */
+export function withoutHidden<T extends { category: string }>(rows: T[], p: Prefs): T[] {
+  if (!p.hidden.length) return rows;
+  const off = new Set(p.hidden);
+  return rows.filter((r) => !off.has(r.category));
+}
+
+/**
  * Ranked feed with a reserved exploration budget: one slot in four goes to a
  * story outside the reader's stated interests, chosen on merit within that set.
  * "Outside" now has two meanings — a category they never picked, or a place
@@ -245,7 +274,8 @@ export async function getFeed(limit: number, userId: string): Promise<Story[]> {
       ORDER BY c.last_seen DESC LIMIT 150`,
     [Date.now() - CANDIDATE_WINDOW_H * 3_600_000]));
 
-  const scored = rows.map((s) => ({ s, k: score(s, prefs, inside) })).sort((a, b) => b.k - a.k);
+  const scored = withoutHidden(rows, prefs)
+    .map((s) => ({ s, k: score(s, prefs, inside) })).sort((a, b) => b.k - a.k);
   const known = scored.filter(({ s }) => prefs.categories.includes(s.category));
   const novel = scored.filter(({ s }) => !prefs.categories.includes(s.category));
   // Geo-adjacent: near a stated place but not inside it, and not something the
@@ -338,7 +368,7 @@ export async function getLocalFeed(limit: number, userId: string): Promise<Story
       return [];
     }
 
-    return withPlaceLabels(rows).map((s) => ({ s, k: score(s, prefs, inside) }))
+    return withoutHidden(withPlaceLabels(rows), prefs).map((s) => ({ s, k: score(s, prefs, inside) }))
       .sort((a, b) => b.k - a.k)
       .slice(0, limit)
       .map(({ s }) => ({ ...s, exploration: 0 as const, exploration_kind: null }));

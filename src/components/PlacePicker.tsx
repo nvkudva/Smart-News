@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { searchPlacesAction } from '@/app/actions';
+import { searchPlacesAction, setPlacesAction } from '@/app/actions';
 import type { Place } from '@/lib/places';
 
 export type PickedPlace = { id: string | null; name: string; label: string };
@@ -17,6 +17,16 @@ const MAX = 12;
  */
 export function PlacePicker({ initial }: { initial: PickedPlace[] }) {
   const [picked, setPicked] = useState<PickedPlace[]>(initial);
+
+  /** Saved on the change rather than on a submit: there is no longer a form
+   *  around this, and a place added is a place the reader meant to add. */
+  const store = (list: PickedPlace[]) => {
+    void setPlacesAction(
+      list.map((p) => p.name),
+      list.filter((p) => p.id).map((p) => p.id as string),
+    ).catch(() => {});
+    return list;
+  };
   const [q, setQ] = useState('');
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
@@ -52,7 +62,7 @@ export function PlacePicker({ initial }: { initial: PickedPlace[] }) {
       const dup = next.id
         ? cur.some((p) => p.id === next.id)
         : cur.some((p) => p.name.toLowerCase() === next.name.toLowerCase());
-      return dup ? cur : [...cur, next];
+      return dup ? cur : store([...cur, next]);
     });
     setQ(''); setResults([]); setOpen(false);
   }
@@ -79,7 +89,7 @@ export function PlacePicker({ initial }: { initial: PickedPlace[] }) {
               {p.label}
               {p.id === null && <span className="chip__note">text</span>}
               <button type="button" className="chip__x" aria-label={`Remove ${p.label}`}
-                      onClick={() => setPicked((cur) => cur.filter((c) => c !== p))}>×</button>
+                      onClick={() => setPicked((cur) => store(cur.filter((c) => c !== p)))}>×</button>
             </span>
           ))}
         </div>
@@ -127,8 +137,6 @@ export function PlacePicker({ initial }: { initial: PickedPlace[] }) {
         Bengaluru, Bengaluru counts as Karnataka.
       </p>
 
-      <input type="hidden" name="place_ids" value={JSON.stringify(ids)} />
-      <input type="hidden" name="places" value={text} />
     </div>
   );
 }

@@ -107,7 +107,8 @@ function migrate(d: DatabaseSync) {
       places       TEXT,
       place_ids    TEXT,
       geo_consent  INTEGER NOT NULL DEFAULT 0,
-      geo_place_id TEXT
+      geo_place_id TEXT,
+      hidden       TEXT
     );
 
     CREATE TABLE IF NOT EXISTS events (
@@ -148,6 +149,9 @@ function migrate(d: DatabaseSync) {
   add('prefs', 'place_ids', 'place_ids TEXT');
   add('prefs', 'geo_consent', 'geo_consent INTEGER NOT NULL DEFAULT 0');
   add('prefs', 'geo_place_id', 'geo_place_id TEXT');
+  // Categories the reader has switched off. Distinct from `categories`, which
+  // only ever ranked: this one removes.
+  add('prefs', 'hidden', 'hidden TEXT');
 
   // After the ALTER, not with the other indexes: on a database that predates
   // place_id the column does not exist yet when the CREATE TABLE block runs.

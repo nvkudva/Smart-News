@@ -1,7 +1,7 @@
 import { d1 } from './d1';
 import {
-  getFeed, getLocalFeed, getPrefs, prefsFingerprint, storyCols, storyFrom, withPlaceLabels,
-  type Story,
+  getFeed, getLocalFeed, getPrefs, prefsFingerprint, storyCols, storyFrom,
+  withPlaceLabels, withoutHidden, type Story,
 } from './feed';
 import { cycleStamp } from './cycle';
 import { placesReady } from './places';
@@ -42,6 +42,24 @@ async function bySql(where: string, params: unknown[], limit: number): Promise<S
   return stamp(rows);
 }
 
+/**
+ * The countries we actually carry news for.
+ *
+ * Home country is not a profile field — it is the definition of the National
+ * and International tabs, which are `c.country = ?` and its complement. So the
+ * only countries worth offering are the ones that would answer with something;
+ * a picker listing all 249 would let a reader choose two empty sections.
+ */
+export async function countriesWithNews(): Promise<string[]> {
+  const rows = await (await d1()).all<{ country: string }>(
+    `SELECT DISTINCT country FROM clusters
+      WHERE headline IS NOT NULL AND country IS NOT NULL AND last_seen >= ?
+      ORDER BY country`, [Date.now() - WINDOW_MS]);
+  // The column is whatever the summariser wrote, and it has written junk — a
+  // bare comma among them. A picker is the wrong place to find that out.
+  return rows.map((r) => r.country.trim().toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c));
+}
+
 /** The reader's own places. Delegates so /local and the Local tab can never
  *  disagree about what "local" means, including the pre-v1.5 free-text
  *  fallback and the empty-on-unmigrated-D1 degradation. */
@@ -51,12 +69,13 @@ export function getLocalSection(limit: number, userId: string): Promise<Story[]>
 
 export async function getNationalSection(limit: number, userId: string): Promise<Story[]> {
   const prefs = await getPrefs(userId);
-  return bySql('c.country = ?', [prefs.country], limit);
+  return withoutHidden(await bySql('c.country = ?', [prefs.country], limit), prefs);
 }
 
 export async function getInternationalSection(limit: number, userId: string): Promise<Story[]> {
   const prefs = await getPrefs(userId);
-  return bySql('c.country IS NOT NULL AND c.country <> ?', [prefs.country], limit);
+  return withoutHidden(
+    await bySql('c.country IS NOT NULL AND c.country <> ?', [prefs.country], limit), prefs);
 }
 
 export function getTopicSection(category: string, limit = SECTION_LIMIT): Promise<Story[]> {

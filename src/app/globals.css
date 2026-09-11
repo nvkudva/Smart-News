@@ -1141,6 +1141,22 @@ body {
 .catstrip__row > *,
 .substrip__row > * { flex: 0 0 auto; }
 
+/* A category the reader switched off, removed from the rail without the rail
+   having to know who is reading — BOOT writes the list onto <html> before the
+   first paint, and this matches a name inside it. The shells stay prerendered,
+   which is the whole reason a category switch costs nothing. Comma-delimited on
+   both sides so "India" cannot match "Indian". */
+:root[data-hidden*=",Sports,"]        .catlink[data-cat="sports"],
+:root[data-hidden*=",Health,"]        .catlink[data-cat="health"],
+:root[data-hidden*=",Climate,"]       .catlink[data-cat="climate"],
+:root[data-hidden*=",Politics,"]      .catlink[data-cat="politics"],
+:root[data-hidden*=",Business,"]      .catlink[data-cat="business"],
+:root[data-hidden*=",Technology,"]    .catlink[data-cat="technology"],
+:root[data-hidden*=",Science,"]       .catlink[data-cat="science"],
+:root[data-hidden*=",Entertainment,"] .catlink[data-cat="entertainment"],
+:root[data-hidden*=",World,"]         .catlink[data-cat="world"],
+:root[data-hidden*=",India,"]         .catlink[data-cat="india"] { display: none; }
+
 /* The strip is the page title. The selected category carries the full heading
    weight; the others are the same type held back to a quiet grey, which is what
    makes the row read as one title with its neighbours showing rather than as a
@@ -1493,29 +1509,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 :root[data-theme="broadsheet"] .plate { border-radius: 3px; border-color: var(--rule); }
 
 
-/* Ember, in the light. The same warm family the dark mode uses, read off paper
-   rather than off a lit screen — a theme is a hue family now, not a time of day. */
-:root[data-theme="ambient"] {
-  --ground:        oklch(0.980 0.012 76);
-  --ink:           oklch(0.23 0.020 44);
-  --ink-2:         oklch(0.48 0.020 44);
-  --ink-3:         oklch(0.57 0.018 44);
-  --kicker:        oklch(0.52 0.09 56);
-  --kicker-near:   oklch(0.46 0.09 158);
-  --kicker-new:    oklch(0.50 0.11 44);
-  --accent:        oklch(0.52 0.13 48);
-  --reels-accent:  oklch(0.52 0.13 48);
-  --glass:         oklch(0.995 0.010 70 / 0.62);
-  --glass-edge:    oklch(0.94 0.020 70 / 0.85);
-  --glass-warm:    linear-gradient(140deg, rgba(255,251,242,0.76), rgba(255,245,232,0.54));
-  --plate:         linear-gradient(150deg, oklch(0.88 0.055 58), oklch(0.91 0.035 30));
-  --shadow:        0 1px 2px rgba(60,40,24,0.05), 0 10px 26px -10px rgba(60,40,24,0.16);
-  --rule:          oklch(0.90 0.016 66);
-  --ring:          oklch(0.52 0.13 48);
-  --track:         oklch(0.89 0.022 66);
-  --bar:           oklch(0.905 0.038 66 / 0.78);
-  --bar-edge:      oklch(0.80 0.055 62 / 0.90);
-}
 
 /* Theme D — Fjordlight. Cold northern daylight, and the one theme with no lift
    at all: no shadow, no blur, no translucency. A card parts from the ground by
@@ -1620,25 +1613,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   --bar-edge:      rgba(255, 255, 255, 0.16);
 }
 
-/* Ember at night: the palette this whole mode was originally written for. */
-:root[data-theme="ambient"][data-mode="dark"] {
-  --ground:        oklch(0.155 0.016 42);
-  --ink:           oklch(0.97 0.004 48);
-  --ink-2:         oklch(0.74 0.010 48);
-  --ink-3:         oklch(0.66 0.010 48);
-  --kicker:        oklch(0.78 0.07 66);
-  --kicker-near:   oklch(0.86 0.07 158);
-  --kicker-new:    oklch(0.88 0.08 68);
-  --accent:        oklch(0.82 0.10 72);
-  --on-accent:     oklch(0.22 0.03 42);
-  --ring:          oklch(0.82 0.10 72);
-  --glass:         rgba(255, 255, 255, 0.085);
-  --glass-edge:    rgba(255, 255, 255, 0.13);
-  --glass-warm:    linear-gradient(140deg, rgba(255,255,255,0.11), rgba(255,255,255,0.05));
-  --plate:         linear-gradient(150deg, oklch(0.36 0.055 44), oklch(0.27 0.045 18));
-  --bar:           oklch(0.235 0.030 44 / 0.88);
-  --bar-edge:      oklch(0.40 0.045 48 / 0.70);
-}
 
 /* Fjordlight at night: the same flat surfaces read off a deep sea ground. The
    accent is re-lit rather than dimmed — a petrol that survives a dark ground is
@@ -1899,8 +1873,25 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
 }
 .setchips .chip { justify-content: flex-start; }
-.setchips .chip { cursor: pointer; }
+.setchips .chip { cursor: pointer; font: inherit; font-size: var(--t-2); font-weight: 600; }
 .setchips .chip input { margin: 0; accent-color: var(--accent); }
+/* Hiding is the destructive half of the pair, so its on-state is not the accent
+   the interests use — an accent here would read as "chosen", which is the
+   opposite of what it says. */
+.setchips .chip--off[data-on="true"] {
+  background: color-mix(in oklab, var(--ink) 82%, transparent);
+  border-color: transparent; color: var(--ground);
+}
+.setselect {
+  margin-left: auto; min-width: 180px; max-width: 260px;
+  cursor: pointer; appearance: none;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-size: 5px 5px, 5px 5px;
+  background-position: right 15px center, right 10px center;
+  background-repeat: no-repeat;
+}
 
 .setinput {
   height: 36px; padding: 0 11px; border-radius: var(--r-sm);

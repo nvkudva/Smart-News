@@ -1,5 +1,6 @@
-import { savePrefsAction } from '@/app/actions';
 import { PrefsPurge } from '@/components/PrefsPurge';
+import { PrefChips } from '@/components/PrefChips';
+import { CountryPicker, type CountryOption } from '@/components/CountryPicker';
 import { GeoConsent } from '@/components/GeoConsent';
 import { ThemeControl } from '@/components/Theme';
 import { ModeControl } from '@/components/Mode';
@@ -9,6 +10,7 @@ import { TabBar } from '@/components/TabBar';
 import { CATEGORIES } from '@/lib/db';
 import { getPrefs } from '@/lib/feed';
 import { getStats } from '@/lib/library';
+import { countriesWithNews } from '@/lib/sections';
 import { getPlaces } from '@/lib/places';
 import { ago } from '@/components/StoryCard';
 import { currentUserId } from '@/lib/session';
@@ -16,7 +18,9 @@ import { currentUserId } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 export default async function Profile() {
-  const [prefs, stats] = await Promise.all([getPrefs(await currentUserId()), getStats()]);
+  const [prefs, stats, countries] = await Promise.all([
+    getPrefs(await currentUserId()), getStats(), countriesWithNews(),
+  ]);
   const [resolved, geo] = await Promise.all([
     getPlaces(prefs.placeIds),
     prefs.geoConsent && prefs.geoPlaceId ? getPlaces([prefs.geoPlaceId]) : Promise.resolve([]),
@@ -29,6 +33,17 @@ export default async function Profile() {
     ...resolved.map((p) => ({ id: p.id, name: p.name, label: p.label })),
     ...prefs.places.filter((t) => !named.has(t.toLowerCase())).map((t) => ({ id: null, name: t, label: t })),
   ];
+
+  // Named here, not in the control: Intl.DisplayNames reads the runtime's own
+  // ICU, and Node's and the browser's disagree often enough to cause a
+  // hydration mismatch — which takes every handler on the page down with it.
+  const REGION = new Intl.DisplayNames(['en'], { type: 'region' });
+  const nameOf = (c: string) => { try { return REGION.of(c) ?? c; } catch { return c; } };
+  // The stored country belongs in the list even if we hold nothing filed to it
+  // today, or choosing it back would be impossible.
+  const options: CountryOption[] = [...new Set([prefs.country, ...countries])]
+    .map((code) => ({ code, name: nameOf(code) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const counts = [
     ['Articles', stats.articles],
@@ -49,42 +64,45 @@ export default async function Profile() {
         <section className="setsection">
           <h2 className="sethead">Feed</h2>
 
-          <form action={savePrefsAction} className="setgroup">
-            <div className="setrow setrow--stack">
-              <span className="setrow__title">Interests</span>
-              <div className="setchips">
-                {CATEGORIES.map((c) => (
-                  <label key={c} className="chip" data-on={prefs.categories.includes(c)}>
-                    <input type="checkbox" name={`cat:${c}`} defaultChecked={prefs.categories.includes(c)} />
-                    {c}
-                  </label>
-                ))}
-              </div>
-            </div>
+          <div className="setgroup">
+            <PrefChips categories={CATEGORIES} initialPicked={[...prefs.categories]}
+                       initialHidden={[...prefs.hidden]} />
+            <PrefsPurge />
+          </div>
 
+          <p className="setnote">
+            Everything saves as you tap it. Interests weight the feed rather than
+            filter it — hiding is what removes a subject, from the feed and from
+            the strip alike.
+          </p>
+        </section>
+
+        {/* One section, because they are one question: where you are reading
+            from. The country is not a profile field — National is the stories
+            filed to it and International is everything else — so it belongs
+            beside the places rather than above the interests. */}
+        <section className="setsection">
+          <h2 className="sethead">Location</h2>
+
+          <div className="setgroup">
             <div className="setrow">
-              <label className="setrow__title" htmlFor="country">Home country</label>
-              <input id="country" name="country" type="text" defaultValue={prefs.country}
-                     maxLength={2} className="setinput setinput--code" />
+              <span className="setrow__title">Home country</span>
+              <CountryPicker country={prefs.country} options={options} />
             </div>
 
+            {/* The picker heads itself; a second title above it said the same
+                words twice. */}
             <div className="setrow setrow--stack">
               <PlacePicker initial={picked} />
             </div>
 
-            <PrefsPurge />
-            <button type="submit" className="btn setsave">Save preferences</button>
-          </form>
-
-          <p className="setnote">
-            Home country news is always represented, and one slot in four is kept
-            for something outside these interests — a different subject, or a
-            place near the ones you follow.
-          </p>
-
-          <div className="setgroup">
             <GeoConsent initialConsent={prefs.geoConsent} initialLabel={geo[0]?.label ?? null} />
           </div>
+
+          <p className="setnote">
+            National and International are this country and everything else. The
+            list holds only countries we currently carry stories for.
+          </p>
         </section>
 
         <section className="setsection">
