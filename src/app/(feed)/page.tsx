@@ -17,7 +17,7 @@ import { TAXONOMY } from '@/lib/taxonomy';
  * Nothing above the rows needs a reader or a request — the strip is the
  * hardcoded taxonomy — so this is now a file in .open-next/assets that
  * Cloudflare serves without invoking the Worker at all, and the rows arrive
- * from /api/section/top, which the isolate map, the cycle stamp and IndexedDB
+ * from /api/world, which the isolate map, the cycle stamp and IndexedDB
  * between them mean is usually not fetched either.
  */
 export default function Home() {

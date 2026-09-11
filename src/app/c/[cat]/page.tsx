@@ -10,7 +10,7 @@ import { TAXONOMY, categoryBySlug } from '@/lib/taxonomy';
  * A static shell. Everything above the rows — the strip, the highlight, the
  * bar — is derivable from the hardcoded taxonomy, so all fourteen categories
  * are built once and a switch is a client navigation with no server render in
- * it. The rows arrive from /api/section/[cat], which the strip warms on hover
+ * it. The rows arrive from /api/world, which the strip warms on hover
  * and SectionFeed keeps for a minute, so a revisit costs nothing at all.
  *
  * The fourteen are prerendered. Nothing above the rows is awaited, so each one
