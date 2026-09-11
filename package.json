@@ -19,7 +19,8 @@
     "migrate:d1": "tsx scripts/migrate-d1.ts",
     "deploy": "npm run migrate:d1 && opennextjs-cloudflare build && wrangler deploy",
     "hydrate": "tsx scripts/hydrate-d1.ts",
-    "prebuild": "tsx scripts/gen-gazetteer.ts"
+    "prebuild": "tsx scripts/gen-gazetteer.ts",
+    "test": "playwright test"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260910.1",
     "@opennextjs/cloudflare": "^1.20.6",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.4.1",
