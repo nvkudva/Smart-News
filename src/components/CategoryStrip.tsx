@@ -15,7 +15,12 @@ export function CategoryStrip({ active }: { active: string }) {
         {TAXONOMY.map((c) => {
           const on = c.slug === active;
           return (
-            <Link key={c.slug} href={c.slug === 'top' ? '/' : `/c/${c.slug}`}
+            // prefetch={false}: a static route's auto-prefetch pulls the whole
+            // RSC payload and re-pulls it every time the link re-enters the
+            // viewport, which in a strip that scrolls itself on every
+            // navigation is continuous. Fourteen of them ran the account into
+            // its daily Worker limit. StripScroller warms on intent instead.
+            <Link key={c.slug} href={c.slug === 'top' ? '/' : `/c/${c.slug}`} prefetch={false}
                   className="catlink" data-cat={c.slug} data-active={on}
                   aria-current={on ? 'page' : undefined}>{c.name}</Link>
           );
