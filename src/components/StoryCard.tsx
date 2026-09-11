@@ -15,15 +15,6 @@ const running = (s: { first_seen: number; last_seen: number }) =>
   s.last_seen - s.first_seen > 6 * 3_600_000;
 
 /**
- * The full account, for the one page with room for it. first_seen is when the
- * story broke; last_seen moves every time another article joins the cluster, so
- * on its own it dates a three-day-old running story as breaking.
- */
-export function storyAge(s: { first_seen: number; last_seen: number }): string {
-  return running(s) ? `${ago(s.first_seen)} · updated ${ago(s.last_seen)}` : ago(s.first_seen);
-}
-
-/**
  * One time value, for a card foot that has to survive on a single line beside
  * a place name. A running story reports its latest movement and says so — the
  * word is what stops `3h ago` on a three-day-old story reading as breaking —

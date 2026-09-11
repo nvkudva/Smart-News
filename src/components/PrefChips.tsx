@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { HIDDEN_KEY } from '@/lib/boot';
 import { toggleHiddenAction, toggleInterestAction } from '@/app/actions';
+import { prefsChanged } from './prefsChanged';
 
 /**
  * Two closed lists over the same ten categories, answering two questions the
@@ -58,7 +59,7 @@ export function PrefChips(
             {categories.map((c) => (
               <label key={c} className="chip" data-on={picked.includes(c)}>
                 <input type="checkbox" checked={picked.includes(c)} disabled={pending}
-                       onChange={() => start(async () => apply(await toggleInterestAction(c)))} />
+                       onChange={() => start(async () => { apply(await toggleInterestAction(c)); prefsChanged(); })} />
                 {c}
               </label>
             ))}
@@ -77,7 +78,7 @@ export function PrefChips(
             {categories.map((c) => (
               <label key={c} className="chip chip--off" data-on={hidden.includes(c)}>
                 <input type="checkbox" checked={hidden.includes(c)} disabled={pending}
-                       onChange={() => start(async () => apply(await toggleHiddenAction(c)))} />
+                       onChange={() => start(async () => { apply(await toggleHiddenAction(c)); prefsChanged(); })} />
                 {c}
               </label>
             ))}

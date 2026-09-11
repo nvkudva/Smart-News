@@ -6,7 +6,7 @@ import type { Outlet, Story } from '@/lib/feed';
 import type { SubCount } from '@/lib/taxonomy';
 import { StoryCard, variantFor } from './StoryCard';
 import { SubcategoryStrip } from './SubcategoryStrip';
-import { forgetStamp, readEntry, sessionStamp, writeEntry } from '@/lib/store';
+import { deleteEntry, forgetStamp, readEntry, sessionStamp, writeEntry } from '@/lib/store';
 
 /** What one category answers with. Derived from the world now rather than
  *  fetched, but the same shape this component has always rendered. */
@@ -140,7 +140,13 @@ export function loadSection(cat: string): Promise<SectionData> {
  * orderings, and what is held here was built before the save; a TTL would let
  * the old order stand for up to a minute after the reader watched it change.
  */
-export function clearSections() { inflight = null; held = null; at = 0; }
+export function clearSections() {
+  inflight = null; held = null; at = 0;
+  // IndexedDB outlives the tab and is keyed on the cycle stamp, which a
+  // preference change does not move. Dropping the map alone would read the
+  // old ranking straight back off disk.
+  deleteEntry(WORLD);
+}
 
 /** Warm without rendering — the strip calls this on hover and on touch-down.
  *  There is one answer for every section now, so the category is immaterial. */

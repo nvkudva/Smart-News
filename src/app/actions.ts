@@ -1,8 +1,7 @@
 'use server';
 
-import { getPrefs, savePrefs, type Prefs } from '@/lib/feed';
+import { getPrefs, savePrefs } from '@/lib/feed';
 import { toggleSaved } from '@/lib/library';
-import { CATEGORIES } from '@/lib/db';
 import { nearestPlace, searchPlaces, type Place } from '@/lib/places';
 import { currentUserId } from '@/lib/session';
 
@@ -27,18 +26,6 @@ export async function toggleSavedAction(clusterId: string): Promise<boolean> {
   return toggleSaved(clusterId, await currentUserId());
 }
 
-/** The picker posts JSON; a hand-edited or stale field must not lose the form. */
-function parsePlaceIds(raw: FormDataEntryValue | null): string[] {
-  if (typeof raw !== 'string' || raw.trim() === '') return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return [...new Set(parsed.filter((v): v is string => typeof v === 'string' && v !== ''))].slice(0, 12);
-  } catch {
-    return [];
-  }
-}
-
 /**
  * Second chance for anything the picker sent as plain text: an exact name hit
  * in the gazetteer becomes a canonical id here. It is what heals a row saved
@@ -56,29 +43,6 @@ async function resolveLabels(labels: string[], have: string[]): Promise<string[]
     if (hit && !seen.has(hit.id)) { ids.push(hit.id); seen.add(hit.id); }
   }
   return ids;
-}
-
-export async function savePrefsAction(formData: FormData) {
-  const picked = CATEGORIES.filter((c) => formData.get(`cat:${c}`) === 'on');
-  const uid = await currentUserId();
-  const current = await getPrefs(uid);
-  const places = String(formData.get('places') ?? '')
-    .split(',').map((p) => p.trim()).filter(Boolean).slice(0, 12);
-  const prefs: Prefs = {
-    ...current,
-    country: String(formData.get('country') ?? 'IN').toUpperCase().slice(0, 2),
-    // An empty set leaves the ranker and the exploration reserve with nothing to
-    // work against, so keep the last real selection instead of storing [].
-    categories: picked.length > 0 ? picked : current.categories,
-    places,
-    // The two arrays are not index-aligned: `places` keeps everything the reader
-    // typed, `placeIds` only the entries that mean something to the gazetteer.
-    placeIds: await resolveLabels(places, parsePlaceIds(formData.get('place_ids'))),
-    // geoConsent and geoPlaceId are not the form's to change: the consent block
-    // owns them, and a plain save must never silently re-enable or drop them.
-  };
-  await savePrefs(prefs, uid);
-  revalidatePrefs();
 }
 
 /**

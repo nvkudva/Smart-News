@@ -414,9 +414,3 @@ export async function getStory(id: string) {
     cluster, articles, related: withPlaceLabels(related), coverage: coverageOf(articles),
   };
 }
-
-export async function logEvent(clusterId: string, kind: string, dwellMs: number | undefined, userId: string) {
-  await (await d1()).run(
-    'INSERT INTO events (user_id, cluster_id, kind, dwell_ms, ts) VALUES (?, ?, ?, ?, ?)',
-    [userId, clusterId, kind, dwellMs ?? null, Date.now()]);
-}

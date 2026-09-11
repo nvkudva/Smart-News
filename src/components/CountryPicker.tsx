@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { setCountryAction } from '@/app/actions';
+import { prefsChanged } from './prefsChanged';
 
 export type CountryOption = { code: string; name: string };
 
@@ -30,7 +31,7 @@ export function CountryPicker({ country, options }: { country: string; options: 
             onChange={(e) => {
               const next = e.target.value;
               setValue(next);
-              start(async () => setValue(await setCountryAction(next)));
+              start(async () => { setValue(await setCountryAction(next)); prefsChanged(); });
             }}>
       {options.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
     </select>

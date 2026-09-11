@@ -60,6 +60,12 @@ export function readEntry<T>(key: string): Promise<Entry<T> | null> {
   return tx<Entry<T>>('readonly', (s) => s.get(key));
 }
 
+/** Saving preferences re-ranks four of the fourteen orderings without moving
+ *  the cycle stamp the stored copy is keyed on, so that copy has to go. */
+export function deleteEntry(key: string): void {
+  void tx('readwrite', (s) => s.delete(key));
+}
+
 export function writeEntry<T>(key: string, stamp: string | null, data: T): void {
   void tx('readwrite', (s) => s.put({ key, stamp, at: Date.now(), data } satisfies Entry<T>));
 }
