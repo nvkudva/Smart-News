@@ -335,7 +335,7 @@ body {
   font-size: var(--t-2); line-height: 1.35; color: var(--ink-3);
 }
 .sources a {
-  display: flex; align-items: center; min-height: 44px; padding: 0 12px;
+  display: flex; align-items: center; min-height: 30px; padding: 0 9px;
   border-radius: var(--r-md); color: var(--accent); text-decoration: none;
   background: var(--glass); border: 1px solid var(--glass-edge);
 }

@@ -76,7 +76,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="detail__side story__rail">
-            <h2 className="sectitle">Summarised from</h2>
+            <h2 className="sectitle">Sources</h2>
             <ul className="sources">
               {outlets.map((a) => (
                 <li key={a.url}>
