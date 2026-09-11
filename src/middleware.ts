@@ -28,15 +28,27 @@ export function middleware(req: NextRequest) {
 }
 
 /**
- * Static assets are the point of the prerendered shells — routing them through
- * middleware would spend a Worker invocation on each and undo that.
+ * Named routes rather than everything-but: the list of pages that need the
+ * reader's id while they render is short, and it is now the minority.
  *
- * /c/* is skipped for the same reason and is the only page route that can be:
- * it is the one prerendered page, it holds nothing belonging to a reader, and
- * the section data it draws comes from /api/*, which does run this. Every other
- * page is force-dynamic and already costs an invocation, so naming it here adds
- * nothing — and those are exactly the ones whose first render needs the id.
+ * / and /c/* are prerendered shells. They hold nothing belonging to a reader
+ * and are served straight out of static assets without invoking the Worker at
+ * all — putting them through middleware to hand them a cookie they never read
+ * would spend an invocation to undo the reason they were built that way. Their
+ * rows come from /api/*, which does run this, so a first-time visitor is given
+ * an id by the first call the page makes.
+ *
+ * Everything below is force-dynamic and already costs an invocation, and every
+ * one of them reads prefs or saved state on the server.
  */
 export const config = {
-  matcher: ['/((?!c/|_next/static|_next/image|cdn-cgi|favicon.ico|icon|splash|manifest.webmanifest|sw.js|BUILD_ID).*)'],
+  matcher: [
+    '/api/:path*',
+    '/story/:path*',
+    '/explore',
+    '/local',
+    '/profile',
+    '/saved',
+    '/reels',
+  ],
 };

@@ -14,3 +14,5 @@
 - [x] Delta responses: ?since=<last_seen> returning { stamp, ids, stories } with bodies only for changed rows, plus GET /api/stories?ids= to backfill
 - [x] Persist section id lists and story bodies in IndexedDB keyed on the stamp, replacing SectionFeed's per-tab module map
 - [x] Service worker: serve /api/* from cache and revalidate only when the stamp has moved, instead of a blind 60s stale-while-revalidate
+- [x] Make / a prerendered shell fed by /api/section/top, and drop it and /c/* from the middleware matcher
+- [x] Key the service worker's document cache on /BUILD_ID so a visited page can be served from storage, and fall back to it on a not-ok response as well as a thrown one

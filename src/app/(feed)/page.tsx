@@ -1,49 +1,37 @@
-import { getFeed } from '@/lib/feed';
-import { StoryCard, variantFor } from '@/components/StoryCard';
+import { Suspense } from 'react';
 import { TabBar } from '@/components/TabBar';
 import { CategoryStrip } from '@/components/CategoryStrip';
 import { CategoryPager } from '@/components/CategoryPager';
-import { SubcategoryStrip } from '@/components/SubcategoryStrip';
-import { TAXONOMY, filterBySub, subCategoriesFor } from '@/lib/taxonomy';
-import { currentUserId } from '@/lib/session';
+import { SectionSkeleton } from '@/components/SectionFeed';
+import { TAXONOMY } from '@/lib/taxonomy';
 
-export const dynamic = 'force-dynamic';
-
-export default async function Home({
-  searchParams,
-}: { searchParams: Promise<{ sub?: string }> }) {
-  const { sub } = await searchParams;
-  const stories = await getFeed(30, await currentUserId());
-
-  // Top's subs are the topic categories its own rows fall under, counted off the
-  // array already in hand rather than queried for. Every other section has had
-  // this strip since it was written; Top was the one that did not, because it
-  // builds its feed here instead of through SectionFeed.
-  const subs = subCategoriesFor('top', stories);
-  const active = sub && subs.some((s) => s.slug === sub) ? sub : null;
-  const shown = active ? filterBySub('top', active, stories) : stories;
-
+/**
+ * The same shell every category page is, for the section that gets the traffic.
+ *
+ * Top used to be the one section rendered on the server: force-dynamic, thirty
+ * cards off a hundred-and-fifty-row query, on the app's entry point, the PWA's
+ * start_url and the page the service worker precaches. Every visit cost a
+ * Worker invocation and a hundred and fifty rows, and none of it could be
+ * cached, because the ranking is the reader's own.
+ *
+ * Nothing above the rows needs a reader or a request — the strip is the
+ * hardcoded taxonomy — so this is now a file in .open-next/assets that
+ * Cloudflare serves without invoking the Worker at all, and the rows arrive
+ * from /api/section/top, which the isolate map, the cycle stamp and IndexedDB
+ * between them mean is usually not fetched either.
+ */
+export default function Home() {
   return (
     <>
       <main className="shell">
         <CategoryStrip active="top" />
-        {/* Top is the one section rendered on the server, so it is handed to the
-            pager as its middle pane rather than fetched again on the client —
-            the first paint has to survive the pager being introduced. */}
-        <CategoryPager active="top" sections={TAXONOMY.map((c) => ({ slug: c.slug, name: c.name }))}>
-          <SubcategoryStrip cat="top" label="Top" base="/" subs={subs} active={active} />
-
-          {shown.length === 0 ? (
-            <div className="panel" style={{ marginTop: 8 }}>
-              <div className="label">Nothing yet</div>
-              <p>Run <code>npm run ingest</code> then <code>npm run pipeline</code> to fill the feed.</p>
-            </div>
-          ) : (
-            <div className="feed">
-              {shown.map((s, i) => <StoryCard key={s.id} story={s} variant={variantFor(s, i)} />)}
-            </div>
-          )}
-        </CategoryPager>
+        {/* useSearchParams reads ?sub= on the client; the boundary is what lets
+            the rest of the page stay static rather than opting into a render
+            per request just to learn the query string. */}
+        <Suspense fallback={<SectionSkeleton />}>
+          <CategoryPager active="top"
+                         sections={TAXONOMY.map((c) => ({ slug: c.slug, name: c.name }))} />
+        </Suspense>
       </main>
       <TabBar active="home" />
     </>

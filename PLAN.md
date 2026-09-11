@@ -110,3 +110,40 @@ The cost, accepted deliberately: the fallback starts the body, which commits
 `200`, so `notFound()` can no longer set `404`. A dead link still lands on the
 not-found screen and still reads correctly — only a crawler can tell, and this
 is a PWA with no sitemap and a `start_url` of `/`.
+
+### Documents may be cached once the cache is named after the build
+
+Documents were network-first and read only inside `catch`, because an HTML page
+names the content-hashed chunks of its own build: serve a cached one after a
+deploy and it asks for scripts that are gone, rendering a page that looks right
+and ignores every tap.
+
+Naming the cache `docs-<BUILD_ID>` removes the hazard rather than living with
+it. A cached page can only be handed to the build that wrote it, because a new
+build reads a different cache and drops the others on activate. `/BUILD_ID` is
+already a real asset (`.open-next/assets/BUILD_ID`) and `UpdateBanner` already
+polls it; it 404s under `next dev` and `next start`, where the id comes back
+null, no document cache is opened, and the old behaviour is what remains.
+
+Two consequences worth stating:
+
+- A daily limit answers `429`/`503` — a resolved response, not a thrown fetch —
+  so the old `catch` never ran and the reader got the error page while the
+  worker held a good copy. Both paths now fall back.
+- Only full loads reach this. A soft navigation is an `?_rsc=` fetch with
+  `mode: 'cors'`, so the document cache serves reloads, deep links and cold
+  opens, not in-app clicks.
+
+### `/` joins the shells
+
+Top was the last force-dynamic page on the reading path: the entry point, the
+PWA `start_url` and the service worker's precached page, costing an invocation
+and 150 rows on every visit and cacheable by nobody, because the ranking is the
+reader's own. With the sub-filter now client-side it needed nothing from the
+request, so it is a prerendered shell like the other fourteen and its rows come
+from `/api/section/top`.
+
+The middleware matcher becomes a list of the routes that actually read a reader
+on the server. `/` and `/c/*` are not among them: putting a shell through
+middleware to hand it a cookie it never reads spends the invocation that making
+it a shell was meant to save.

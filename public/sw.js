@@ -16,6 +16,34 @@ const DATA = `data-${VERSION}`;
 const MEDIA = `media-${VERSION}`;
 const KEEP = new Set([SHELL, DATA, MEDIA]);
 
+/**
+ * Documents get a cache named after the build that produced them.
+ *
+ * An HTML page names the exact content-hashed chunks of its own build, so a
+ * cached one served after a deploy asks for scripts that are no longer there
+ * and the page renders but never hydrates — a screen that looks right and
+ * ignores every tap. That is why documents were network-first and never read
+ * except when the network threw.
+ *
+ * Keyed on /BUILD_ID the hazard disappears: a cached page can only ever be
+ * handed to the build that wrote it, because a new build reads a different
+ * cache and drops every other one on activate. Then serving a story from
+ * storage is simply correct, which is what it should have been all along —
+ * the words in a story do not change after it is filed.
+ */
+let buildId;
+async function docs() {
+  if (buildId === undefined) {
+    buildId = await fetch('/BUILD_ID', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.text() : null))
+      .then((t) => (t && /^[\w-]{1,64}$/.test(t.trim()) ? t.trim() : null))
+      // In development /BUILD_ID is the not-found page. No id, no document
+      // cache, and the old network-first behaviour is what is left.
+      .catch(() => null);
+  }
+  return buildId ? caches.open(`docs-${buildId}`) : null;
+}
+
 /** Roughly a few hundred article photographs — many days of reading, and small
  *  enough that the browser is never tempted to evict the origin entire. */
 const MEDIA_MAX = 300;
@@ -28,9 +56,15 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys()
-    .then((keys) => Promise.all(keys.filter((k) => !KEEP.has(k)).map((k) => caches.delete(k))))
-    .then(() => self.clients.claim()));
+  e.waitUntil((async () => {
+    await docs();   // learn this build's name before deciding what is rubbish
+    const mine = buildId ? `docs-${buildId}` : null;
+    const keys = await caches.keys();
+    await Promise.all(keys
+      .filter((k) => !KEEP.has(k) && k !== mine)
+      .map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
 async function swr(req, cacheName, maxAgeMs) {
@@ -137,14 +171,40 @@ self.addEventListener('fetch', (e) => {
   // same bargain, and are excluded for the same reason.
   if (request.mode === 'navigate') {
     e.respondWith((async () => {
+      const cache = await docs();
+      // A page from this build is this build's own output. Answer with it and
+      // refresh behind the reader — the only thing that can have changed is
+      // which stories the page mentions, and every one of those is fetched by
+      // the client against the cycle stamp anyway.
+      const hit = cache ? await cache.match(request) : null;
+      if (hit) {
+        void fetch(request)
+          .then((res) => { if (res.ok) cache.put(request, res.clone()); })
+          .catch(() => {});
+        return hit;
+      }
+
       try {
         const res = await fetch(request);
-        if (res.ok) (await caches.open(SHELL)).put(request, res.clone());
-        return res;
+        if (res.ok) {
+          (cache ?? await caches.open(SHELL)).put(request, res.clone());
+          return res;
+        }
+        // A daily limit answers 429 or 503 — a response, not a throw, so this
+        // used to hand the reader the error page while holding a good copy.
+        return (await fallback(request)) ?? res;
       } catch {
-        const cache = await caches.open(SHELL);
-        return (await cache.match(request)) ?? (await cache.match('/')) ?? Response.error();
+        return (await fallback(request)) ?? Response.error();
       }
     })());
   }
 });
+
+/** The last page we hold for this request, then the shell, then nothing. */
+async function fallback(request) {
+  const cache = await docs();
+  const shell = await caches.open(SHELL);
+  return (cache ? await cache.match(request) : null)
+      ?? await shell.match(request)
+      ?? await shell.match('/');
+}
