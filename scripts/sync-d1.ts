@@ -114,11 +114,13 @@ async function reap(d: D1, local: DatabaseSync, since: number) {
 /** Cluster ids D1 holds inside the window, paged because D1 caps a result set. */
 async function remoteClusterIds(d: D1, since: number): Promise<string[]> {
   const out: string[] = [];
-  for (let offset = 0; ; offset += 400) {
+  let after = '';
+  for (;;) {
     const page = await d.all<{ id: string }>(
-      `SELECT id FROM clusters WHERE last_seen >= ? ORDER BY id LIMIT 400 OFFSET ${offset}`, [since]);
+      `SELECT id FROM clusters WHERE last_seen >= ? AND id > ? ORDER BY id LIMIT 400`, [since, after]);
     out.push(...page.map((r) => r.id));
     if (page.length < 400) break;
+    after = page[page.length - 1].id;
   }
   return out;
 }

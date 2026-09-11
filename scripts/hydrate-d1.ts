@@ -26,13 +26,20 @@ async function pull<T>(table: string, cols: string, where: string, params: unkno
   // Every table's primary key comes first, except where it is composite — then
   // the caller passes the whole key, or paging silently skips and repeats rows.
   const key = orderBy ?? cols.split(',')[0].trim();
-  for (let offset = 0; ; offset += PAGE) {
+  // Keyset, not OFFSET. `OFFSET n` makes SQLite walk and discard n rows before
+  // returning any, so paging a table costs roughly half its length squared over
+  // the page size — measured at 2.8M rows a day against a 5M daily allowance,
+  // for 5.5k articles. Carrying the last key read instead makes it linear.
+  let after: unknown = null;
+  for (;;) {
+    const clause = after === null ? where : `${where ? `${where} AND` : 'WHERE'} ${key} > ?`;
     const page = await d.all<T>(
-      // Without an ORDER BY, LIMIT/OFFSET may skip or repeat rows between pages.
-      `SELECT ${cols} FROM ${table} ${where} ORDER BY ${key} LIMIT ${PAGE} OFFSET ${offset}`, params);
+      `SELECT ${cols} FROM ${table} ${clause} ORDER BY ${key} LIMIT ${PAGE}`,
+      after === null ? params : [...params, after]);
     out.push(...page);
     process.stdout.write(`\r  ${table}: ${out.length}`);
     if (page.length < PAGE) break;
+    after = (page[page.length - 1] as Record<string, unknown>)[key];
   }
   process.stdout.write(`\r  ${table}: ${out.length}\n`);
   return out;
