@@ -87,6 +87,43 @@ The pipeline and the site use different stores. The pipeline writes local SQLite
 
 `deploy/install-schedule.sh` installs the same 15-minute cycle as a launchd agent. It is macOS only — on Linux, or anywhere else, use the GitHub Actions workflow instead. Do not run both against one D1: two concurrent cycles clobber each other's cluster assignments.
 
+### End to end, step by step
+
+**Gathering**
+
+- `src/lib/sources.ts` is the list — 55 feeds, hand-curated, each with a country, a category and a political lean rated against its own country's politics. A feed enters the file only after three checks: it parses, its articles yield readable text through Readability, and its `robots.txt` permits the fetch.
+- `scripts/ingest.ts` reads every feed, normalises each link (dropping tracking parameters, which is not cosmetic — Al Jazeera's `robots.txt` disallows the `?traffic_source=` variant its own feed emits), and skips URLs already stored.
+- Before fetching an article, `src/lib/robots.ts` checks that host's `robots.txt` under RFC 9309 — most specific agent group, longest matching path, `Allow` breaking ties — caching one fetch per host per run and honouring `Crawl-delay` per host.
+- Full text is extracted with jsdom and Readability. Summaries come from the article, never the RSS blurb. A body that fails is retried on later runs for an hour, so a transient error is not permanent.
+
+**Clustering**
+
+- `src/lib/cluster.ts` builds a TF-IDF vector per article from the title (weighted 3x) and lead, then does single-link agglomeration inside a 48-hour window, requiring a shared named entity so two unrelated stories cannot merge on vocabulary alone.
+- `source_count` counts *newsrooms*, not URLs. A wire story carried by five outlets is one piece of reporting, so near-identical bodies collapse — compared by Jaccard over five-word shingles, not the clustering's cosine, because IDF over a handful of documents discounts precisely the shared text that identifies a copy.
+
+**Summarising**
+
+- One LLM call per cluster, never per article. Up to six articles, one per outlet, 1,800 characters each, all in a single prompt so the model synthesises across outlets rather than paraphrasing one.
+- The model returns a headline, a crux, a category, a place, an importance score, and one sentence per political lean describing how those outlets framed it.
+- `SUMMARISE_MIN_SOURCES` (default 2) is the cost dial: a story only one outlet ran is what a corroboration-ranked feed should be sceptical of, and also the cheapest thing not to summarise. Clusters are re-summarised only after growing 40%.
+
+**Storing**
+
+- The pipeline writes local SQLite, because a cluster run issues thousands of statements and each would otherwise be an HTTP round trip.
+- `scripts/sync-d1.ts` pushes finished rows to D1 in batches, fingerprinting the tables that rarely change so unchanged rows are not rewritten, and paging by key rather than `OFFSET` — `OFFSET n` makes SQLite walk and discard n rows, which alone was costing millions of reads a day.
+
+**Serving**
+
+- Page shells are prerendered into Workers Static Assets, which are free and uncounted against the Workers request limit, so a category page costs no D1 read and no render.
+- The gazetteer — 338 places and their aliases — is compiled into the bundle rather than queried, because it only changes when someone edits the seed and redeploys.
+- `src/lib/feed.ts` ranks per request on recency (9-hour half-life), corroboration, importance and stated interest, weighted for a readership of engineers who also follow markets, with a lift for stories whose text reads as macro-economic whatever category they were filed under. Every fourth slot is reserved for something outside the reader's stated interests.
+
+**Reading and refreshing**
+
+- `public/sw.js` is a hand-written service worker: hashed build output cached forever, `/api/*` stale-while-revalidate on a 60-second threshold, images for a day, and documents network-first with the cache as an offline fallback.
+- The client asks `/api/section/[cat]` for rows as you move between categories, so switching sections is a JSON fetch rather than a server render.
+- New articles arrive because the 15-minute cycle writes them; the service worker shows what it has instantly and replaces it behind you, and `UpdateBanner` watches `/BUILD_ID` to prompt a reload when the site itself has been redeployed.
+
 ## Status
 
 Ingest, clustering, summarisation, the D1 sync, the ranked feed, story pages and saved stories all work, and the scheduled Actions cycle runs against the live site.
