@@ -5,6 +5,7 @@ import { Readability } from '@mozilla/readability';
 import { db } from './db';
 import { SOURCES } from './sources';
 import { normaliseUrl, titleFingerprint } from './text';
+import { robotsVerdict } from './robots';
 
 const MAX_AGE_MS = 72 * 60 * 60 * 1000;
 const UA = 'smartnews/0.1 (personal news aggregator)';
@@ -41,8 +42,27 @@ function seedSources() {
   for (const s of SOURCES) stmt.run(s.id, s.name, s.feed_url, s.homepage, s.country, s.category, s.bias);
 }
 
-async function extractBody(url: string): Promise<string | null> {
+/**
+ * When each host may next be fetched. Crawl-delay is per host, not global, so
+ * the six-way concurrency stays useful — a 10-second delay on CNA does not
+ * stall the other thirty-eight sources.
+ */
+const nextFetchAt = new Map<string, number>();
+
+async function pace(origin: string, delayMs: number): Promise<void> {
+  if (!delayMs) return;
+  const now = Date.now();
+  const at = nextFetchAt.get(origin) ?? 0;
+  nextFetchAt.set(origin, Math.max(now, at) + delayMs);
+  if (at > now) await new Promise((r) => setTimeout(r, at - now));
+}
+
+/** null means no body; `blocked` distinguishes "told not to" from "could not". */
+async function extractBody(url: string): Promise<string | null | 'blocked'> {
   try {
+    const verdict = await robotsVerdict(url, UA);
+    if (!verdict.allowed) return 'blocked';
+    await pace(new URL(url).origin, verdict.delayMs);
     const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(14000) });
     if (!res.ok) return null;
     const ct = res.headers.get('content-type') ?? '';
@@ -105,11 +125,15 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
   const bodyLimit = pLimit(6);
   const setBody = d.prepare('UPDATE articles SET body = ? WHERE id = ?');
   let got = 0;
+  let blocked = 0;
   await Promise.all(pending.map((a) => bodyLimit(async () => {
     const body = await extractBody(a.url);
+    if (body === 'blocked') { blocked++; return; }
     if (body) { setBody.run(body, a.id); got++; }
   })));
 
-  console.log(`Full text for ${got}/${pending.length}.`);
+  // Worth its own number rather than folding into the misses: a rising count
+  // here is a publisher changing their policy, not the extractor failing.
+  console.log(`Full text for ${got}/${pending.length}.${blocked ? ` ${blocked} disallowed by robots.txt.` : ''}`);
   return { added: pending.length, withBody: got };
 }
