@@ -136,12 +136,13 @@ the same 48-hour window total 631 stories. `getFeed` also pre-truncates with
 in-window stories are cut by recency alone and can never rank however high
 `score()` would put them. Rank the whole window, and page by rank rather than by
 `last_seen` so slot 34 still honours the one-in-four exploration budget.
-`src/lib/feed.ts`, `src/app/(feed)/page.tsx`, `src/app/api/feed/route.ts`.
+`src/lib/feed.ts`, `src/app/(feed)/page.tsx`.
 
 ### 13. Nothing knows what you have already read
-`logEvent()` has no call sites, and the `events` table is written by nothing and
-read by nothing — the schema note says it exists "so personalisation has history
-to learn from later", and it has been collecting nothing. Every visit re-serves
+The `events` table is written by nothing and read by nothing — the schema note
+says it exists "so personalisation has history to learn from later", and it has
+been collecting nothing. `logEvent()` was its only writer, had no call sites,
+and has been deleted; anything that starts recording reads begins here. Every visit re-serves
 the same cards in the same order, so a reader returning after lunch rescans
 thirty headlines to find three that are new. Call it on story open, dim and
 demote read cards, and show "12 new since you last looked".
