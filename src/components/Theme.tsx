@@ -8,13 +8,14 @@ import { paintChrome, resolveMode, MODE_KEY } from '@/lib/boot';
 // client graph leaves this page's subtree unhydrated.
 const KEY = 'sn_theme';
 
-export type Theme = 'frost' | 'pastel' | 'broadsheet' | 'ambient';
+export type Theme = 'frost' | 'pastel' | 'broadsheet' | 'ambient' | 'fjord';
 
 const OPTIONS: [Theme, string, string][] = [
   ['frost', 'Frosted', 'White glass over a soft wash. The default.'],
   ['pastel', 'Pastel', 'The same glass, each card tinted by its category.'],
   ['broadsheet', 'Broadsheet', 'Paper, serif headlines and hairlines instead of cards.'],
   ['ambient', 'Ambient', 'Dark and warm — an ember palette, calm at night.'],
+  ['fjord', 'Fjordlight', 'Cold daylight. Flat surfaces, one petrol accent, serif headlines.'],
 ];
 
 export function ThemeControl() {

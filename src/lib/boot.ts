@@ -16,7 +16,7 @@ export const MODE_KEY = 'sn_mode';
 /**
  * Each theme's ground, as the browser and standalone chrome need it. Not
  * derivable from the stylesheet here — this runs before any CSS has loaded —
- * so the four values are repeated, and `viewport.themeColor` is deliberately
+ * so the values are repeated, and `viewport.themeColor` is deliberately
  * absent from the layout: two sources would race and the loser wins at random.
  */
 export const THEME_CHROME: Record<string, string> = {
@@ -24,10 +24,12 @@ export const THEME_CHROME: Record<string, string> = {
   pastel: '#f8f8fa',
   broadsheet: '#f9f6f0',
   ambient: '#fdf8ef',
+  fjord: '#e9efef',
   'frost-dark': '#15171c',
   'pastel-dark': '#16161f',
   'broadsheet-dark': '#141310',
   'ambient-dark': '#1a120d',
+  'fjord-dark': '#0d1618',
 };
 
 /** 'light' | 'dark' | null, where null means follow the system. */
