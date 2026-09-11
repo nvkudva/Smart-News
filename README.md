@@ -2,6 +2,10 @@
 
 A world-news reader that clusters the same story across many outlets and has a model write one neutral summary of it. For anyone who would rather read one corroborated account than six versions of the same wire copy.
 
+A personal project, published for learning and demonstration. Not a commercial
+news service: no ads, no subscriptions, no accounts, and nothing to sign in to.
+See [Use of content](#use-of-content) for how it handles publishers' work.
+
 The npm package and the deployed Worker are both named `smartnews`; the repo is `Smart-News`.
 
 [Live site](https://smartnews.nvkudva.workers.dev) - [Model and provider notes](docs/MODELS.md)
@@ -9,8 +13,8 @@ The npm package and the deployed Worker are both named `smartnews`; the repo is 
 ## What it looks like
 
 Shown in the Pastel theme, where each card takes a quiet tint from its category.
-Three others ship with it — Frosted, Broadsheet and Ambient — and the picker is
-under Profile.
+Three others ship with it — Frosted, Broadsheet and Northlight — and the picker
+is under Profile.
 
 | Mobile — the feed | Mobile — a category |
 |---|---|
@@ -146,6 +150,37 @@ Known gaps, from the code review in `REVIEW.md` (7 September 2026):
 - Reels, theme variants, GPS-local news, the left/centre/right coverage breakdown and the credibility signal are not built. `sources.bias` is declared in the schema and read by nothing.
 
 Provider cost and quality figures are in [docs/MODELS.md](docs/MODELS.md); treat any number there as a single measurement on one machine, not a guarantee.
+
+## Use of content
+
+Built and published for educational purposes — to learn clustering, summarisation
+and the economics of running a real reader on a free tier. There is nothing to
+sign in to: a visitor gets an anonymous id in a cookie, which names a preferences
+row and nothing else.
+
+What it does with other people's journalism, and what it deliberately does not:
+
+- Only public RSS feeds are read, and `src/lib/robots.ts` checks each host's
+  `robots.txt` under RFC 9309 before any article is fetched, honouring
+  `Crawl-delay` per host. A feed enters `src/lib/sources.ts` only after its
+  `robots.txt` permits the fetch.
+- No article is ever republished. A reader sees a model-written summary of
+  several independent reports of the same event, the names of the outlets that
+  filed them, and a link out to each original. A cluster is only summarised once
+  it has two independent outlets, so the output describes the event rather than
+  paraphrasing one piece.
+- Full text is fetched to write that summary and kept in the five-day working
+  window so a cluster that grows can be re-summarised. It is never rendered by
+  any page, never returned by any route, and `prune()` in `scripts/sync-d1.ts`
+  deletes it once it leaves the window.
+- Every story credits its sources and links to them. Traffic goes to the
+  publisher; nothing here is monetised.
+
+Publishers: if you would rather not be included, open an issue. Removing a feed
+is one line in `src/lib/sources.ts` and I will take it out.
+
+A label is not a legal position, and this note is a description of the
+implementation rather than a claim about it.
 
 ## License
 
