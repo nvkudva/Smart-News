@@ -48,7 +48,10 @@ export function ThemeControl() {
     <div className="panel">
       <div className="label">Theme</div>
       <p>{OPTIONS.find(([v]) => v === theme)?.[2]}</p>
-      <div className="chips" role="radiogroup" aria-label="Theme">
+      {/* Five options where the other tracks have three: it is given the room
+          five need, and below 420px it becomes two rows rather than wrapping
+          one option onto a line of its own. */}
+      <div className="chips" data-track="theme" role="radiogroup" aria-label="Theme">
         {OPTIONS.map(([value, label]) => (
           <button
             key={value}

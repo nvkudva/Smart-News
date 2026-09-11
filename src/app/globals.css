@@ -1805,7 +1805,15 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    into a row here. Every rule is specific enough to outrank the dark-mode
    surface rules, which reach .panel and .chip through :root[data-mode].
    ───────────────────────────────────────────────────────────────────────── */
-.setpage    { display: flex; flex-direction: column; gap: 24px; }
+/* Settings are not a feed and must not take the feed's width. At 1440 the
+   column is 1400px, which turned every row into a band with a word at one end
+   and a control at the other, and every segmented track into a toolbar of
+   400px segments holding a single 12px word. A settings page is a reading
+   measure wide; nothing on it gets better for being wider. */
+.setpage {
+  display: flex; flex-direction: column; gap: 24px;
+  max-width: 680px; margin-inline: auto;
+}
 .setsection { display: flex; flex-direction: column; gap: 8px; }
 .sethead {
   margin: 0; padding: 0 14px;
@@ -1814,7 +1822,10 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 /* The footer text under a group, where iOS puts the sentence a row has no room
    for. Outside the surface on purpose: it is about the group, not in it. */
-.setnote { margin: 2px 0 0; padding: 0 14px; font-size: var(--t-2); line-height: 1.5; color: var(--ink-3); }
+.setnote {
+  margin: 2px 0 0; padding: 0 14px; max-width: 65ch;
+  font-size: var(--t-2); line-height: 1.5; color: var(--ink-3);
+}
 .setnote code { font-size: var(--t-1); }
 
 .setgroup {
@@ -1848,7 +1859,9 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   font-size: var(--t-4); font-weight: 600; letter-spacing: -0.01em;
   text-transform: none; color: var(--ink);
 }
-.setsection .setgroup > .panel > p { font-size: var(--t-2); line-height: 1.45; color: var(--ink-3); }
+.setsection .setgroup > .panel > p {
+  max-width: 65ch; font-size: var(--t-2); line-height: 1.45; color: var(--ink-3);
+}
 
 /* Those panels each offer one choice from a short closed set, which is a
    segmented control, not a scatter of pills: one track, equal segments, and
@@ -1856,6 +1869,18 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .setgroup > .panel > .chips {
   gap: 3px; padding: 3px;
   border-radius: var(--r-md); background: var(--track); border: 1px solid var(--glass-edge);
+  /* Sized by its options, not by the page. A track wider than the words it
+     holds stops reading as a choice between them. */
+  max-width: 420px;
+}
+/* Five options rather than three, so it gets the room five need — and below
+   that, two rows of the full width, because a segmented control that has
+   wrapped one option onto a second line is no longer a segmented control. */
+.setgroup > .panel > .chips[data-track="theme"] { max-width: 520px; }
+@media (max-width: 419.98px) {
+  .setgroup > .panel > .chips[data-track="theme"] {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .setgroup > .panel > .chips > .chip {
   flex: 1 1 auto; justify-content: center;
@@ -1866,7 +1891,14 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   background: var(--accent); border-color: transparent; color: var(--on-accent);
 }
 
-.setchips { display: flex; flex-wrap: wrap; gap: 7px; }
+/* A grid, not a wrapped row. Ten category names of very different lengths
+   ragged themselves into a shape that read as decoration; equal cells make the
+   set look like the closed list of ten it is, and the eye can count it. */
+.setchips {
+  display: grid; gap: 7px;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+}
+.setchips .chip { justify-content: flex-start; }
 .setchips .chip { cursor: pointer; }
 .setchips .chip input { margin: 0; accent-color: var(--accent); }
 
@@ -1878,6 +1910,10 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 /* The country box holds two letters, so it is sized for two letters. */
 .setinput--code { margin-left: auto; width: 74px; text-align: center; text-transform: uppercase; }
+/* The label and its field are one control and have to look like it. Left to
+   space-between they drifted to opposite ends of the row and stopped being a
+   pair; the title takes only the width it needs and the gap closes. */
+.setrow > .setrow__title { flex: 0 1 auto; }
 
 /* The picker brings its own .field, whose caption-sized label reads as a hint
    rather than as the title of the row it now heads. */
@@ -1890,7 +1926,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   background: var(--accent); color: var(--on-accent);
 }
 
-.setstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.setstats { display: grid; grid-template-columns: minmax(0, 1fr); }
 .setstat  { display: flex; flex-direction: column; gap: 1px; padding: 10px 14px; }
 .setstat b {
   font-size: var(--t-7); font-weight: 700; letter-spacing: -0.028em;
@@ -1900,7 +1936,14 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   font-size: var(--t-1); font-weight: 650; letter-spacing: .07em;
   text-transform: uppercase; color: var(--ink-3);
 }
-@media (min-width: 600px) { .setstats { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+/* Five stats in threes leaves an orphan row of two, and the group's hairline
+   rule only parts its children, not the rows inside one of them. Below 600
+   they go in a column of pairs, where five is simply five. */
+.setstats > * + * { border-top: 1px solid var(--rule); }
+@media (min-width: 600px) {
+  .setstats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .setstats > * + * { border-top: 0; }
+}
 
 /* The rows look tight; the targets inside them are not. 40px here would have
    read as tighter still, but this selector outranks the sheet's own coarse
