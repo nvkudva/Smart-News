@@ -137,8 +137,3 @@ export async function robotsVerdict(url: string, ua: string): Promise<Verdict> {
 
   return { allowed: best ? (best as { allowed: boolean }).allowed : true, delayMs: rules.delayMs };
 }
-
-/** Test seam: the cache is per process, and a test needs more than one. */
-export function resetRobotsCache(): void {
-  CACHE.clear();
-}

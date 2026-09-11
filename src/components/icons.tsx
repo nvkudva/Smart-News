@@ -28,9 +28,6 @@ export const Reels = ({ size = 24 }: P) => (
 export const Pin = ({ size = 11 }: P) => (
   <svg {...base(size)} strokeWidth={2.4}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
 );
-export const Spark = ({ size = 11 }: P) => (
-  <svg {...base(size)} strokeWidth={2.4}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></svg>
-);
 export const Back = ({ size = 21 }: P) => (
   <svg {...base(size)} strokeWidth={2.2}><path d="m14.5 5-7 7 7 7" /></svg>
 );

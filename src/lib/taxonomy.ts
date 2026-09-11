@@ -242,10 +242,3 @@ export function filterBySub<T extends Matchable>(
   const re = MATCHERS.get(`${cat.slug}/${subSlug}`);
   return re ? stories.filter((s) => re.test(searchText(s))) : [...stories];
 }
-
-/** Section-object spellings of the two helpers above, for callers that already
- *  hold the resolved category and should not have to round-trip through a slug. */
-export const SECTIONS = TAXONOMY;
-export const sectionBySlug = categoryBySlug;
-export const visibleSubs = (section: Section, stories: readonly Matchable[]): SubCount[] =>
-  subCategoriesFor(section.slug, stories);
