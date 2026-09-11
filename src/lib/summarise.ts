@@ -7,7 +7,22 @@ import { distinctByText } from './text';
 
 const MAX_ARTICLES = 6;
 const MAX_ATTEMPTS = 3;
-const MAX_CHARS_EACH = 2600;
+
+/**
+ * How much of each article the model sees.
+ *
+ * Input is 84% of what a summary costs — measured over a day on Workers AI,
+ * 471,808 input tokens against 90,021 output — so this constant, not the
+ * output, is the bill. News is written inverted-pyramid: what happened, who
+ * says so, then the background that was already in yesterday's piece. The tail
+ * is the cheapest part to lose and the least likely to change a summary.
+ *
+ * Trimmed here rather than by taking fewer articles, because every outlet in
+ * the cluster has to stay in the prompt for framing_left/centre/right to have
+ * anything to compare — cutting MAX_ARTICLES would save the same tokens by
+ * removing exactly the voices that feature exists to contrast.
+ */
+const MAX_CHARS_EACH = 1800;
 
 type Member = { source_id: string; name: string; title: string; lead: string | null; body: string | null;
                 bias: Bias | null };
