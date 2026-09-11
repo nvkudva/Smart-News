@@ -83,6 +83,17 @@ Every fifteen minutes: read the feeds, cluster what is the same story, summarise
 
 The pipeline and the site deliberately use different stores. The pipeline writes local SQLite because a cluster run issues thousands of statements, each of which would otherwise be an HTTP round trip; the site reads D1 through `src/lib/d1.ts`. `scripts/hydrate-d1.ts` pulls the working window down and `scripts/sync-d1.ts` pushes results back, which is what lets `.github/workflows/cycle.yml` run `hydrate` → `cycle` → `sync` on a runner with no persistent disk.
 
+`npm run deploy` migrates D1 before it builds. This is not optional ceremony:
+the schema lives in two files (`src/lib/db.ts` for local SQLite, `scripts/d1-schema.ts`
+for D1), every statement in them is `CREATE TABLE IF NOT EXISTS`, and a column
+added later therefore arrives only through the guarded `ALTER`s in
+`ADDED_COLUMNS`. Those used to run at the tail of `npm run sync` — which is the
+wrong moment, because a release that reads a new column is live the instant it
+deploys, and until the next cycle every request in the gap throws *no such
+column*. Adding a column means adding it to both files and to `ADDED_COLUMNS`;
+`npm run migrate:d1 -- --check` reports what a live database is missing, and
+exits non-zero if the two files have drifted apart.
+
 `deploy/install-schedule.sh` installs the same 15-minute cycle as a launchd agent. It is macOS only — on Linux, or anywhere else, use the GitHub Actions workflow instead. Do not run both against one D1: two concurrent cycles clobber each other's cluster assignments.
 
 ### End to end, step by step

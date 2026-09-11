@@ -17,7 +17,7 @@
     "gazetteer:gen": "tsx scripts/gen-gazetteer.ts",
     "sync": "tsx scripts/sync-d1.ts",
     "migrate:d1": "tsx scripts/migrate-d1.ts",
-    "deploy": "opennextjs-cloudflare build && wrangler deploy",
+    "deploy": "npm run migrate:d1 && opennextjs-cloudflare build && wrangler deploy",
     "hydrate": "tsx scripts/hydrate-d1.ts",
     "prebuild": "tsx scripts/gen-gazetteer.ts"
   },
