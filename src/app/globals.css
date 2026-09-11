@@ -412,6 +412,20 @@ body {
   .card { background: rgba(255, 255, 255, 0.62); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
+/* The sub-strip stops scrolling too. It is a handful of short links, and a
+   width that fits three card columns fits them on one or two lines — so they
+   wrap, and the masked edge that advertised a sweep comes off with the
+   scroller. [data-edge] rather than the bare class: StripScroller keeps setting
+   the attribute from a scrollLeft that no longer moves, and the mask rules it
+   feeds are written at that specificity. */
+@media (min-width: 1024px) {
+  .substrip, .substrip[data-edge] {
+    overflow: visible;
+    -webkit-mask-image: none; mask-image: none;
+  }
+  .substrip__row { flex-wrap: wrap; width: auto; row-gap: 4px; }
+}
+
 /* ── The category strip as a column ───────────────────────────────────────
    A horizontal strip is right on a phone, where a thumb sweeps it and the
    masked edge says there is more. On a desktop it is the wrong shape: fourteen
