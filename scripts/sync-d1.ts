@@ -196,6 +196,20 @@ async function main() {
   const state = await d.get<{ n: number; m: number }>(
     `SELECT COUNT(*) AS n, COALESCE(MAX(last_seen), 0) AS m
        FROM clusters WHERE headline IS NOT NULL`);
+
+  // The profile counters, computed here rather than on every profile render.
+  // getStats used to COUNT(*) two whole tables per page view, and D1 bills rows
+  // read — a cost that grew for the life of the database, since nothing
+  // deletes articles. The local file is open and counts there are free.
+  const counts = local.prepare(
+    `SELECT (SELECT COUNT(*) FROM articles) AS articles,
+            (SELECT COUNT(*) FROM clusters) AS clusters,
+            (SELECT COUNT(*) FROM clusters WHERE headline IS NOT NULL) AS summarised,
+            (SELECT COUNT(*) FROM sources) AS sources,
+            (SELECT COALESCE(MAX(last_seen), 0) FROM clusters) AS newest`,
+  ).get() as Record<string, number>;
+  await d.run('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)',
+              ['stats', JSON.stringify(counts)]);
   const cycle = `${state?.n ?? 0}-${state?.m ?? 0}`;
   const seen = await d.get<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', ['cycle']);
   if (seen?.value !== cycle) {

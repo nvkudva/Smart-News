@@ -105,17 +105,35 @@ export function haversineKm(a: { lat: number; lon: number }, b: { lat: number; l
  * `false` is re-probed, so the site heals on the first sync with no redeploy.
  */
 let gazetteer = false;
+let negativeUntil = 0;
+
+/** Long enough that one request tree asks once; short enough that a migration
+ *  is picked up without a redeploy, as the comment above promises. */
+const NEGATIVE_TTL_MS = 60_000;
 
 export async function placesReady(): Promise<boolean> {
   if (gazetteer) return true;
+  // A false was not remembered at all, so every caller re-issued the probe —
+  // and there are many: getFeed asks twice, bySql once per section, library six
+  // more times. The degraded path, which exists to keep the site up, was
+  // therefore also the path that multiplied D1 statements. Remember the no for
+  // a minute too.
+  if (Date.now() < negativeUntil) return false;
+
   try {
     const row = await (await d1()).get<{ places: number; cluster: number; prefs: number }>(
       `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='places') AS places,
               (SELECT COUNT(*) FROM pragma_table_info('clusters') WHERE name='place_id') AS cluster,
               (SELECT COUNT(*) FROM pragma_table_info('prefs') WHERE name='place_ids') AS prefs`);
     gazetteer = Boolean(row?.places && row?.cluster && row?.prefs);
+    if (!gazetteer) negativeUntil = Date.now() + NEGATIVE_TTL_MS;
   } catch {
-    gazetteer = false;   // an unreachable store is not a migrated one
+    // An unreachable store is not an unmigrated one, and conflating them was
+    // the worse half: a transient error made the whole request tree fall back
+    // to pre-v1.5 shapes with no place data. Held for a much shorter moment, so
+    // the next request tries the real question again.
+    gazetteer = false;
+    negativeUntil = Date.now() + 5_000;
   }
   return gazetteer;
 }

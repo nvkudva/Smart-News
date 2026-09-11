@@ -60,7 +60,7 @@ export function withPlaceLabels<T extends { place_id: string | null; place_label
  * than that, so id lists are inlined instead of bound. They are the gazetteer's
  * own slugs, but quote them anyway.
  */
-function idList(ids: string[]): string {
+export function idList(ids: string[]): string {
   return ids.map((id) => `'${id.replace(/'/g, "''")}'`).join(',');
 }
 

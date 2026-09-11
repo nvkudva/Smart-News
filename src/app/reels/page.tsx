@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Back, Photo } from '@/components/icons';
 import { SaveButton } from '@/components/SaveButton';
 import { storyWhen } from '@/components/StoryCard';
-import { getReels, isSaved } from '@/lib/library';
+import { getReels, savedAmong } from '@/lib/library';
 import { TabBar } from '@/components/TabBar';
 import { ReelKeys } from '@/components/ReelKeys';
 
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
  *  the same for a keyboard, which snap alone leaves with nothing but Tab. */
 export default async function Reels() {
   const stories = await getReels(20);
-  const savedFlags = await Promise.all(stories.map((s) => isSaved(s.id)));
+  const saved = await savedAmong(stories.map((s) => s.id));
 
   return (
     <>
@@ -39,7 +39,7 @@ export default async function Reels() {
             <div className="reel__count" aria-hidden><b>{i + 1}</b> / {stories.length}</div>
             <div className="reel__head">
               <h2>{s.headline}</h2>
-              <SaveButton clusterId={s.id} initial={savedFlags[i]} iconOnly />
+              <SaveButton clusterId={s.id} initial={saved.has(s.id)} iconOnly />
             </div>
             <p>{s.crux}</p>
             {/* Under the summary, not over the headline: it is what the story

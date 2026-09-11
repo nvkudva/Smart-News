@@ -1,5 +1,5 @@
 import { d1 } from './d1';
-import { storyCols, storyFrom, withPlaceLabels, type Story } from './feed';
+import { idList, storyCols, storyFrom, withPlaceLabels, type Story } from './feed';
 import { expandPlaceIds, placesReady, type PlaceKind } from './places';
 
 // Shape shared with the feed, so an unmigrated store degrades identically here.
@@ -12,6 +12,23 @@ const select = (ready: boolean) => `SELECT ${cols(ready)} ${storyFrom(ready)}`;
 export async function isSaved(clusterId: string, userId = 'local'): Promise<boolean> {
   return Boolean(await (await d1()).get(
     'SELECT 1 AS one FROM saved WHERE user_id = ? AND cluster_id = ?', [userId, clusterId]));
+}
+
+/**
+ * Which of these are saved, in one statement.
+ *
+ * The reels page asked isSaved twenty times, once per story. Promise.all does
+ * not rescue that: the D1 interface has no batch, so over the REST backend each
+ * is its own HTTPS round trip, and even on the binding it is twenty statements
+ * billed. A page that renders twenty stories should ask one question about
+ * twenty ids.
+ */
+export async function savedAmong(clusterIds: string[], userId = 'local'): Promise<Set<string>> {
+  if (!clusterIds.length) return new Set();
+  const rows = await (await d1()).all<{ cluster_id: string }>(
+    `SELECT cluster_id FROM saved WHERE user_id = ? AND cluster_id IN (${idList(clusterIds)})`,
+    [userId]);
+  return new Set(rows.map((r) => r.cluster_id));
 }
 
 export async function toggleSaved(clusterId: string, userId = 'local'): Promise<boolean> {
@@ -115,17 +132,29 @@ export async function getReels(limit = 20): Promise<Story[]> {
 
 // ----------------------------------------------------------------- stats ---
 
+/**
+ * The profile counters.
+ *
+ * These used to be six COUNT(*)s, two of them over whole tables, run on every
+ * profile render. D1 bills rows read, and nothing deletes articles, so the
+ * price of looking at your own profile grew with the age of the database.
+ *
+ * The pipeline counts them instead — it has the local file open and counting
+ * there is free — and leaves the answer in sync_meta beside the cycle stamp.
+ * Reading it is one row. Only `saved` is still counted live, because the
+ * reader writes it between cycles and a stale number there would be wrong in
+ * the one place they would notice.
+ */
 export async function getStats() {
-  // One round trip: D1 is remote, and six counts are six requests otherwise.
-  const r = await (await d1()).get<Record<string, number>>(
-    `SELECT (SELECT COUNT(*) FROM articles) AS articles,
-            (SELECT COUNT(*) FROM clusters) AS clusters,
-            (SELECT COUNT(*) FROM clusters WHERE headline IS NOT NULL) AS summarised,
-            (SELECT COUNT(*) FROM sources) AS sources,
-            (SELECT COUNT(*) FROM saved) AS saved,
-            (SELECT MAX(last_seen) FROM clusters) AS newest`);
+  const d = await d1();
+  const [meta, saved] = await Promise.all([
+    d.get<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', ['stats']),
+    d.get<{ n: number }>('SELECT COUNT(*) AS n FROM saved'),
+  ]);
+  let r: Record<string, number> = {};
+  try { r = meta?.value ? JSON.parse(meta.value) as Record<string, number> : {}; } catch { /* pre-stats sync */ }
   return {
-    articles: r?.articles ?? 0, clusters: r?.clusters ?? 0, summarised: r?.summarised ?? 0,
-    sources: r?.sources ?? 0, saved: r?.saved ?? 0, newest: r?.newest ?? 0,
+    articles: r.articles ?? 0, clusters: r.clusters ?? 0, summarised: r.summarised ?? 0,
+    sources: r.sources ?? 0, saved: saved?.n ?? 0, newest: r.newest ?? 0,
   };
 }
