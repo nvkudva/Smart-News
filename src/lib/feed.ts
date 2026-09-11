@@ -1,6 +1,7 @@
 import { d1 } from './d1';
 import { SOURCES, type Bias } from './sources';
 import { expandPlaceIds, geoAdjacentPlaceIds, placeLabel, placesReady } from './places';
+import { matchesSub } from './taxonomy';
 
 export type Story = {
   id: string; headline: string; crux: string; category: string;
@@ -21,7 +22,7 @@ export type Prefs = {
 
 export const DEFAULT_PREFS: Prefs = {
   country: 'IN',
-  categories: ['World', 'India', 'Technology', 'Science'],
+  categories: ['Technology', 'Business', 'World', 'Science'],
   places: ['Bengaluru'],
   placeIds: [],
   geoConsent: false,
@@ -121,6 +122,49 @@ export function effectivePlaceIds(p: Prefs): string[] {
   return [...new Set(ids)];
 }
 
+/**
+ * Who this feed is for.
+ *
+ * `interest` answers whether the reader asked for a category at all; this
+ * answers how much this particular readership cares once they have. The two
+ * multiply, so a category can be both chosen and merely tolerated. The
+ * readership is engineers and AI practitioners who also follow markets, so
+ * Technology leads and Business follows it — and nothing is pushed below 1,
+ * because down-weighting a category is what the exploration slot and the
+ * reader's own choices are for.
+ */
+const AUDIENCE: Record<string, number> = {
+  Technology: 1.35,
+  Business: 1.15,
+  Science: 1.05,
+};
+
+/**
+ * "Global news with a large economic impact" is not a category — it is a
+ * property that cuts across Business, World and Politics, and the same tariff
+ * ruling can be filed under any of the three. So it is read off the text
+ * rather than the label, reusing the keyword lists that already define the
+ * Business sub-categories: they were measured against this store, and a second
+ * hand-tuned list would only drift from them.
+ *
+ * Scaled by corroboration rather than applied flat, because breadth is what
+ * separates a decision that moved markets from a column predicting one. At six
+ * outlets it is the full quarter; at one it is almost nothing.
+ */
+const MACRO_SUBS: readonly (readonly [string, string])[] = [
+  ['business', 'markets'], ['business', 'economy'],
+  ['business', 'trade-tariffs'], ['business', 'energy-commodities'],
+  // Crypto counts as an asset class here, not as a gadget: a readership that
+  // follows markets reads a Bitcoin move the way it reads a rate decision. The
+  // pill exists under Technology too, and either filing earns the lift.
+  ['business', 'crypto'], ['technology', 'crypto'],
+];
+
+function macroLift(s: Story): number {
+  if (!MACRO_SUBS.some(([cat, sub]) => matchesSub(cat, sub, s))) return 1;
+  return 1 + 0.25 * Math.min(1, s.source_count / 6);
+}
+
 const HALF_LIFE_H = 9;
 
 /**
@@ -154,7 +198,8 @@ function score(s: Story, prefs: Prefs, inside: Set<string> | null): number {
   // own and leaves the other three terms arguing over the remainder. Mapped to
   // 0.6-1.0 it still sorts, but a widely-run story can now outrank a lightly-run
   // one the model happened to like better.
-  return recency * (0.35 + 0.65 * corroboration) * (0.5 + 0.1 * s.importance) * interest;
+  return recency * (0.35 + 0.65 * corroboration) * (0.5 + 0.1 * s.importance) * interest
+         * (AUDIENCE[s.category] ?? 1) * macroLift(s);
 }
 
 /**
