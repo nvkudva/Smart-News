@@ -2,123 +2,173 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import type { Story } from '@/lib/feed';
+import type { Outlet, Story } from '@/lib/feed';
 import type { SubCount } from '@/lib/taxonomy';
 import { StoryCard, variantFor } from './StoryCard';
 import { SubcategoryStrip } from './SubcategoryStrip';
-import { readEntry, sessionStamp, writeEntry } from '@/lib/store';
+import { forgetStamp, readEntry, sessionStamp, writeEntry } from '@/lib/store';
 
-/** What one category answers with. `active` is gone: the sub-filter is the
- *  client's business now, and the rows carry the verdicts to do it with. */
-export type SectionStory = Story & { subs: string[] };
+/** What one category answers with. Derived from the world now rather than
+ *  fetched, but the same shape this component has always rendered. */
+export type SectionStory = Story & { subs: string[]; cslug: string; outlets: Outlet[] };
 export type SectionData = {
-  stamp: string | null; name: string; subs: SubCount[];
+  stamp: string | null; name: string; kind: 'scope' | 'topic'; subs: SubCount[];
   total: number; ids: string[]; stories: SectionStory[];
 };
 
-/**
- * Module scope, so it survives every navigation inside the app and dies with
- * the tab. A section the reader has already opened — or hovered — comes back
- * with no request at all, which is the whole point of moving this off the
- * server: the page shell is static and this is the only thing that can wait.
- */
-const cache = new Map<string, { at: number; data: Promise<SectionData> }>();
+type WorldSection = {
+  name: string; kind: 'scope' | 'topic'; total: number; ids: string[]; subs: SubCount[];
+};
+type World = {
+  stamp: string | null; sections: Record<string, WorldSection>; stories: SectionStory[];
+};
+
+const WORLD = '/api/world';
 const TTL_MS = 60_000;
 
-/** Synchronously resolved cache entries only — used to skip the skeleton. */
-const settled = new Map<string, SectionData>();
+/**
+ * One fetch for everything the reader can read.
+ *
+ * The fourteen sections are fourteen orderings of a single forty-eight-hour
+ * pool of about three hundred stories, so asking per section re-sent rows the
+ * browser already held under another heading — and cost a request for every
+ * tap on the strip. The bodies arrive once, deduplicated; a section switch, a
+ * story opening and a related-stories list are all reads of this array.
+ *
+ * Module scope, so it survives every navigation inside the app and dies with
+ * the tab.
+ */
+let inflight: Promise<World> | null = null;
+let held: World | null = null;
+let at = 0;
 
-/** One URL per category, with no sub in it — that is the point. */
-export function sectionUrl(cat: string) {
-  return `/api/section/${encodeURIComponent(cat)}`;
-}
-
-export function loadSection(cat: string): Promise<SectionData> {
-  const key = sectionUrl(cat);
-  const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
-
-  const data = resolve(cat, key);
-  cache.set(key, { at: Date.now(), data });
-  data.catch(() => { if (cache.get(key)?.data === data) cache.delete(key); });
-  data.then((d) => settled.set(key, d)).catch(() => {});
-  return data;
+export function loadWorld(): Promise<World> {
+  if (inflight && Date.now() - at < TTL_MS) return inflight;
+  at = Date.now();
+  const p = resolve();
+  inflight = p;
+  p.then((w) => { if (inflight === p) held = w; })
+   .catch(() => { if (inflight === p) { inflight = null; at = 0; } });
+  return p;
 }
 
 /**
  * Stored copy first, and no request at all when it is still current.
  *
  * The stamp is one small answer for the whole app, so asking it and finding it
- * unchanged settles every section this browser holds at once. Only when it has
- * moved — at most every fifteen minutes, usually less — does a section cost
- * anything, and then only the one being looked at.
+ * unchanged settles everything this browser holds. Only when it has moved — at
+ * most every fifteen minutes, usually less — is there anything to fetch, and
+ * then only the handful of stories the last pipeline run produced.
  */
-async function resolve(cat: string, key: string): Promise<SectionData> {
-  const [stamp, stored] = await Promise.all([
-    sessionStamp(),
-    readEntry<SectionData>(key),
-  ]);
-  const held = stored?.data;
-  if (held && stamp && stored.stamp === stamp) return held;
+async function resolve(): Promise<World> {
+  const [stamp, stored] = await Promise.all([sessionStamp(), readEntry<World>(WORLD)]);
+  const have = stored?.data;
+  if (have && stamp && stored.stamp === stamp) return have;
 
-  // When we hold a copy, ask only for what has changed since the newest thing
-  // in it. A cycle usually moves a handful of stories, not forty-eight.
-  const since = held?.stories.length
-    ? Math.max(...held.stories.map((s) => s.last_seen))
+  const since = have?.stories.length
+    ? Math.max(...have.stories.map((s) => s.last_seen))
     : 0;
-  const res = await fetch(since ? `${key}?since=${since}` : key);
-  if (!res.ok) {
-    // A section we hold is a better answer than an error, even a stale one.
-    if (held) return held;
-    throw new Error(String(res.status));
-  }
+  const fresh = await ask(since);
+  if (!since) { writeEntry(WORLD, fresh.stamp, fresh); return fresh; }
 
-  const fresh = await res.json() as SectionData;
-  const merged = since ? await merge(held!, fresh) : fresh;
-  writeEntry(key, merged.stamp, merged);
+  const merged = merge(have!, fresh);
+  // A delta naming a body we no longer hold means storage was evicted under
+  // us. One full answer is cheaper and simpler than an endpoint per id.
+  const wanted = new Set(Object.values(merged.sections).flatMap((x) => x.ids));
+  if (merged.stories.length < wanted.size) {
+    const whole = await ask(0);
+    writeEntry(WORLD, whole.stamp, whole);
+    return whole;
+  }
+  writeEntry(WORLD, merged.stamp, merged);
   return merged;
 }
 
-/**
- * The delta's ordered ids, filled from whatever body we can find for each —
- * the changed ones the server just sent, then the ones already here. An id in
- * neither was evicted from storage, and only those are asked for.
- */
-async function merge(held: SectionData, delta: SectionData): Promise<SectionData> {
-  const bodies = new Map<string, SectionStory>();
-  for (const s of held.stories) bodies.set(s.id, s);
-  for (const s of delta.stories) bodies.set(s.id, s);
-
-  const gaps = delta.ids.filter((id) => !bodies.has(id));
-  if (gaps.length) {
-    try {
-      const res = await fetch(`/api/stories?ids=${gaps.map(encodeURIComponent).join(',')}`);
-      if (res.ok) {
-        const { stories } = await res.json() as { stories: SectionStory[] };
-        // Backfilled rows carry no sub verdicts — that endpoint does not know
-        // which section asked. The strip still counts them; only the sub filter
-        // cannot place them, which is the right way round for a rare gap.
-        for (const s of stories) bodies.set(s.id, { ...s, subs: s.subs ?? [] });
-      }
-    } catch { /* an id with no body is simply dropped below */ }
-  }
-
-  return {
-    ...delta,
-    stories: delta.ids.map((id) => bodies.get(id)).filter((s): s is SectionStory => !!s),
-  };
+async function ask(since: number): Promise<World> {
+  const res = await fetch(since ? `${WORLD}?since=${since}` : WORLD);
+  if (!res.ok) throw new Error(String(res.status));
+  return await res.json() as World;
 }
 
 /**
- * Empty the map outright. Saving preferences re-ranks four of the fourteen
- * sections, and the entries here were filled before the save; a TTL would let
+ * The orderings always arrive in full and the bodies do not: an id that stops
+ * appearing is how this learns a story was reaped, which a `since` alone could
+ * never say.
+ */
+function merge(have: World, delta: World): World {
+  const bodies = new Map<string, SectionStory>();
+  for (const s of have.stories) bodies.set(s.id, s);
+  for (const s of delta.stories) bodies.set(s.id, s);
+
+  const wanted = new Set(Object.values(delta.sections).flatMap((x) => x.ids));
+  return {
+    stamp: delta.stamp,
+    sections: delta.sections,
+    stories: [...wanted].map((id) => bodies.get(id)).filter((s): s is SectionStory => !!s),
+  };
+}
+
+/** Built once per world rather than once per section: fourteen sections read
+ *  the same three hundred rows. */
+const index = new WeakMap<World, Map<string, SectionStory>>();
+function byId(w: World): Map<string, SectionStory> {
+  let m = index.get(w);
+  if (!m) { m = new Map(w.stories.map((s) => [s.id, s])); index.set(w, m); }
+  return m;
+}
+
+export function sectionFrom(w: World, cat: string): SectionData {
+  const s = w.sections[cat];
+  const by = byId(w);
+  return {
+    stamp: w.stamp,
+    name: s?.name ?? cat,
+    kind: s?.kind ?? 'topic',
+    subs: s?.subs ?? [],
+    total: s?.total ?? 0,
+    ids: s?.ids ?? [],
+    stories: (s?.ids ?? []).map((id) => by.get(id)).filter((x): x is SectionStory => !!x),
+  };
+}
+
+export function loadSection(cat: string): Promise<SectionData> {
+  return loadWorld().then((w) => sectionFrom(w, cat));
+}
+
+/**
+ * Drop it outright. Saving preferences re-ranks four of the fourteen
+ * orderings, and what is held here was built before the save; a TTL would let
  * the old order stand for up to a minute after the reader watched it change.
  */
-export function clearSections() { cache.clear(); }
+export function clearSections() { inflight = null; held = null; at = 0; }
 
-/** Warm without rendering — the strip calls this on hover and on touch-down. */
-export function warmSection(cat: string) {
-  void loadSection(cat).catch(() => {});
+/** Warm without rendering — the strip calls this on hover and on touch-down.
+ *  There is one answer for every section now, so the category is immaterial. */
+export function warmSection(_cat?: string) { void loadWorld().catch(() => {}); }
+
+/**
+ * The pipeline moves every fifteen minutes, so this asks on the same clock.
+ *
+ * It costs a stamp read, not a world: `resolve` returns the stored copy
+ * untouched when the stamp has not moved, and when it has, `since` brings back
+ * the three or four stories that run produced rather than three hundred.
+ *
+ * Only while the tab is being looked at — a backgrounded PWA polls nothing —
+ * and again the moment it comes back, which is when a reader who left it open
+ * for an hour looks again.
+ */
+const REFRESH_MS = 15 * 60_000;
+
+function refresh() {
+  if (document.visibilityState !== 'visible') return;
+  forgetStamp();
+  at = 0;
+  void loadWorld().catch(() => {});
+}
+
+if (typeof document !== 'undefined') {
+  setInterval(refresh, REFRESH_MS);
+  document.addEventListener('visibilitychange', refresh);
 }
 
 export function SectionFeed({ cat, name }: { cat: string; name: string }) {
@@ -157,11 +207,20 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
   // one: the keyword lists run against live rows, and yesterday's link should
   // still land somewhere useful.
   const active = sub && data.subs.some((s) => s.slug === sub) ? sub : null;
-  const shown = active ? data.stories.filter((s) => s.subs.includes(active)) : data.stories;
+  // A scope section's pills are the ten topics, so its filter is the story's
+  // own category; a topic section's are its keyword lists, which each row
+  // carries the verdicts for.
+  const shown = !active ? data.stories
+    : data.kind === 'scope' ? data.stories.filter((s) => s.cslug === active)
+    : data.stories.filter((s) => s.subs.includes(active));
 
   return (
     <>
-      <SubcategoryStrip cat={cat} label={name} base={`/c/${cat}`}
+      {/* Top lives at /, the way CategoryStrip has always sent it. Building
+          the base from the slug alone gave the section a second URL at
+          /c/top — a real prerendered page showing the same rows, so shared
+          links disagreed and both payloads were fetched and held apart. */}
+      <SubcategoryStrip cat={cat} label={name} base={cat === 'top' ? '/' : `/c/${cat}`}
                         subs={data.subs} active={active} />
       {shown.length === 0 ? (
         <div className="panel">
@@ -181,11 +240,7 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
 }
 
 function peek(cat: string): SectionData | null {
-  const key = sectionUrl(cat);
-  const hit = cache.get(key);
-  if (!hit || Date.now() - hit.at >= TTL_MS) { settled.delete(key); return null; }
-  hit.data.then((d) => settled.set(key, d)).catch(() => {});
-  return settled.get(key) ?? null;
+  return held ? sectionFrom(held, cat) : null;
 }
 
 export function SectionSkeleton() {

@@ -4,8 +4,18 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Pin } from './icons';
 import { ModeToggle } from './Mode';
+import { sessionStamp } from '@/lib/store';
 
 const KEY = 'sn_here';
+
+/** The stored line, against the cycle it was true for. */
+type Held = { stamp: string | null; here: string };
+
+/** Saving preferences can move this without moving the cycle stamp, so the
+ *  purge that empties the section caches empties this too. */
+export function forgetPlace() {
+  try { localStorage.removeItem(KEY); } catch { /* nothing to forget */ }
+}
 
 /**
  * The date and the place are the only part of the header that is not the same
@@ -20,17 +30,35 @@ export function HeaderAside() {
 
   useEffect(() => {
     setToday(new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }));
-    try { setHere(localStorage.getItem(KEY) ?? ''); } catch { /* first visit */ }
 
     let live = true;
-    fetch('/api/place')
-      .then((r) => r.json() as Promise<{ here: string }>)
-      .then(({ here: h }) => {
+    let held: Held | null = null;
+    try {
+      const raw = localStorage.getItem(KEY);
+      // Anything stored before this carried the line on its own.
+      if (raw) held = raw.startsWith('{') ? JSON.parse(raw) as Held : { stamp: null, here: raw };
+      if (held?.here) setHere(held.here);
+    } catch { /* first visit, or storage refused */ }
+
+    void (async () => {
+      const stamp = await sessionStamp();
+      // The line is the reader's own preferences read through the gazetteer,
+      // and the gazetteer only changes on a sync — which is what moves the
+      // stamp. So an unmoved stamp means the stored answer is still the right
+      // one, and the fetch was a Worker invocation spent to be told nothing.
+      if (held?.here && stamp && held.stamp === stamp) return;
+
+      try {
+        const res = await fetch('/api/place');
+        if (!res.ok || !live) return;
+        const { here: h } = await res.json() as { here: string };
         if (!live || !h) return;
         setHere(h);
-        try { localStorage.setItem(KEY, h); } catch { /* the label still shows */ }
-      })
-      .catch(() => { /* the pin keeps whatever it had; it is not the story */ });
+        try { localStorage.setItem(KEY, JSON.stringify({ stamp, here: h } satisfies Held)); }
+        catch { /* the label still shows */ }
+      } catch { /* the pin keeps whatever it had; it is not the story */ }
+    })();
+
     return () => { live = false; };
   }, []);
 

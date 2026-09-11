@@ -36,13 +36,13 @@ export function SubcategoryStrip(
     <StripScroller className="substrip" data-cat={cat} label={`${label} sub-categories`}
                    activeKey={active ?? 'all'}>
       <div className="substrip__row">
-        <Link href={base} className="subpill" data-active={all} onClick={swap(base)}
+        <Link href={base} prefetch={false} className="subpill" data-active={all} onClick={swap(base)}
               aria-current={all ? 'page' : undefined}>All</Link>
         {subs.map((s) => {
           const on = s.slug === active;
           const href = `${base}?sub=${encodeURIComponent(s.slug)}`;
           return (
-            <Link key={s.slug} href={href} className="subpill" data-active={on}
+            <Link key={s.slug} href={href} prefetch={false} className="subpill" data-active={on}
                   onClick={swap(href)}
                   aria-current={on ? 'page' : undefined}>{s.name}</Link>
           );

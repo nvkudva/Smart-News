@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { forgetPlace } from './HeaderAside';
 import { clearSections } from './SectionFeed';
 
 /**
@@ -22,6 +23,9 @@ export function PrefsPurge() {
 
     const purge = () => {
       clearSections();
+      // The pin names a place the reader may have just changed, and that change
+      // does not move the cycle stamp the stored line is keyed on.
+      forgetPlace();
       // The service worker answers /api/* stale-while-revalidate for a minute,
       // so the old ranking would come back from its cache even with both maps
       // emptied. Names are versioned; the prefix is what stays true.
