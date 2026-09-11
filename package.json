@@ -20,7 +20,8 @@
     "deploy": "npm run migrate:d1 && opennextjs-cloudflare build && wrangler deploy",
     "hydrate": "tsx scripts/hydrate-d1.ts",
     "prebuild": "tsx scripts/gen-gazetteer.ts",
-    "test": "playwright test"
+    "test": "playwright test",
+    "pretest": "next build && opennextjs-cloudflare build"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
