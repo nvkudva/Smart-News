@@ -10,11 +10,15 @@
  *   · documents go network first with a cached fallback, so an offline open
  *     lands on the last page seen rather than the browser's error
  */
-const VERSION = 'v2';
+const VERSION = 'v3';   // bumped so the unbounded media-v2 is dropped on activate
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const MEDIA = `media-${VERSION}`;
 const KEEP = new Set([SHELL, DATA, MEDIA]);
+
+/** Roughly a few hundred article photographs — many days of reading, and small
+ *  enough that the browser is never tempted to evict the origin entire. */
+const MEDIA_MAX = 300;
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(SHELL)
@@ -33,19 +37,48 @@ async function swr(req, cacheName, maxAgeMs) {
   const cache = await caches.open(cacheName);
   const hit = await cache.match(req);
 
-  const network = fetch(req).then((res) => {
-    if (res.ok) cache.put(req, res.clone());
+  const network = fetch(req).then(async (res) => {
+    if (res.ok) {
+      await cache.put(req, res.clone());
+      if (cacheName === MEDIA) await trim(MEDIA, MEDIA_MAX);
+    }
     return res;
   });
 
   // A hit answers immediately and the refresh runs behind it. Only the age is
   // consulted to decide whether to bother refreshing at all.
+  //
+  // An unknown age is stale, not fresh. `Date.parse('')` is NaN, the
+  // subtraction is NaN, and `NaN || 0` is 0 — so the old line read a missing
+  // Date header as brand new and skipped the refresh entirely. Same-origin
+  // responses always carry one; opaque cross-origin images expose no headers
+  // at all, so every publisher photograph was cached and never looked at again.
   if (hit) {
-    const age = Date.now() - Date.parse(hit.headers.get('date') || '') || 0;
+    const at = Date.parse(hit.headers.get('date') || '');
+    const age = Number.isNaN(at) ? Infinity : Date.now() - at;
     if (!maxAgeMs || age >= maxAgeMs) network.catch(() => {});
     return hit;
   }
   return network;
+}
+
+/**
+ * Keep a cache from growing without end.
+ *
+ * Only names are cleaned on activate, and MEDIA never changes name, so it held
+ * every story photograph the reader had ever scrolled past. Left alone it grows
+ * until the browser evicts this origin's storage wholesale — which takes the
+ * shell and the offline fallback with it, so the failure lands on the one thing
+ * the cache exists to protect.
+ *
+ * Insertion order is FIFO in the Cache API, so the oldest keys are simply the
+ * first ones.
+ */
+async function trim(cacheName, max) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length <= max) return;
+  await Promise.all(keys.slice(0, keys.length - max).map((k) => cache.delete(k)));
 }
 
 self.addEventListener('fetch', (e) => {

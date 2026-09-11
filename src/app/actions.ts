@@ -1,22 +1,31 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { getPrefs, savePrefs, type Prefs } from '@/lib/feed';
 import { toggleSaved } from '@/lib/library';
 import { CATEGORIES } from '@/lib/db';
 import { nearestPlace, searchPlaces, type Place } from '@/lib/places';
 
-/** Every surface that reads prefs has to be told they moved. */
+/**
+ * Kept as the one place that knows a preference change has to reach the reader,
+ * but it no longer calls revalidatePath. Those calls did nothing: every route
+ * they named is force-dynamic, so there was no cached render to invalidate, and
+ * the incremental cache is the read-only static-assets one, which cannot be
+ * written at runtime.
+ *
+ * What actually delays the change is three 60-second caches the save does not
+ * touch, and they compose: the per-isolate map in sections.ts, the per-tab map
+ * in SectionFeed, and the service worker's stale-while-revalidate on /api/*.
+ * Worst case is close to three minutes. Fixing that means keying those maps on
+ * a stamp the save can bump, which is a change to all three and not this one.
+ */
 function revalidatePrefs() {
-  revalidatePath('/');
-  revalidatePath('/local');
-  revalidatePath('/profile');
+  // Intentionally empty — see above.
 }
 
 export async function toggleSavedAction(clusterId: string): Promise<boolean> {
-  const nowSaved = await toggleSaved(clusterId);
-  revalidatePath('/saved');
-  return nowSaved;
+  // /saved is force-dynamic too, so revalidating it was the same no-op; the
+  // button already reflects the new state from this function's return value.
+  return toggleSaved(clusterId);
 }
 
 /** The picker posts JSON; a hand-edited or stale field must not lose the form. */

@@ -35,8 +35,16 @@ export async function GET(
   return NextResponse.json(
     { name: category.name, subs, active, total: matching.length,
       stories: matching.slice(0, SECTION_PAGE) },
-    // The pipeline moves every fifteen minutes. A minute of shared cache and
-    // five of serving stale while it refreshes costs nobody a stale headline.
-    { headers: { 'cache-control': 'public, max-age=15, s-maxage=60, stale-while-revalidate=300' } },
+    // The pipeline moves every fifteen minutes, so a minute of caching and five
+    // of serving stale while it refreshes costs nobody a stale headline.
+    //
+    // private, not public: four of the fourteen slugs — top, local, national,
+    // international — are ranked against the reader's prefs, so the body is
+    // reader-specific. That is harmless while there is one identity and no
+    // shared cache to honour it, which is exactly why it would be easy to leave
+    // wrong until the day identity is added and it becomes a cross-reader leak.
+    // s-maxage is gone with it: on workers.dev there is no shared cache, so it
+    // read as working edge caching and was not.
+    { headers: { 'cache-control': 'private, max-age=15, stale-while-revalidate=300' } },
   );
 }

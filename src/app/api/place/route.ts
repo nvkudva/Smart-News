@@ -17,6 +17,7 @@ export async function GET() {
   // reader's own words if that is all they gave us, and the country last.
   const place = places[0];
   const here = place ? `${place.name}, ${place.country}` : prefs.places[0] ?? countryName(prefs.country);
+  // private: this is the reader's own resolved location, not a shared fact.
   return NextResponse.json({ here },
-    { headers: { 'cache-control': 'public, max-age=60, stale-while-revalidate=600' } });
+    { headers: { 'cache-control': 'private, max-age=60, stale-while-revalidate=600' } });
 }
