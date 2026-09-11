@@ -9,7 +9,7 @@ const select = (ready: boolean) => `SELECT ${cols(ready)} ${storyFrom(ready)}`;
 
 // ---------------------------------------------------------------- saved ---
 
-export async function isSaved(clusterId: string, userId = 'local'): Promise<boolean> {
+export async function isSaved(clusterId: string, userId: string): Promise<boolean> {
   return Boolean(await (await d1()).get(
     'SELECT 1 AS one FROM saved WHERE user_id = ? AND cluster_id = ?', [userId, clusterId]));
 }
@@ -23,7 +23,7 @@ export async function isSaved(clusterId: string, userId = 'local'): Promise<bool
  * billed. A page that renders twenty stories should ask one question about
  * twenty ids.
  */
-export async function savedAmong(clusterIds: string[], userId = 'local'): Promise<Set<string>> {
+export async function savedAmong(clusterIds: string[], userId: string): Promise<Set<string>> {
   if (!clusterIds.length) return new Set();
   const rows = await (await d1()).all<{ cluster_id: string }>(
     `SELECT cluster_id FROM saved WHERE user_id = ? AND cluster_id IN (${idList(clusterIds)})`,
@@ -31,7 +31,7 @@ export async function savedAmong(clusterIds: string[], userId = 'local'): Promis
   return new Set(rows.map((r) => r.cluster_id));
 }
 
-export async function toggleSaved(clusterId: string, userId = 'local'): Promise<boolean> {
+export async function toggleSaved(clusterId: string, userId: string): Promise<boolean> {
   const d = await d1();
   if (await isSaved(clusterId, userId)) {
     await d.run('DELETE FROM saved WHERE user_id = ? AND cluster_id = ?', [userId, clusterId]);
@@ -42,7 +42,7 @@ export async function toggleSaved(clusterId: string, userId = 'local'): Promise<
   return true;
 }
 
-export async function getSaved(userId = 'local'): Promise<(Story & { saved_at: number })[]> {
+export async function getSaved(userId: string): Promise<(Story & { saved_at: number })[]> {
   const ready = await placesReady();
   return withPlaceLabels(await (await d1()).all<Story & { saved_at: number }>(
     `SELECT ${cols(ready)}, sv.saved_at

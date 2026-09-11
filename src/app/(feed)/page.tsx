@@ -5,6 +5,7 @@ import { CategoryStrip } from '@/components/CategoryStrip';
 import { CategoryPager } from '@/components/CategoryPager';
 import { SubcategoryStrip } from '@/components/SubcategoryStrip';
 import { TAXONOMY, filterBySub, subCategoriesFor } from '@/lib/taxonomy';
+import { currentUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ export default async function Home({
   searchParams,
 }: { searchParams: Promise<{ sub?: string }> }) {
   const { sub } = await searchParams;
-  const stories = await getFeed(30);
+  const stories = await getFeed(30, await currentUserId());
 
   // Top's subs are the topic categories its own rows fall under, counted off the
   // array already in hand rather than queried for. Every other section has had

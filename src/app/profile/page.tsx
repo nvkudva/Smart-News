@@ -10,11 +10,12 @@ import { getPrefs } from '@/lib/feed';
 import { getStats } from '@/lib/library';
 import { getPlaces } from '@/lib/places';
 import { ago } from '@/components/StoryCard';
+import { currentUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Profile() {
-  const [prefs, stats] = await Promise.all([getPrefs(), getStats()]);
+  const [prefs, stats] = await Promise.all([getPrefs(await currentUserId()), getStats()]);
   const [resolved, geo] = await Promise.all([
     getPlaces(prefs.placeIds),
     prefs.geoConsent && prefs.geoPlaceId ? getPlaces([prefs.geoPlaceId]) : Promise.resolve([]),

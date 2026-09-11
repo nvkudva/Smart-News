@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getFeed } from '@/lib/feed';
+import { currentUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const limit = Number(new URL(request.url).searchParams.get('limit') ?? 30);
-  return NextResponse.json({ stories: await getFeed(Math.min(100, Math.max(1, limit))) });
+  return NextResponse.json({ stories: await getFeed(Math.min(100, Math.max(1, limit)), await currentUserId()) });
 }

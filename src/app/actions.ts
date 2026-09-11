@@ -4,6 +4,7 @@ import { getPrefs, savePrefs, type Prefs } from '@/lib/feed';
 import { toggleSaved } from '@/lib/library';
 import { CATEGORIES } from '@/lib/db';
 import { nearestPlace, searchPlaces, type Place } from '@/lib/places';
+import { currentUserId } from '@/lib/session';
 
 /**
  * Kept as the one place that knows a preference change has to reach the reader,
@@ -25,7 +26,7 @@ function revalidatePrefs() {
 export async function toggleSavedAction(clusterId: string): Promise<boolean> {
   // /saved is force-dynamic too, so revalidating it was the same no-op; the
   // button already reflects the new state from this function's return value.
-  return toggleSaved(clusterId);
+  return toggleSaved(clusterId, await currentUserId());
 }
 
 /** The picker posts JSON; a hand-edited or stale field must not lose the form. */
@@ -61,7 +62,8 @@ async function resolveLabels(labels: string[], have: string[]): Promise<string[]
 
 export async function savePrefsAction(formData: FormData) {
   const picked = CATEGORIES.filter((c) => formData.get(`cat:${c}`) === 'on');
-  const current = await getPrefs();
+  const uid = await currentUserId();
+  const current = await getPrefs(uid);
   const places = String(formData.get('places') ?? '')
     .split(',').map((p) => p.trim()).filter(Boolean).slice(0, 12);
   const prefs: Prefs = {
@@ -77,7 +79,7 @@ export async function savePrefsAction(formData: FormData) {
     // geoConsent and geoPlaceId are not the form's to change: the consent block
     // owns them, and a plain save must never silently re-enable or drop them.
   };
-  await savePrefs(prefs);
+  await savePrefs(prefs, uid);
   revalidatePrefs();
 }
 
@@ -93,12 +95,13 @@ export async function searchPlacesAction(q: string): Promise<Place[]> {
  * place stops being used, not merely that it stops being refreshed.
  */
 export async function setGeoConsentAction(on: boolean): Promise<void> {
-  const current = await getPrefs();
+  const uid = await currentUserId();
+  const current = await getPrefs(uid);
   await savePrefs({
     ...current,
     geoConsent: on,
     geoPlaceId: on ? current.geoPlaceId : null,
-  });
+  }, uid);
   revalidatePrefs();
 }
 
@@ -111,7 +114,8 @@ export async function setGeoConsentAction(on: boolean): Promise<void> {
  * stale tab or a hand-made request cannot turn location on by using it.
  */
 export async function setGeoPlaceAction(lat: number, lon: number): Promise<{ ok: boolean; label: string | null }> {
-  const current = await getPrefs();
+  const uid = await currentUserId();
+  const current = await getPrefs(uid);
   if (!current.geoConsent) return { ok: false, label: null };
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
     return { ok: false, label: null };
@@ -119,7 +123,7 @@ export async function setGeoPlaceAction(lat: number, lon: number): Promise<{ ok:
   const place = await nearestPlace(lat, lon);
   if (!place) return { ok: false, label: null };
 
-  await savePrefs({ ...current, geoPlaceId: place.id });
+  await savePrefs({ ...current, geoPlaceId: place.id }, uid);
   revalidatePrefs();
   return { ok: true, label: place.label };
 }
@@ -127,7 +131,8 @@ export async function setGeoPlaceAction(lat: number, lon: number): Promise<{ ok:
 /** Forget the resolved place but leave the switch where the reader put it, so
  *  'Use my location' can be pressed again without re-consenting. */
 export async function clearGeoAction(): Promise<void> {
-  const current = await getPrefs();
-  await savePrefs({ ...current, geoPlaceId: null });
+  const uid = await currentUserId();
+  const current = await getPrefs(uid);
+  await savePrefs({ ...current, geoPlaceId: null }, uid);
   revalidatePrefs();
 }

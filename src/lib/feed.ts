@@ -73,7 +73,7 @@ function parseJsonArray(raw: string | null | undefined): string[] {
   } catch { return []; }
 }
 
-export async function getPrefs(userId = 'local'): Promise<Prefs> {
+export async function getPrefs(userId: string): Promise<Prefs> {
   const ready = await placesReady();
   const row = await (await d1()).get<{
     country: string; categories: string; places: string;
@@ -91,7 +91,7 @@ export async function getPrefs(userId = 'local'): Promise<Prefs> {
   };
 }
 
-export async function savePrefs(p: Prefs, userId = 'local') {
+export async function savePrefs(p: Prefs, userId: string) {
   // Without the migration the three v1.5 columns do not exist. Nothing can have
   // set them either — the picker's lookups are all no-ops then — so writing the
   // pre-v1.5 row loses nothing the reader chose.
@@ -208,7 +208,7 @@ function score(s: Story, prefs: Prefs, inside: Set<string> | null): number {
  * "Outside" now has two meanings — a category they never picked, or a place
  * near the ones they did — and the reserved slots alternate between them.
  */
-export async function getFeed(limit = 30, userId = 'local'): Promise<Story[]> {
+export async function getFeed(limit: number, userId: string): Promise<Story[]> {
   const prefs = await getPrefs(userId);
   const effective = effectivePlaceIds(prefs);
   // One call each for the whole list, never one per place. geoAdjacentPlaceIds
@@ -287,7 +287,7 @@ export async function getFeed(limit = 30, userId = 'local'): Promise<Story[]> {
  * empty for them; a reader who has named no place at all gets nothing, and
  * nothing thrown.
  */
-export async function getLocalFeed(limit = 30, userId = 'local'): Promise<Story[]> {
+export async function getLocalFeed(limit: number, userId: string): Promise<Story[]> {
   try {
     const prefs = await getPrefs(userId);
     const effective = effectivePlaceIds(prefs);
@@ -400,7 +400,7 @@ export function coverageOf(articles: { source: string; bias: Bias | null }[]): C
   };
 }
 
-export async function logEvent(clusterId: string, kind: string, dwellMs?: number, userId = 'local') {
+export async function logEvent(clusterId: string, kind: string, dwellMs: number | undefined, userId: string) {
   await (await d1()).run(
     'INSERT INTO events (user_id, cluster_id, kind, dwell_ms, ts) VALUES (?, ?, ?, ?, ?)',
     [userId, clusterId, kind, dwellMs ?? null, Date.now()]);

@@ -4,13 +4,15 @@ import { TabBar } from '@/components/TabBar';
 import { Pin } from '@/components/icons';
 import { effectivePlaceIds, getLocalFeed, getPrefs } from '@/lib/feed';
 import { getPlaces } from '@/lib/places';
+import { currentUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Local() {
-  const prefs = await getPrefs();
+  const uid = await currentUserId();
+  const prefs = await getPrefs(uid);
   const [stories, places] = await Promise.all([
-    getLocalFeed(30),
+    getLocalFeed(30, uid),
     getPlaces(effectivePlaceIds(prefs)),
   ]);
 

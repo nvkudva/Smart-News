@@ -43,16 +43,16 @@ async function bySql(where: string, params: unknown[], limit: number): Promise<S
 /** The reader's own places. Delegates so /local and the Local tab can never
  *  disagree about what "local" means, including the pre-v1.5 free-text
  *  fallback and the empty-on-unmigrated-D1 degradation. */
-export function getLocalSection(limit = SECTION_LIMIT, userId = 'local'): Promise<Story[]> {
+export function getLocalSection(limit: number, userId: string): Promise<Story[]> {
   return getLocalFeed(limit, userId);
 }
 
-export async function getNationalSection(limit = SECTION_LIMIT, userId = 'local'): Promise<Story[]> {
+export async function getNationalSection(limit: number, userId: string): Promise<Story[]> {
   const prefs = await getPrefs(userId);
   return bySql('c.country = ?', [prefs.country], limit);
 }
 
-export async function getInternationalSection(limit = SECTION_LIMIT, userId = 'local'): Promise<Story[]> {
+export async function getInternationalSection(limit: number, userId: string): Promise<Story[]> {
   const prefs = await getPrefs(userId);
   return bySql('c.country IS NOT NULL AND c.country <> ?', [prefs.country], limit);
 }
@@ -92,7 +92,7 @@ function cached(key: string, run: () => Promise<Story[]>): Promise<Story[]> {
  * read as a quiet news day.
  */
 export async function getSection(
-  slug: string, limit = SECTION_LIMIT, userId = 'local',
+  slug: string, limit = SECTION_LIMIT, userId: string,
 ): Promise<{ category: Section; stories: Story[] } | null> {
   const category = categoryBySlug(slug);
   if (!category) return null;

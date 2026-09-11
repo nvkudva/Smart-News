@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SECTION_PAGE, getSection } from '@/lib/sections';
 import { categoryBySlug, filterBySub, subCategoriesFor } from '@/lib/taxonomy';
+import { currentUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function GET(
   if (!category) return NextResponse.json({ error: 'unknown category' }, { status: 404 });
 
   const sub = new URL(request.url).searchParams.get('sub');
-  const section = await getSection(category.slug);
+  const section = await getSection(category.slug, undefined, await currentUserId());
   const rows = section?.stories ?? [];
   const subs = subCategoriesFor(category.slug, rows);
 

@@ -1,11 +1,12 @@
 import { StoryCard, variantFor } from '@/components/StoryCard';
 import { TabBar } from '@/components/TabBar';
 import { getSaved } from '@/lib/library';
+import { currentUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Saved() {
-  const stories = await getSaved();
+  const stories = await getSaved(await currentUserId());
 
   return (
     <>

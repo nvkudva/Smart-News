@@ -9,6 +9,7 @@ import { storyAge } from '@/components/StoryCard';
 import { Back, Photo } from '@/components/icons';
 import { SaveButton } from '@/components/SaveButton';
 import { TabBar } from '@/components/TabBar';
+import { currentUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,7 +44,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
               to this story, and at the foot of the summary it sat below the fold
               on every story long enough to be worth keeping. */}
           <div className="story__save">
-            <SaveButton clusterId={cluster.id} initial={await isSaved(cluster.id)} />
+            <SaveButton clusterId={cluster.id} initial={await isSaved(cluster.id, await currentUserId())} />
           </div>
         </header>
 

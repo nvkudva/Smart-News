@@ -5,6 +5,7 @@ import { storyWhen } from '@/components/StoryCard';
 import { getReels, savedAmong } from '@/lib/library';
 import { TabBar } from '@/components/TabBar';
 import { ReelKeys } from '@/components/ReelKeys';
+import { currentUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic';
  *  the same for a keyboard, which snap alone leaves with nothing but Tab. */
 export default async function Reels() {
   const stories = await getReels(20);
-  const saved = await savedAmong(stories.map((s) => s.id));
+  const saved = await savedAmong(stories.map((s) => s.id), await currentUserId());
 
   return (
     <>
