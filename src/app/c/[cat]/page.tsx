@@ -13,14 +13,20 @@ import { TAXONOMY, categoryBySlug } from '@/lib/taxonomy';
  * it. The rows arrive from /api/section/[cat], which the strip warms on hover
  * and SectionFeed keeps for a minute, so a revisit costs nothing at all.
  *
- * Prerendering the fourteen would be better still, but OpenNext writes SSG
- * output to an incremental cache this deployment has no binding for, so the
- * built pages 404 at runtime. The service worker caches the shell instead.
+ * The fourteen are prerendered. Nothing above the rows is awaited, so each one
+ * is a file in .open-next/assets that Cloudflare serves without invoking the
+ * Worker at all — and asset requests are free and uncounted, which is the whole
+ * reason to reach for a shell rather than an ISR page: a page in an incremental
+ * cache still costs a Worker invocation to read.
  *
  * The 404 is decided by a pure taxonomy lookup before anything is awaited, so
  * the Suspense boundary below cannot flush a 200 in front of it, which is why
  * this can live in the page when a loading.tsx here could not.
  */
+
+export function generateStaticParams() {
+  return TAXONOMY.map((c) => ({ cat: c.slug }));
+}
 
 export default async function SectionPage({ params }: { params: Promise<{ cat: string }> }) {
   const { cat } = await params;
