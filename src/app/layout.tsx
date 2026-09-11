@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { BOOT } from '@/lib/boot';
 import { AppHeader } from '@/components/AppHeader';
+import { ScrollPort } from '@/components/ScrollPort';
 import { ServiceWorker } from '@/components/ServiceWorker';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import './globals.css';
@@ -66,7 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script id="boot" strategy="beforeInteractive">{BOOT}</Script>
         <div className="wash" aria-hidden><i /><i /><i /></div>
         <AppHeader />
-        {children}
+        <ScrollPort>{children}</ScrollPort>
         <ServiceWorker />
         <UpdateBanner />
       </body>

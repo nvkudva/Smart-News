@@ -176,12 +176,23 @@
 
 html { background: var(--ground); }
 body {
-  padding-top: var(--appbar-h);
   background: var(--ground);
   color: var(--ink);
   font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+}
+
+/* The document does not scroll; this box does. A scrolling document lets a
+   phone browser collapse its own toolbar as the reader moves, and everything
+   fixed to the viewport — the header, the dock, the gap under the dock — shifts
+   with it. Pinned to the viewport instead, the toolbar has nothing to react to
+   and both bars hold still. */
+html, body { height: 100%; overflow: hidden; }
+.scrollport {
+  position: fixed; inset: 0; overflow-y: auto; overflow-x: hidden;
+  padding-top: var(--appbar-h);
+  -webkit-overflow-scrolling: touch; overscroll-behavior-y: none;
 }
 
 /* the soft ambient wash the glass reads against */
@@ -1212,7 +1223,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    only the widths that would otherwise show a bottom bar need a value here. */
 @media (max-width: 699.98px) { :root[data-nav="side"] { --rail: 200px; } }
 
-:root[data-nav="side"] body { padding-left: var(--rail); }
+:root[data-nav="side"] .scrollport { padding-left: var(--rail); }
 :root[data-nav="side"] .shell { width: auto; margin: 0 auto; padding: 0 16px 48px; }
 :root[data-nav="side"] .tabbar {
   left: 0; top: 0; bottom: 0; right: auto; transform: none;
@@ -1256,7 +1267,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* Forced bottom bar. --rail drives body padding, the reels overlay and its close
    button, so zeroing it here is most of the work; the rest restores the dock. */
 :root[data-nav="bottom"] { --rail: 0px; }
-:root[data-nav="bottom"] body { padding-left: 0; }
+:root[data-nav="bottom"] .scrollport { padding-left: 0; }
 :root[data-nav="bottom"] .shell { padding-bottom: 110px; }
 :root[data-nav="bottom"] .tabbar {
   left: 12px; right: 12px; top: auto; transform: none;
