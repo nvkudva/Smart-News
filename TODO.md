@@ -2,3 +2,15 @@
 - [ ] Cloudflare deploy: port src/lib/db.ts from node:sqlite to D1 (same SQL, different client), replace jsdom+Readability full-text extraction with HTMLRewriter or keep ingest on a Node host, and move the 15-min cycle from launchd to a Workers Cron Trigger
 - [ ] Work through FEATURES.md — 5 features and 5 fixes left over from the PM/design/architect review; items 1 (first-run assumes Bengaluru) and 6 (reels N+1 saved lookups) are the highest value
 - [ ] Google sign-in: promote the anonymous sn_uid cookie to a real account — OAuth, a users table, and a migration that re-keys the signed-in reader's existing prefs and saved rows from their cookie id so nothing is lost at sign-up; decide what happens when the same person signs in from a second device that already has its own anonymous id
+- [ ] Serve the cycle stamp: a stamp header on every /api response plus GET /api/stamp, off the memoised cycleStamp()
+- [ ] Answer 304 from /api/section/[cat] and /api/place using etagFor/matches in src/lib/cycle.ts, which nothing currently calls
+- [ ] Key the sections.ts isolate map on the cycle stamp instead of a 60s TTL, so a section is queried once per cycle rather than once a minute
+- [ ] Narrow the middleware matcher to /api/* so prerendered shells stop costing a Worker invocation each
+- [ ] Stop reading the prefs row twice per section request: derive the cache key from the prefs getFeed already loads
+- [ ] Parallelise getStory's three queries and hoist isSaved out of the JSX in src/app/story/[id]/page.tsx
+- [ ] Add GET /api/story/[id] and turn /story/[id] into a prerendered shell plus a client fetch, the shape /c/[cat] already has
+- [ ] Prefetch a story payload on card hover and touch-down, as StripScroller already does for sections
+- [ ] Tag each story row with its sub-category slug server-side and filter subs in the client, so switching a sub costs no request
+- [ ] Delta responses: ?since=<last_seen> returning { stamp, ids, stories } with bodies only for changed rows, plus GET /api/stories?ids= to backfill
+- [ ] Persist section id lists and story bodies in IndexedDB keyed on the stamp, replacing SectionFeed's per-tab module map
+- [ ] Service worker: serve /api/* from cache and revalidate only when the stamp has moved, instead of a blind 60s stale-while-revalidate

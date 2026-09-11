@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { SECTION_PAGE, getSection } from '@/lib/sections';
 import { categoryBySlug, filterBySub, subCategoriesFor } from '@/lib/taxonomy';
 import { currentUserId } from '@/lib/session';
+import { getPrefs, prefsFingerprint } from '@/lib/feed';
+import { cacheHeaders, conditional, notModified } from '@/lib/cycle';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +25,24 @@ export async function GET(
   if (!category) return NextResponse.json({ error: 'unknown category' }, { status: 404 });
 
   const sub = new URL(request.url).searchParams.get('sub');
-  const section = await getSection(category.slug, undefined, await currentUserId());
+  const userId = await currentUserId();
+
+  // What this answer varies by, beyond the cycle. A topic section is the same
+  // rows for every reader, so it is not scoped by one; the four that rank
+  // against preferences carry their fingerprint, and reading the prefs row to
+  // build it costs nothing the ranking below was not already going to pay —
+  // getPrefs is request-scoped.
+  const scope = category.kind === 'topic'
+    ? `${category.slug}.${sub ?? ''}`
+    : `${category.slug}.${sub ?? ''}.${prefsFingerprint(await getPrefs(userId))}`;
+  const version = await conditional(request, scope);
+  const headers = cacheHeaders(version, 15, 300);
+  // The whole point: the pipeline moves every fifteen minutes, so most requests
+  // for a section ask about a cycle the reader already has. Answer them with no
+  // body and no query rather than two round trips and two hundred rows.
+  if (version.fresh) return notModified(headers);
+
+  const section = await getSection(category.slug, undefined, userId);
   const rows = section?.stories ?? [];
   const subs = subCategoriesFor(category.slug, rows);
 
@@ -34,18 +53,8 @@ export async function GET(
   const matching = active ? filterBySub(category.slug, active, rows) : rows;
 
   return NextResponse.json(
-    { name: category.name, subs, active, total: matching.length,
-      stories: matching.slice(0, SECTION_PAGE) },
-    // The pipeline moves every fifteen minutes, so a minute of caching and five
-    // of serving stale while it refreshes costs nobody a stale headline.
-    //
-    // private, not public: four of the fourteen slugs — top, local, national,
-    // international — are ranked against the reader's prefs, so the body is
-    // reader-specific. That is harmless while there is one identity and no
-    // shared cache to honour it, which is exactly why it would be easy to leave
-    // wrong until the day identity is added and it becomes a cross-reader leak.
-    // s-maxage is gone with it: on workers.dev there is no shared cache, so it
-    // read as working edge caching and was not.
-    { headers: { 'cache-control': 'private, max-age=15, stale-while-revalidate=300' } },
+    { stamp: version.stamp, name: category.name, subs, active,
+      total: matching.length, stories: matching.slice(0, SECTION_PAGE) },
+    { headers },
   );
 }

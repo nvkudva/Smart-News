@@ -1,8 +1,9 @@
 import { d1 } from './d1';
 import {
-  getFeed, getLocalFeed, getPrefs, storyCols, storyFrom, withPlaceLabels,
-  type Prefs, type Story,
+  getFeed, getLocalFeed, getPrefs, prefsFingerprint, storyCols, storyFrom, withPlaceLabels,
+  type Story,
 } from './feed';
+import { cycleStamp } from './cycle';
 import { placesReady } from './places';
 import { categoryBySlug, type Section } from './taxonomy';
 
@@ -68,41 +69,35 @@ export function getTopicSection(category: string, limit = SECTION_LIMIT): Promis
  * pure latency. The map lives in module scope: on Workers that is the isolate,
  * which serves many requests, and on a cold isolate it is simply empty.
  *
+ * Keyed on the cycle stamp rather than expired by a clock. The stamp is derived
+ * from the data and moves only when the readable feed could have changed, so an
+ * entry is good until it is actually wrong — a section is queried once per
+ * cycle instead of once a minute, and the fifty-nine other minutes' worth of
+ * round trips never happen. A stamp of null (no sync_meta yet) falls back to a
+ * short TTL, which is the old behaviour and the only honest answer when there
+ * is nothing to version against.
+ *
  * Promises, not results, are cached — two readers landing on the same section
  * at once then share one query instead of racing.
  */
-const TTL_MS = 60_000;
-const warm = new Map<string, { at: number; rows: Promise<Story[]> }>();
+const NO_STAMP_TTL_MS = 60_000;
+const warm = new Map<string, { stamp: string; at: number; rows: Promise<Story[]> }>();
 
-/**
- * A fingerprint of the preferences a section was ranked against, so a save
- * invalidates by changing the key rather than by waiting out a TTL. Before this
- * the reader could change their interests and watch the old ranking for a
- * minute here, another in the client's map, and a third behind the service
- * worker — additively, close to three minutes.
- *
- * The prefs row is a primary-key lookup, and getFeed and the place sections
- * read it anyway; the cost of naming it in the key is one round trip against
- * two queries and two hundred rows.
- */
-function prefsStamp(p: Prefs): string {
-  const flat = `${p.country}|${p.categories.join(',')}|${p.places.join(',')}`
-             + `|${p.placeIds.join(',')}|${p.geoConsent ? 1 : 0}|${p.geoPlaceId ?? ''}`;
-  let h = 5381;
-  for (let i = 0; i < flat.length; i++) h = ((h * 33) ^ flat.charCodeAt(i)) >>> 0;
-  return h.toString(36);
-}
-
-function cached(key: string, run: () => Promise<Story[]>): Promise<Story[]> {
+function cached(key: string, stamp: string | null, run: () => Promise<Story[]>): Promise<Story[]> {
+  const version = stamp ?? 'none';
   const hit = warm.get(key);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.rows;
+  const fresh = hit && hit.stamp === version
+    && (stamp !== null || Date.now() - hit.at < NO_STAMP_TTL_MS);
+  if (fresh) return hit.rows;
 
   const rows = run();
-  warm.set(key, { at: Date.now(), rows });
-  // A failed query must not be remembered as this section's answer for a minute.
+  warm.set(key, { stamp: version, at: Date.now(), rows });
+  // A failed query must not be remembered as this section's answer for a cycle.
   rows.catch(() => { if (warm.get(key)?.rows === rows) warm.delete(key); });
 
-  for (const [k, v] of warm) if (Date.now() - v.at > TTL_MS) warm.delete(k);
+  // Everything from an older cycle is dead the moment the stamp moves, so the
+  // map never carries more than the sections this isolate served this cycle.
+  for (const [k, v] of warm) if (v.stamp !== version) warm.delete(k);
   return rows;
 }
 
@@ -118,14 +113,17 @@ export async function getSection(
   if (!category) return null;
 
   // A topic section is the same rows for everyone, so it is keyed without a
-  // reader at all; the four that rank against preferences carry their stamp.
+  // reader at all; the four that rank against preferences carry a fingerprint
+  // of the prefs they were ranked with. getPrefs is request-scoped, so naming
+  // it here costs nothing the ranking below was not already going to pay.
   const key = category.kind === 'topic'
     ? `${slug}:${limit}`
-    : `${slug}:${limit}:${userId}:${prefsStamp(await getPrefs(userId))}`;
+    : `${slug}:${limit}:${userId}:${prefsFingerprint(await getPrefs(userId))}`;
+  const stamp = await cycleStamp();
 
   let stories: Story[] = [];
   try {
-    stories = await cached(key, () => {
+    stories = await cached(key, stamp, () => {
       if (category.kind === 'topic') return getTopicSection(category.name, limit);
       if (category.slug === 'top') return getFeed(limit, userId);
       if (category.slug === 'local') return getLocalSection(limit, userId);

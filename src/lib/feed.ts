@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { d1 } from './d1';
 import { SOURCES, type Bias } from './sources';
 import { expandPlaceIds, geoAdjacentPlaceIds, placeLabel, placesReady } from './places';
@@ -73,7 +74,27 @@ function parseJsonArray(raw: string | null | undefined): string[] {
   } catch { return []; }
 }
 
-export async function getPrefs(userId: string): Promise<Prefs> {
+/**
+ * A fingerprint of the preferences a ranked answer was built against. Anything
+ * keyed on it — the isolate map, an ETag — is invalidated by a save changing
+ * the value rather than by waiting out a clock.
+ */
+export function prefsFingerprint(p: Prefs): string {
+  const flat = `${p.country}|${p.categories.join(',')}|${p.places.join(',')}`
+             + `|${p.placeIds.join(',')}|${p.geoConsent ? 1 : 0}|${p.geoPlaceId ?? ''}`;
+  let h = 5381;
+  for (let i = 0; i < flat.length; i++) h = ((h * 33) ^ flat.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+/**
+ * Wrapped in React's `cache` so the several places that need the reader's prefs
+ * inside one request — the section's cache key and then the ranking itself —
+ * share a single D1 round trip instead of each paying for their own.
+ */
+export const getPrefs = cache(uncachedGetPrefs);
+
+async function uncachedGetPrefs(userId: string): Promise<Prefs> {
   const ready = await placesReady();
   const row = await (await d1()).get<{
     country: string; categories: string; places: string;

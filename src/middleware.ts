@@ -29,10 +29,14 @@ export function middleware(req: NextRequest) {
 
 /**
  * Static assets are the point of the prerendered shells — routing them through
- * middleware would spend a Worker invocation on each and undo that. The matcher
- * skips them, and the pages they belong to get their data from /api/*, which
- * does run this.
+ * middleware would spend a Worker invocation on each and undo that.
+ *
+ * /c/* is skipped for the same reason and is the only page route that can be:
+ * it is the one prerendered page, it holds nothing belonging to a reader, and
+ * the section data it draws comes from /api/*, which does run this. Every other
+ * page is force-dynamic and already costs an invocation, so naming it here adds
+ * nothing — and those are exactly the ones whose first render needs the id.
  */
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|cdn-cgi|favicon.ico|icon|splash|manifest.webmanifest|sw.js|BUILD_ID).*)'],
+  matcher: ['/((?!c/|_next/static|_next/image|cdn-cgi|favicon.ico|icon|splash|manifest.webmanifest|sw.js|BUILD_ID).*)'],
 };

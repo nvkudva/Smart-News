@@ -45,3 +45,47 @@ export function matches(request: Request, etag: string): boolean {
   if (!header) return false;
   return header.split(',').some((t) => t.trim() === etag);
 }
+
+/**
+ * The header every /api response carries. A client that keeps the last value it
+ * saw can tell whether anything it holds is stale without asking a second time,
+ * and the delta endpoints take it back as `If-None-Match`.
+ */
+export const STAMP_HEADER = 'x-cycle';
+
+/**
+ * The three things a conditional route needs, resolved in one place: the stamp
+ * for this cycle, the validator for this particular answer, and whether the
+ * caller already holds it.
+ *
+ * `scope` names what varies beyond the cycle — the category, the sub-filter,
+ * the fingerprint of the preferences an answer was ranked against. Two answers
+ * that differ must never share a validator, which is what the scope prevents.
+ */
+export async function conditional(request: Request, scope: string) {
+  const stamp = await cycleStamp();
+  const etag = stamp ? etagFor(stamp, scope) : null;
+  return { stamp, etag, fresh: !!etag && matches(request, etag) };
+}
+
+/**
+ * Headers for a cacheable JSON answer. `private` because every body here is
+ * either the reader's own or ranked against their preferences; the browser may
+ * still hold it, which is the only cache that matters on workers.dev.
+ */
+export function cacheHeaders(
+  { stamp, etag }: { stamp: string | null; etag: string | null },
+  maxAge: number, swr: number,
+): Record<string, string> {
+  const h: Record<string, string> = {
+    'cache-control': `private, max-age=${maxAge}, stale-while-revalidate=${swr}`,
+  };
+  if (etag) h.etag = etag;
+  if (stamp) h[STAMP_HEADER] = stamp;
+  return h;
+}
+
+/** A 304 keeps the validator: without it the next request has nothing to send. */
+export function notModified(headers: Record<string, string>): Response {
+  return new Response(null, { status: 304, headers });
+}
