@@ -5,7 +5,7 @@ import { CoverageSplit } from '@/components/CoverageSplit';
 import { StoryFraming } from '@/components/StoryFraming';
 import { StoryCard } from '@/components/StoryCard';
 import { isSaved } from '@/lib/library';
-import { storyAge } from '@/components/StoryCard';
+import { ago } from '@/components/StoryCard';
 import { Back, Photo } from '@/components/icons';
 import { SaveButton } from '@/components/SaveButton';
 import { TabBar } from '@/components/TabBar';
@@ -37,29 +37,25 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <main className="shell">
+        {/* Back, dateline and the save control read as one line: the story's
+            own metadata sits in the bar rather than repeating under the title. */}
         <header className="story__topbar">
           <Link href="/" className="story__back" aria-label="Back"><Back /></Link>
-          <span className="story__cat">{cluster.category}</span>
-          {/* Top right, opposite the way out. Saving is the one thing you can do
-              to this story, and at the foot of the summary it sat below the fold
-              on every story long enough to be worth keeping. */}
+          <div className="story__meta">
+            {cluster.place && <><span>{cluster.place}</span><span className="sep">·</span></>}
+            <span>{ago(cluster.first_seen)}</span>
+            <span className="sep">·</span>
+            <span>{outlets.length} outlet{outlets.length === 1 ? '' : 's'}</span>
+          </div>
           <div className="story__save">
-            <SaveButton clusterId={cluster.id} initial={await isSaved(cluster.id, await currentUserId())} />
+            <SaveButton clusterId={cluster.id} initial={await isSaved(cluster.id, await currentUserId())} iconOnly />
           </div>
         </header>
 
         <div className="detail">
           <div className="story__head">
             <div className="story__headtext">
-              <div className="kicker">
-                {cluster.place && <><span>{cluster.place}</span><span className="sep">·</span></>}
-                <span>{storyAge(cluster)}</span>
-              </div>
               <h1 className="story__title">{cluster.headline}</h1>
-              <div className="story__stats">
-                <span>{outlets.length} outlet{outlets.length === 1 ? '' : 's'}</span>
-                <span>{articles.length} article{articles.length === 1 ? '' : 's'}</span>
-              </div>
             </div>
 
             <div className="plate plate--detail">

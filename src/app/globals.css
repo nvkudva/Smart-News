@@ -1882,8 +1882,17 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   display: flex; align-items: center; justify-content: center;
   width: 44px; height: 44px; margin-left: -12px; color: var(--accent);
 }
-.story__cat { font-size: var(--t-3); font-weight: 650; color: var(--ink-2); }
-.story__save { margin-left: auto; }
+/* One line, and it must stay one line: the dateline gives up characters from
+   its end before the bookmark is pushed off the row. */
+.story__meta {
+  display: flex; align-items: center; gap: 7px; min-width: 0;
+  font-size: var(--t-1); font-weight: 650; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden;
+}
+.story__meta > span { overflow: hidden; text-overflow: ellipsis; }
+.story__meta span.sep { opacity: .4; flex: 0 0 auto; }
+.story__save { margin-left: auto; flex: 0 0 auto; }
 
 .story__head { display: flex; flex-direction: column; gap: 14px; }
 .story__headtext { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
@@ -1891,13 +1900,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   margin: 0; font-size: var(--t-8); line-height: 1.16; font-weight: 700;
   letter-spacing: -0.026em; text-wrap: pretty;
 }
-.story__stats {
-  display: flex; flex-wrap: wrap; gap: 4px 9px;
-  font-size: var(--t-1); font-weight: 650; letter-spacing: .05em;
-  text-transform: uppercase; color: var(--ink-3);
-}
-.story__stats span + span::before { content: '·'; opacity: .4; margin-right: 9px; }
-
 .story__coverage { display: flex; flex-direction: column; gap: 18px; }
 .story__framings { display: flex; flex-direction: column; gap: 14px; }
 /* A rule in the side's own colour, so a column is identifiable before its badge
@@ -1931,7 +1933,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   }
   .story__title { max-width: none; }
   .story__head .plate--detail { max-height: 288px; }
-  .story__stats { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
+  .story__meta { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
 
   /* The meter and its blindspot note are a fixed-width object; the framing is
      prose and takes everything left over. */
