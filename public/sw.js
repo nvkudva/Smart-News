@@ -7,10 +7,10 @@
  *   · build output under /_next/static is content-hashed — cache first, forever
  *   · section data and images go stale-while-revalidate — show instantly, then
  *     replace, because a headline a minute old is not wrong
- *   · documents go network first with a cached fallback, so an offline open
- *     lands on the last page seen rather than the browser's error
+ *   · documents come from a cache named after the build that wrote them, so a
+ *     page can only ever be handed to the build whose chunks it names
  */
-const VERSION = 'v4';   // bumped: /api/* is no longer cached here, see below
+const VERSION = 'v5';   // bumped: shells are served without a revalidation
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const MEDIA = `media-${VERSION}`;
@@ -43,6 +43,13 @@ async function docs() {
   }
   return buildId ? caches.open(`docs-${buildId}`) : null;
 }
+
+/**
+ * The prerendered shells. Both are build output with no reader and no rows in
+ * them — every story on them arrives from /api/world, validated against the
+ * cycle stamp — so within one build they are the same bytes for everybody.
+ */
+const isShell = (url) => url.pathname === '/' || url.pathname.startsWith('/c/');
 
 /** Roughly a few hundred article photographs — many days of reading, and small
  *  enough that the browser is never tempted to evict the origin entire. */
@@ -161,26 +168,29 @@ self.addEventListener('fetch', (e) => {
   }
   if (request.destination === 'image') { e.respondWith(swr(request, MEDIA, 86_400_000)); return; }
 
-  // Documents are network-first, and this is not negotiable: an HTML page names
-  // the exact hashed chunks of the build that produced it, so a cached one
-  // served after a deploy asks for scripts that 404 and the page never
-  // hydrates. It looks like a working page that ignores every tap. The cache
-  // is the offline fallback and nothing else.
+  // An HTML page names the exact hashed chunks of the build that produced it,
+  // so a cached one served after a deploy asks for scripts that 404 and the
+  // page renders but never hydrates. The docs-<build> key is what makes that
+  // impossible: a page can only be handed to the build that wrote it.
   //
-  // The ?_rsc= payloads the client router fetches on a soft navigation are the
-  // same bargain, and are excluded for the same reason.
+  // The ?_rsc= payloads the client router fetches on a soft navigation are not
+  // cached here — they are the router's business and it versions them itself.
   if (request.mode === 'navigate') {
     e.respondWith((async () => {
       const cache = await docs();
-      // A page from this build is this build's own output. Answer with it and
-      // refresh behind the reader — the only thing that can have changed is
-      // which stories the page mentions, and every one of those is fetched by
-      // the client against the cycle stamp anyway.
       const hit = cache ? await cache.match(request) : null;
       if (hit) {
-        void fetch(request)
-          .then((res) => { if (res.ok) cache.put(request, res.clone()); })
-          .catch(() => {});
+        // A shell held under this build's key cannot have changed: it is
+        // prerendered output with no reader in it, and the cache dies with the
+        // build. Re-fetching it spent a Worker invocation — on every view of
+        // the two most-visited routes in the app — to be handed back the same
+        // bytes. The dynamic pages do carry per-request state, so those still
+        // refresh behind the reader.
+        if (!isShell(url)) {
+          void fetch(request)
+            .then((res) => { if (res.ok) cache.put(request, res.clone()); })
+            .catch(() => {});
+        }
         return hit;
       }
 
