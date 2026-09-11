@@ -37,6 +37,10 @@ export default async function SectionPage({ params }: { params: Promise<{ cat: s
     <>
       <main className="shell">
         <CategoryStrip active={category.slug} />
+        {/* The strip is the page's title on a phone, where it is set at display
+            size. In the desktop column it is set small, so the title has to be
+            said again — outside the pager, which swaps its children mid-swipe. */}
+        <h1 className="cattitle">{category.name}</h1>
         {/* useSearchParams reads ?sub= on the client; the boundary is what lets
             the rest of the page stay static rather than opting into a render
             per request just to learn the query string. */}

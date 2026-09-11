@@ -412,6 +412,72 @@ body {
   .card { background: rgba(255, 255, 255, 0.62); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
+/* ── The category strip as a column ───────────────────────────────────────
+   A horizontal strip is right on a phone, where a thumb sweeps it and the
+   masked edge says there is more. On a desktop it is the wrong shape: fourteen
+   categories at display size cannot fit a line at any width we support, the
+   ones past the edge are simply invisible, and a mouse has no sweep — the
+   reader has to discover a scroller that looks like a heading.
+   
+   So above 1024 the strip becomes the left column of the shell and shows all
+   fourteen at once. It loses the display size doing it: a column of 40px
+   headings would out-shout the stories it exists to file. */
+@media (min-width: 1024px) {
+  .shell:has(> .catstrip) {
+    display: grid;
+    grid-template-columns: var(--catcol) minmax(0, 1fr);
+    column-gap: 32px; align-items: start;
+  }
+  :root { --catcol: 168px; }
+
+  /* Placed rather than flowed: the title is a third child in document order and
+     auto-placement would put it beside the strip and push the feed to row two. */
+  .shell > .catstrip { grid-column: 1; grid-row: 1 / span 2; }
+  .shell > .cattitle { grid-column: 2; grid-row: 1; }
+  .shell > .pager    { grid-column: 2; grid-row: 2; }
+
+  .shell > .cattitle {
+    /* Out of the screen-reader-only box it sits in at every smaller width. */
+    position: static; width: auto; height: auto; overflow: visible;
+    clip-path: none; white-space: normal;
+    display: block; margin: 0 0 2px;
+    font-size: clamp(30px, 3vw, 40px); line-height: 1.12;
+    font-weight: 700; letter-spacing: -0.028em; color: var(--ink);
+    padding-block: 18px 0;
+  }
+
+  .shell > .catstrip {
+    /* Out of the scroller and back into normal flow — no mask, no overflow, and
+       no negative margin to cancel, since the column is its own gutter now. */
+    margin-inline: 0; padding-inline: 0;
+    overflow: visible; mask-image: none; -webkit-mask-image: none;
+    padding-block: 18px 0;
+    /* The list is shorter than the feed beside it, so it rides down with the
+       reader rather than scrolling away in the first screen. */
+    position: sticky; top: calc(var(--appbar-h) + 18px);
+  }
+  .shell > .catstrip .catstrip__row {
+    flex-direction: column; flex-wrap: nowrap;
+    width: auto; align-items: stretch; gap: 1px;
+  }
+  .shell > .catstrip .catlink {
+    font-size: var(--t-5); font-weight: 650; letter-spacing: -0.012em;
+    padding: 6px 10px; border-radius: var(--r-md);
+    border-left: 2px solid transparent;
+  }
+  .shell > .catstrip .catlink[aria-current="page"],
+  .shell > .catstrip .catlink[data-active="true"] {
+    border-left-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 9%, transparent);
+  }
+  @media (hover: hover) {
+    .shell > .catstrip .catlink:hover { color: var(--ink); }
+  }
+
+  /* A grid item needs telling that it may be narrower than its 300%-wide track. */
+  .shell > .pager { min-width: 0; }
+}
+
 @media (min-width: 1024px) {
   :root { --content: 1200px; }
   .shell { padding: 0 28px 110px; }
@@ -1108,6 +1174,14 @@ body {
 /* All that is left of the old category header: the strip carries the name now,
    so this only counts what is under it. */
 .cathead__meta { margin: 0 0 10px; font-size: var(--t-2); color: var(--kicker); }
+
+/* Said by the strip everywhere the strip is set at display size, which is every
+   width below the desktop column. Hidden rather than absent so the document
+   still has its one h1 for a screen reader at any size. */
+.cattitle {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
 
 @media (min-width: 700px) {
   /* Room for the whole set. A wrapped row cannot hide a category past an edge,
