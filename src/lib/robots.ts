@@ -71,14 +71,29 @@ function parse(txt: string, token: string): Rules {
   return (named ?? groups.find((g) => g.agents.includes('*')))?.rules ?? ALLOW_ALL;
 }
 
+async function fetchOnce(origin: string, ua: string) {
+  return fetch(`${origin}/robots.txt`, {
+    headers: { 'User-Agent': ua }, signal: AbortSignal.timeout(10_000),
+  });
+}
+
 async function rulesFor(origin: string, token: string, ua: string): Promise<Rules> {
   try {
-    const res = await fetch(`${origin}/robots.txt`, {
-      headers: { 'User-Agent': ua }, signal: AbortSignal.timeout(10_000),
-    });
-    // 4xx means no policy was published, so there is nothing to obey. 5xx is a
-    // policy we could not read, which RFC 9309 says to treat as a refusal.
-    if (res.status >= 500) return DENY_ALL;
+    let res = await fetchOnce(origin, ua);
+    // A 5xx is a policy we could not read, and RFC 9309 says to treat that as a
+    // refusal — but the verdict is cached per host, so one bad response denies
+    // a whole source for the run. It is usually not policy: ingest opens the
+    // feeds eight at a time and the bodies six at a time, and some hosts shed
+    // load under that burst. Ask once more, unhurried, before believing it.
+    if (res.status >= 500) {
+      await new Promise((r) => setTimeout(r, 1500));
+      res = await fetchOnce(origin, ua);
+    }
+    if (res.status >= 500) {
+      console.warn(`  robots: ${origin} answered ${res.status} twice — treating as disallow this run`);
+      return DENY_ALL;
+    }
+    // 4xx means no policy was published, so there is nothing to obey.
     if (!res.ok) return ALLOW_ALL;
     return parse(await res.text(), token);
   } catch {

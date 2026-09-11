@@ -148,7 +148,7 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
   let blocked = 0;
   await Promise.all(work.map((a) => bodyLimit(async () => {
     const body = await extractBody(a.url);
-    if (body === 'blocked') { blocked++; return; }
+    if (body === 'blocked') { blocked++; if (process.env.LOG_BLOCKED) console.log(`  BLOCKED ${a.url.slice(0, 110)}`); return; }
     if (body) { setBody.run(body, a.id); got++; }
   })));
 

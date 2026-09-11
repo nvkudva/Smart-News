@@ -63,7 +63,14 @@ export function normaliseUrl(raw: string): string {
     const u = new URL(raw);
     u.hash = '';
     for (const k of [...u.searchParams.keys()]) {
-      if (/^(utm_|fbclid|gclid|ref|cmp|CMP|at_|ito|smid|partner)/i.test(k)) u.searchParams.delete(k);
+      // traffic_source earns its place the hard way: Al Jazeera's feed appends
+      // ?traffic_source=rss to every link, and their robots.txt disallows
+      // /*?traffic_source= — a rule about parameter variants, sitting beside
+      // the one for fbclid, not about the article. Carrying the parameter got
+      // all 25 of their stories refused; the canonical URL is welcome.
+      if (/^(utm_|fbclid|gclid|ref|cmp|CMP|at_|ito|smid|partner|traffic_source)/i.test(k)) {
+        u.searchParams.delete(k);
+      }
     }
     u.hostname = u.hostname.replace(/^www\./, '');
     return u.toString().replace(/\/$/, '');
