@@ -155,3 +155,31 @@ test('Top has one address, and the sub-strip agrees about it', async ({ page }) 
   expect(hrefs.length).toBeGreaterThan(1);
   expect(hrefs.filter((h) => h?.startsWith('/c/top'))).toEqual([]);
 });
+
+test('changing a preference drops the world the tab was holding', async ({ page }) => {
+  const t = await watch(page);
+  await page.goto('/');
+  await settle(page);
+
+  // The control: leaving and coming back holds what it had, so the assertion
+  // below is about the preference change and not about navigation.
+  clear(t);
+  await page.goto('/saved');
+  await page.goto('/');
+  await settle(page);
+  expect(count(t.api, '/api/world'), `control: ${t.api.join(' ')}`).toBe(0);
+
+  await page.goto('/profile');
+  await page.locator('.setdrop summary').first().click();
+  const chip = page.locator('.setchips .chip input').first();
+  await chip.click();
+  await page.waitForTimeout(1_500);
+
+  clear(t);
+  await page.goto('/');
+  await settle(page);
+
+  // Ranked against preferences that just changed, and the cycle stamp the
+  // stored copy is keyed on has not moved — so it has to be asked for again.
+  expect(count(t.api, '/api/world'), `api: ${t.api.join(' ')}`).toBe(1);
+});

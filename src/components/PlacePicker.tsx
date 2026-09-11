@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { searchPlacesAction, setPlacesAction } from '@/app/actions';
+import { prefsChanged } from './prefsChanged';
 import type { Place } from '@/lib/places';
 
 export type PickedPlace = { id: string | null; name: string; label: string };
@@ -24,7 +25,7 @@ export function PlacePicker({ initial }: { initial: PickedPlace[] }) {
     void setPlacesAction(
       list.map((p) => p.name),
       list.filter((p) => p.id).map((p) => p.id as string),
-    ).catch(() => {});
+    ).then(prefsChanged).catch(() => {});
     return list;
   };
   const [q, setQ] = useState('');

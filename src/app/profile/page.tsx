@@ -1,4 +1,3 @@
-import { PrefsPurge } from '@/components/PrefsPurge';
 import { PrefChips } from '@/components/PrefChips';
 import { CountryPicker, type CountryOption } from '@/components/CountryPicker';
 import { GeoConsent } from '@/components/GeoConsent';
@@ -67,7 +66,6 @@ export default async function Profile() {
           <div className="setgroup">
             <PrefChips categories={CATEGORIES} initialPicked={[...prefs.categories]}
                        initialHidden={[...prefs.hidden]} />
-            <PrefsPurge />
           </div>
 
           <p className="setnote">

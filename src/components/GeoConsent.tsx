@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { clearGeoAction, setGeoConsentAction, setGeoPlaceAction } from '@/app/actions';
+import { prefsChanged } from './prefsChanged';
 import { Pin } from './icons';
 
 /**
@@ -29,6 +30,7 @@ export function GeoConsent({ initialConsent, initialLabel }:
     setConsent(on);
     if (!on) setLabel(null);
     setGeoConsentAction(on)
+      .then(prefsChanged)
       .catch(() => { setConsent(!on); setNote('That could not be saved. Try again in a moment.'); })
       .finally(() => setBusy(false));
   }
@@ -42,7 +44,7 @@ export function GeoConsent({ initialConsent, initialLabel }:
       (pos) => {
         setGeoPlaceAction(pos.coords.latitude, pos.coords.longitude)
           .then((r) => {
-            if (r.ok) { setLabel(r.label); setNote(null); }
+            if (r.ok) { setLabel(r.label); setNote(null); prefsChanged(); }
             else setNote('No place we cover is close enough to where you are. Nothing was saved.');
           })
           .catch(() => setNote('That could not be saved. Try again in a moment.'))
@@ -61,7 +63,7 @@ export function GeoConsent({ initialConsent, initialLabel }:
   function forget() {
     setBusy(true);
     clearGeoAction()
-      .then(() => { setLabel(null); setNote('That place has been removed.'); })
+      .then(() => { setLabel(null); setNote('That place has been removed.'); prefsChanged(); })
       .catch(() => setNote('That could not be removed. Try again in a moment.'))
       .finally(() => setBusy(false));
   }
