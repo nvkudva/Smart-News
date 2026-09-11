@@ -442,41 +442,32 @@ body {
     grid-template-columns: var(--catcol) minmax(0, 1fr);
     column-gap: 32px; align-items: start;
   }
-  :root { --catcol: 168px; }
+  :root { --catcol: 190px; }
 
-  /* Placed rather than flowed: the title is a third child in document order and
-     auto-placement would put it beside the strip and push the feed to row two. */
-  .shell > .catstrip { grid-column: 1; grid-row: 1 / span 2; }
-  .shell > .cattitle { grid-column: 2; grid-row: 1; }
-  .shell > .pager    { grid-column: 2; grid-row: 2; }
-
-  .shell > .cattitle {
-    /* Out of the screen-reader-only box it sits in at every smaller width. */
-    position: static; width: auto; height: auto; overflow: visible;
-    clip-path: none; white-space: normal;
-    display: block; margin: 0 0 2px;
-    font-size: clamp(30px, 3vw, 40px); line-height: 1.12;
-    font-weight: 700; letter-spacing: -0.028em; color: var(--ink);
-    padding-block: 18px 0;
-  }
 
   .shell > .catstrip {
-    /* Out of the scroller and back into normal flow — no mask, no overflow, and
-       no negative margin to cancel, since the column is its own gutter now. */
-    margin-inline: 0; padding-inline: 0;
-    overflow: visible; mask-image: none; -webkit-mask-image: none;
-    padding-block: 18px 0;
-    /* The list is shorter than the feed beside it, so it rides down with the
-       reader rather than scrolling away in the first screen. */
+    /* Out of the sweep and into a panel of its own: no mask, and no negative
+       margin to cancel, since the column is its own gutter now. */
+    margin-inline: 0;
+    mask-image: none; -webkit-mask-image: none;
+    /* Full height, not the list's own. A column of fourteen items floating in
+       the middle of a tall screen reads as a card that happens to hold links;
+       taken to both edges it reads as the side of the page, which is what it
+       is. Its own scroller only when a short window leaves it no room. */
     position: sticky; top: calc(var(--appbar-h) + 18px);
+    height: calc(100svh - var(--appbar-h) - 36px);
+    overflow-y: auto; overflow-x: hidden;
+    padding: 10px; box-sizing: border-box;
+    background: var(--glass); border: 1px solid var(--glass-edge);
+    border-radius: var(--r-lg); box-shadow: var(--shadow);
   }
   .shell > .catstrip .catstrip__row {
     flex-direction: column; flex-wrap: nowrap;
     width: auto; align-items: stretch; gap: 1px;
   }
   .shell > .catstrip .catlink {
-    font-size: var(--t-5); font-weight: 650; letter-spacing: -0.012em;
-    padding: 6px 10px; border-radius: var(--r-md);
+    font-size: var(--t-7); font-weight: 650; letter-spacing: -0.016em;
+    padding: 11px 12px; border-radius: var(--r-md);
     border-left: 2px solid transparent;
   }
   .shell > .catstrip .catlink[aria-current="page"],
@@ -1189,13 +1180,6 @@ body {
    so this only counts what is under it. */
 .cathead__meta { margin: 0 0 10px; font-size: var(--t-2); color: var(--kicker); }
 
-/* Said by the strip everywhere the strip is set at display size, which is every
-   width below the desktop column. Hidden rather than absent so the document
-   still has its one h1 for a screen reader at any size. */
-.cattitle {
-  position: absolute; width: 1px; height: 1px;
-  margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
-}
 
 @media (min-width: 700px) {
   /* Room for the whole set. A wrapped row cannot hide a category past an edge,
@@ -1207,22 +1191,27 @@ body {
 
   .cathead__meta { margin-bottom: 14px; }
 
-  /* On a desktop the subs are a row of links under the title, not pills: the
-     underline marks the current one without repeating the catlink's weight. */
-  .substrip__row { gap: 18px; }
+  /* On a desktop the subs are a row under the title rather than a strip of
+     chips, but the current one is still marked by a filled pill: an underline
+     had to sit clear of the descenders and read as a rule under the row. */
+  .substrip__row { gap: 6px; }
   .subpill {
-    min-height: 28px; padding: 0 1px; border-radius: 0;
-    border: none; font-size: var(--t-2);
+    min-height: 30px; padding: 0 12px; border-radius: 999px;
+    border: 1px solid transparent; font-size: var(--t-2);
   }
   .subpill[aria-current="page"],
   .subpill[data-active="true"] {
-    background: none; border: none;
-    box-shadow: inset 0 -2px 0 var(--accent);
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    border-color: color-mix(in oklab, var(--accent) 28%, transparent);
+    color: var(--accent);
+    box-shadow: none;
   }
   :root[data-theme="pastel"] .subpill[aria-current="page"],
   :root[data-theme="pastel"] .subpill[data-active="true"] {
-    background: none; border: none;
-    box-shadow: inset 0 -2px 0 oklch(0.55 0.13 var(--cat-h));
+    background: color-mix(in oklab, oklch(0.55 0.13 var(--cat-h)) 14%, transparent);
+    border-color: color-mix(in oklab, oklch(0.55 0.13 var(--cat-h)) 28%, transparent);
+    color: oklch(0.55 0.13 var(--cat-h));
+    box-shadow: none;
   }
 }
 

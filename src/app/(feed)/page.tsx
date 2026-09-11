@@ -27,9 +27,6 @@ export default async function Home({
     <>
       <main className="shell">
         <CategoryStrip active="top" />
-        {/* See the note in c/[cat]: the strip is the title only where it is set
-            at display size, which the desktop column is not. */}
-        <h1 className="cattitle">Top</h1>
         {/* Top is the one section rendered on the server, so it is handed to the
             pager as its middle pane rather than fetched again on the client —
             the first paint has to survive the pager being introduced. */}
