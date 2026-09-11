@@ -221,8 +221,6 @@ body {
   min-width: 0; flex: 0 1 auto; white-space: nowrap; overflow: hidden;
 }
 .kicker > span { overflow: hidden; text-overflow: ellipsis; }
-.kicker--near { color: var(--kicker-near); }
-.kicker--new  { color: var(--kicker-new); }
 .kicker span.sep { opacity: .35; }
 
 .card h2 { margin: 0; font-size: var(--t-6); line-height: 1.26; font-weight: 650; letter-spacing: -.016em; text-wrap: pretty;
@@ -787,8 +785,6 @@ body {
 @media (min-width: 1440px) {
   .foot .kicker__place, .foot .kicker .sep { display: none; }
 }
-.masthead-mark { display: flex; }
-@media (min-width: 700px) { .masthead-mark { display: none; } }
 
 /* ── Uniform card height ───────────────────────────────────────────────────
    In grid mode every card is the same height so rows align, whatever the
@@ -847,7 +843,6 @@ body {
 .tab:focus-visible,
 .catlink:focus-visible,
 .subpill:focus-visible,
-.relrow:focus-visible,
 .savebtn:focus-visible,
 .btn:focus-visible,
 .reelsbtn:focus-visible,
@@ -857,7 +852,7 @@ body {
   outline-offset: 2px;
 }
 
-.card, .tile, .relrow {
+.card, .tile {
   transition: transform .18s cubic-bezier(.32,.72,0,1), box-shadow .18s;
 }
 
@@ -868,7 +863,6 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 1px 2px rgba(30,38,60,0.05), 0 16px 34px -12px rgba(30,38,60,0.22);
   }
-  .relrow:hover { background: rgba(255,255,255,0.72); }
 }
 .card:active { transform: scale(.988); }
 /* Everything else the thumb lands on says nothing when pressed. A press is
@@ -1190,10 +1184,6 @@ body {
   border-color: var(--glass-edge);
 }
 
-/* All that is left of the old category header: the strip carries the name now,
-   so this only counts what is under it. */
-.cathead__meta { margin: 0 0 10px; font-size: var(--t-2); color: var(--kicker); }
-
 
 @media (min-width: 700px) {
   /* Room for the whole set. A wrapped row cannot hide a category past an edge,
@@ -1204,8 +1194,6 @@ body {
   .substrip { padding-block: 10px; }
   .catstrip__row { gap: 26px; }
   .catlink { font-size: clamp(30px, 3vw, 40px); letter-spacing: -0.028em; }
-
-  .cathead__meta { margin-bottom: 14px; }
 
   /* On a desktop the subs are a row under the title rather than a strip of
      chips, but the current one is still marked by a filled pill: an underline
@@ -1319,11 +1307,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   flex-direction: column; align-items: stretch; justify-content: flex-start;
   gap: 4px; max-width: none;
 }
-:root[data-nav="side"] .railhead {
-  display: flex; align-items: center; gap: 9px;
-  padding: 2px 10px 22px; font-weight: 700; font-size: var(--t-6); letter-spacing: -0.02em;
-  color: var(--ink);
-}
 :root[data-nav="side"] .tabgroup { display: contents; }
 :root[data-nav="side"] .tabgroup .tab { width: 100%; max-width: none; flex: 0 0 auto; }
 :root[data-nav="side"] .tab {
@@ -1365,7 +1348,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   flex-direction: row; align-items: center; justify-content: space-between;
   gap: 0; max-width: 430px;
 }
-:root[data-nav="bottom"] .railhead { display: none; }
 :root[data-nav="bottom"] .tabgroup {
   display: flex; flex: 1 1 0; min-width: 0;
   align-items: flex-start; justify-content: space-around;
@@ -1457,9 +1439,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   .appbar__brand { font-size: var(--t-9); }
   .appbar__date { font-size: var(--t-2); }
 }
-/* The feed masthead carried its own small mark; the header now owns branding. */
-.masthead-mark { display: none !important; }
-
 /* ─────────────────────────────────────────────────────────────────────────
    Theme B — Quiet Broadsheet, and Theme C — Ambient Lens
 
@@ -1650,7 +1629,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 :root[data-mode="dark"] .panel,
 :root[data-mode="dark"] .chip,
 :root[data-mode="dark"] .pinchip,
-:root[data-mode="dark"] .relrow,
 :root[data-mode="dark"] .subpill[data-active="true"],
 :root[data-mode="dark"] .subpill[aria-current="page"] {
   background: rgba(255, 255, 255, 0.075);
@@ -1928,8 +1906,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   background: color-mix(in oklab, var(--ink) 8%, var(--ground));
   border: 1px solid var(--glass-edge);
 }
-/* The country box holds two letters, so it is sized for two letters. */
-.setinput--code { margin-left: auto; width: 74px; text-align: center; text-transform: uppercase; }
 /* The label and its field are one control and have to look like it. Left to
    space-between they drifted to opposite ends of the row and stopped being a
    pair; the title takes only the width it needs and the gap closes. */
@@ -1938,13 +1914,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* The picker brings its own .field, whose caption-sized label reads as a hint
    rather than as the title of the row it now heads. */
 .setgroup .setrow .field > label { font-size: var(--t-4); font-weight: 600; color: var(--ink); }
-
-/* The submit is the group's last row rather than a button floating under it —
-   the one place on the page where a tap changes what is stored on the server. */
-.setsave {
-  width: 100%; height: 46px; padding: 0; border-radius: 0;
-  background: var(--accent); color: var(--on-accent);
-}
 
 .setstats { display: grid; grid-template-columns: minmax(0, 1fr); }
 .setstat  { display: flex; flex-direction: column; gap: 1px; padding: 10px 14px; }
@@ -1973,7 +1942,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   .setgroup > .panel > .chips > .chip { min-height: 44px; }
   .setinput { min-height: 44px; }
 }
-.setsave:focus-visible, .setinput:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.setinput:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 /* ─────────────────────────────────────────────────────────────────────────
    Category pager
@@ -2054,10 +2023,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 
 .story__related { display: flex; flex-direction: column; gap: 12px; }
 .story__relgrid { display: flex; flex-direction: column; gap: 10px; }
-/* No crux and no thumbnail to balance it, so the headline carries the card and
-   the foot sits on the bottom edge rather than floating under two short lines. */
-.story__rel { justify-content: space-between; min-height: 96px; }
-.story__rel h2 { font-size: var(--t-5); -webkit-line-clamp: 3; }
 
 @media (min-width: 700px) {
   .story__relgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -2086,7 +2051,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   /* Six cards, two rows of three. A compact card is a row with its own thumbnail,
      so three across is already half the width each card wants. */
   .story__relgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-  .story__rel { min-height: 0; }
 }
 .story__sides { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .story__rail { display: flex; flex-direction: column; gap: 12px; }
