@@ -90,3 +90,23 @@ When the browser has evicted a body the id list still names, it backfills with
   megabyte to serve a reader who will open two. Hover and idle warm instead.
 
 ## Revisions
+
+### A per-story prerendered shell is not available on this host
+
+The plan called for `/story/[id]` to take the `/c/[cat]` shape — a shell built
+once, with the data fetched client-side. It cannot be. The fourteen category
+shells work because the taxonomy is a fixed list that `generateStaticParams`
+can enumerate at build time, and because `open-next.config.ts` puts prerendered
+pages in the static-assets incremental cache, which is **read-only**. Story ids
+are unbounded and turn over every cycle, so there is nothing to enumerate and
+nowhere to write a page at runtime.
+
+What was done instead: a `loading.tsx` on the route. It buys both halves of the
+same prize — the click paints immediately, and App Router prefetches a dynamic
+route only as far as its nearest loading boundary, so `StoryWarm` finally has
+something to fetch on hover where before it fetched nothing at all.
+
+The cost, accepted deliberately: the fallback starts the body, which commits
+`200`, so `notFound()` can no longer set `404`. A dead link still lands on the
+not-found screen and still reads correctly — only a crawler can tell, and this
+is a PWA with no sitemap and a `start_url` of `/`.

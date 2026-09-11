@@ -92,8 +92,12 @@ export function StoryCard({ story, variant = 'compact' }: { story: Story; varian
 
   return (
     <div className="cardwrap">
+      {/* Prefetching is StoryWarm's job, not this link's. Link's own hover
+          prefetch has no dwell and no ceiling, so a pointer crossing a grid
+          fetched every card it grazed — and on a hover that was meant, the two
+          of them asked for the same page twice. */}
       <Link href={`/story/${encodeURIComponent(story.id)}`} className={className}
-            data-cat={story.category.toLowerCase()}>
+            prefetch={false} data-cat={story.category.toLowerCase()}>
         {variant === 'compact' ? (
           /* Headline runs the full width; the thumbnail sits beside the summary,
              which is the only block that can afford to be narrower. */
