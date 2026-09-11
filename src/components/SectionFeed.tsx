@@ -7,9 +7,12 @@ import type { SubCount } from '@/lib/taxonomy';
 import { StoryCard, variantFor } from './StoryCard';
 import { SubcategoryStrip } from './SubcategoryStrip';
 
+/** What one category answers with. `active` is gone: the sub-filter is the
+ *  client's business now, and the rows carry the verdicts to do it with. */
+export type SectionStory = Story & { subs: string[] };
 export type SectionData = {
-  name: string; subs: SubCount[]; active: string | null;
-  total: number; stories: Story[];
+  stamp: string | null; name: string; subs: SubCount[];
+  total: number; stories: SectionStory[];
 };
 
 /**
@@ -21,12 +24,13 @@ export type SectionData = {
 const cache = new Map<string, { at: number; data: Promise<SectionData> }>();
 const TTL_MS = 60_000;
 
-export function sectionUrl(cat: string, sub: string | null) {
-  return `/api/section/${encodeURIComponent(cat)}${sub ? `?sub=${encodeURIComponent(sub)}` : ''}`;
+/** One URL per category, with no sub in it — that is the point. */
+export function sectionUrl(cat: string) {
+  return `/api/section/${encodeURIComponent(cat)}`;
 }
 
-export function loadSection(cat: string, sub: string | null): Promise<SectionData> {
-  const key = sectionUrl(cat, sub);
+export function loadSection(cat: string): Promise<SectionData> {
+  const key = sectionUrl(cat);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
 
@@ -48,27 +52,30 @@ export function clearSections() { cache.clear(); }
 
 /** Warm without rendering — the strip calls this on hover and on touch-down. */
 export function warmSection(cat: string) {
-  void loadSection(cat, null).catch(() => {});
+  void loadSection(cat).catch(() => {});
 }
 
 export function SectionFeed({ cat, name }: { cat: string; name: string }) {
   const sub = useSearchParams().get('sub');
   // A cached section renders in the first commit, with no loading state at all.
-  const [data, setData] = useState<SectionData | null>(() => peek(cat, sub));
+  const [data, setData] = useState<SectionData | null>(() => peek(cat));
   const [failed, setFailed] = useState(false);
 
+  // Only `cat`. Changing the sub used to re-run this and fetch the same rows
+  // back under a different query string; it is now a filter over what is
+  // already here, so the strip responds with no request at all.
   useEffect(() => {
     let live = true;
-    const cached = peek(cat, sub);
+    const cached = peek(cat);
     if (cached) { setData(cached); setFailed(false); return; }
 
     setData(null);
     setFailed(false);
-    loadSection(cat, sub)
+    loadSection(cat)
       .then((d) => { if (live) setData(d); })
       .catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
-  }, [cat, sub]);
+  }, [cat]);
 
   if (failed) {
     return (
@@ -80,21 +87,27 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
   }
   if (!data) return <SectionSkeleton />;
 
+  // An unknown or now-empty ?sub= shows the whole section rather than an empty
+  // one: the keyword lists run against live rows, and yesterday's link should
+  // still land somewhere useful.
+  const active = sub && data.subs.some((s) => s.slug === sub) ? sub : null;
+  const shown = active ? data.stories.filter((s) => s.subs.includes(active)) : data.stories;
+
   return (
     <>
       <SubcategoryStrip cat={cat} label={name} base={`/c/${cat}`}
-                        subs={data.subs} active={data.active} />
-      {data.total === 0 ? (
+                        subs={data.subs} active={active} />
+      {shown.length === 0 ? (
         <div className="panel">
           <div className="label">Quiet so far</div>
           <p>
-            Nothing has been filed under {data.subs.find((s) => s.slug === data.active)?.name ?? name}
+            Nothing has been filed under {data.subs.find((s) => s.slug === active)?.name ?? name}
             {' '}in the last two days. The main feed still carries these stories when they turn up.
           </p>
         </div>
       ) : (
         <div className="feed">
-          {data.stories.map((s, i) => <StoryCard key={s.id} story={s} variant={variantFor(s, i)} />)}
+          {shown.map((s, i) => <StoryCard key={s.id} story={s} variant={variantFor(s, i)} />)}
         </div>
       )}
     </>
@@ -103,8 +116,8 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
 
 /** Synchronously resolved cache entries only — used to skip the skeleton. */
 const settled = new Map<string, SectionData>();
-function peek(cat: string, sub: string | null): SectionData | null {
-  const key = sectionUrl(cat, sub);
+function peek(cat: string): SectionData | null {
+  const key = sectionUrl(cat);
   const hit = cache.get(key);
   if (!hit || Date.now() - hit.at >= TTL_MS) { settled.delete(key); return null; }
   hit.data.then((d) => settled.set(key, d)).catch(() => {});

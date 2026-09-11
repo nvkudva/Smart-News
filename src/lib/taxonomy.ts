@@ -213,6 +213,23 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
 }
 
 /** The rows behind one pill, taken from the same array the counts came from. */
+/**
+ * Which of a section's sub-categories this one story belongs to.
+ *
+ * The same verdict `filterBySub` reaches, computed per story instead of per
+ * sub, so the answer can travel with the row and a reader switching subs is
+ * filtering an array they already hold rather than asking for one.
+ */
+export function subSlugsFor(categorySlug: string, story: Matchable): string[] {
+  const cat = categoryBySlug(categorySlug);
+  if (!cat) return [];
+  if (cat.kind === 'scope') return [slug(story.category)];
+  const text = searchText(story);
+  return (cat.subs ?? [])
+    .filter((sub) => MATCHERS.get(`${cat.slug}/${sub.slug}`)?.test(text))
+    .map((sub) => sub.slug);
+}
+
 export function filterBySub<T extends Matchable>(
   categorySlug: string, subSlug: string, stories: readonly T[],
 ): T[] {

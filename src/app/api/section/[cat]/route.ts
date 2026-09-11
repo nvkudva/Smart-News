@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { SECTION_PAGE, getSection } from '@/lib/sections';
-import { categoryBySlug, filterBySub, subCategoriesFor } from '@/lib/taxonomy';
+import { categoryBySlug, subSlugsFor, subCategoriesFor } from '@/lib/taxonomy';
 import { currentUserId } from '@/lib/session';
 import { getPrefs, prefsFingerprint } from '@/lib/feed';
 import { cacheHeaders, conditional, notModified } from '@/lib/cycle';
@@ -24,7 +24,6 @@ export async function GET(
   const category = categoryBySlug(cat);
   if (!category) return NextResponse.json({ error: 'unknown category' }, { status: 404 });
 
-  const sub = new URL(request.url).searchParams.get('sub');
   const userId = await currentUserId();
 
   // What this answer varies by, beyond the cycle. A topic section is the same
@@ -33,8 +32,8 @@ export async function GET(
   // build it costs nothing the ranking below was not already going to pay —
   // getPrefs is request-scoped.
   const scope = category.kind === 'topic'
-    ? `${category.slug}.${sub ?? ''}`
-    : `${category.slug}.${sub ?? ''}.${prefsFingerprint(await getPrefs(userId))}`;
+    ? category.slug
+    : `${category.slug}.${prefsFingerprint(await getPrefs(userId))}`;
   const version = await conditional(request, scope);
   const headers = cacheHeaders(version, 15, 300);
   // The whole point: the pipeline moves every fifteen minutes, so most requests
@@ -46,15 +45,16 @@ export async function GET(
   const rows = section?.stories ?? [];
   const subs = subCategoriesFor(category.slug, rows);
 
-  // An unknown or now-empty ?sub= falls back to the whole section rather than
-  // 404ing: the keyword lists run against live rows, and yesterday's link
-  // should still land somewhere useful.
-  const active = sub && subs.some((s) => s.slug === sub) ? sub : null;
-  const matching = active ? filterBySub(category.slug, active, rows) : rows;
+  // One answer per category, not one per sub. The sub-strip is a refinement of
+  // a list the reader is already looking at, so refining it must not cost a
+  // request: every story carries the sub slugs it matches and the client filters
+  // on them. The keyword lists stay here, where they live next to the taxonomy —
+  // what ships is the verdict, not the rules.
+  const stories = rows.slice(0, SECTION_PAGE)
+    .map((s) => ({ ...s, subs: subSlugsFor(category.slug, s) }));
 
   return NextResponse.json(
-    { stamp: version.stamp, name: category.name, subs, active,
-      total: matching.length, stories: matching.slice(0, SECTION_PAGE) },
+    { stamp: version.stamp, name: category.name, subs, total: stories.length, stories },
     { headers },
   );
 }
