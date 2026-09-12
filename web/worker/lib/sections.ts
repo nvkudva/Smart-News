@@ -5,7 +5,7 @@ import {
 } from './feed';
 import { cycleStamp } from './cycle';
 import { placesReady } from './places';
-import { categoryBySlug, type Section } from './taxonomy';
+import { categoryBySlug, type Section } from '../../shared/taxonomy';
 
 /**
  * The query layer behind the category strip. Every function here returns the

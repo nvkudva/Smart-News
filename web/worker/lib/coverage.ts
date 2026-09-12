@@ -1,4 +1,4 @@
-import { SOURCES, type Bias } from './sources';
+import { SOURCES, type Bias } from '../../shared/sources';
 
 /**
  * The bias split behind a story, and the only part of a story's payload the

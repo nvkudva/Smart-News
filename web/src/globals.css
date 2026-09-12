@@ -1,0 +1,2059 @@
+@import "tailwindcss";
+
+/* Type is in rem so the reader's browser text-size setting actually moves it.
+   The exception is text inside a control with a pinned pixel height — a tab
+   label, a chip, an input — where growing the type without growing the box
+   would only clip it. Those stay in px until the controls are sized in rem
+   too, which is a change to every control in the sheet, not to the type. */
+
+/* Theme A — Frosted Stack. Tokens mirror the design canvas exactly. */
+:root {
+  --ground:        oklch(0.975 0.006 250);
+  --ink:           oklch(0.24 0.014 258);
+  --ink-2:         oklch(0.50 0.014 258);
+  --ink-3:         oklch(0.55 0.012 258);
+  --kicker:        oklch(0.53 0.03 258);
+  --kicker-near:   oklch(0.52 0.09 252);
+  --kicker-new:    oklch(0.52 0.09 68);
+  --accent:        oklch(0.52 0.13 252);
+  /* The reels disc keeps the light accent in both modes: it is the one lit
+     object in the bar, and a dark-mode accent turns the ball pale. */
+  --reels-accent:  oklch(0.52 0.13 252);
+  --glass:         rgba(255, 255, 255, 0.58);
+  --glass-edge:    rgba(255, 255, 255, 0.78);
+  --glass-warm:    linear-gradient(140deg, rgba(255,252,244,0.74), rgba(255,247,238,0.52));
+  --plate:         linear-gradient(150deg, oklch(0.87 0.045 250), oklch(0.90 0.030 300));
+  --shadow:        0 1px 2px rgba(30,38,60,0.04), 0 10px 26px -10px rgba(30,38,60,0.14);
+  --rule:          oklch(0.90 0.008 258);
+  --ring:          oklch(0.48 0.15 252);
+  /* What sits on top of an accent fill — inverts with the mode, not the theme. */
+  --on-accent:     oklch(0.99 0 0);
+  /* The bar sat at white on a near-white ground and disappeared. It takes
+     the accent's hue, a few steps down in lightness, so it reads as its own
+     surface rather than as a lighter patch of the page. */
+  --bar:           oklch(0.860 0.048 252 / 0.76);
+  --bar-edge:      oklch(0.78 0.060 252 / 0.90);
+  /* Unfilled meters and switch backs — a surface, so it inverts with the theme. */
+  --track:         oklch(0.88 0.008 258);
+
+  /* Ten type steps, not the twenty-four half-pixel sizes this replaced. Every
+     size in the sheet lands on one of these; a value off the scale is a bug. */
+  --t-1:  0.6875rem;   /* 11   micro caps, tab labels, meta */
+  --t-2:  0.78125rem;  /* 12.5 captions, hints, pills */
+  --t-3:  0.875rem;    /* 14   secondary body */
+  --t-4:  0.9375rem;   /* 15   reading body */
+  --t-5:  1.03125rem;  /* 16.5 emphasised body */
+  --t-6:  1.125rem;    /* 18   card headline */
+  --t-7:  1.25rem;     /* 20   lead headline */
+  --t-8:  1.5625rem;   /* 25   section title */
+  --t-9:  1.9375rem;   /* 31   page title */
+  --t-10: 2.5rem;      /* 40   display */
+
+  /* Four radii. The pill shapes are absent on purpose: a 26px switch track and
+     a 30px chip are half their own height, which is a geometry, not a style. */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 30px;
+
+  /* One column width for the whole app. The header and the dock read it too, so
+     the wordmark, the feed and the tabs all land on the same two edges — change
+     it here and the page changes together instead of in three places. */
+  --content: 100%;
+
+  /* 10 + 44 + 10 of padding and row, plus the hairline. The header is fixed, so
+     the page has to reserve this itself. */
+  --appbar-h: calc(65px + env(safe-area-inset-top));
+}
+
+/* Pastel — a tinted Frosted Stack. The same geometry with the glass coloured: a
+   card takes a quiet shade from its category so a scrolled feed reads as bands
+   of subject rather than one white column. Hues are the card's only variable;
+   everything structural stays on theme A's tokens. */
+:root[data-theme="pastel"] {
+  /* A cool near-white ground: the cards carry all the colour, so the page
+     under them stays out of the way instead of adding a warm cast of its own. */
+  --bar:        oklch(0.865 0.072 268 / 0.78);
+  --bar-edge:   oklch(0.76 0.090 268 / 0.90);
+  --ground:     oklch(0.977 0.004 258);
+  --accent:     oklch(0.50 0.165 268);
+  --reels-accent: oklch(0.50 0.165 268);
+  --glass:      oklch(0.990 0.010 258 / 0.66);
+  --glass-edge: oklch(0.965 0.016 258 / 0.85);
+  --rule:       oklch(0.905 0.012 258);
+  --track:      oklch(0.90 0.020 258);
+}
+:root[data-theme="pastel"] .wash i:nth-child(1) { background: oklch(0.86 0.105 262); }
+:root[data-theme="pastel"] .wash i:nth-child(2) { background: oklch(0.88 0.100 335); }
+:root[data-theme="pastel"] .wash i:nth-child(3) { background: oklch(0.90 0.085 175); }
+
+/* Hue per category. --cat-h is the one thing that changes; a card's fill, edge
+   and kicker and a strip's type are all derived from it, so a new category
+   needs one line. Keyed on the attribute alone rather than on .card, because
+   the same slug rides on the category strip and on the sub-strip. */
+:root[data-theme="pastel"] .card,
+:root[data-theme="pastel"] [data-cat]                { --cat-h: 252; }
+:root[data-theme="pastel"] [data-cat="top"]           { --cat-h: 252; }
+:root[data-theme="pastel"] [data-cat="local"]         { --cat-h: 158; }
+:root[data-theme="pastel"] [data-cat="national"]      { --cat-h: 62; }
+:root[data-theme="pastel"] [data-cat="international"] { --cat-h: 232; }
+:root[data-theme="pastel"] [data-cat="world"]         { --cat-h: 252; }
+:root[data-theme="pastel"] [data-cat="india"]         { --cat-h: 62; }
+:root[data-theme="pastel"] [data-cat="politics"]      { --cat-h: 305; }
+:root[data-theme="pastel"] [data-cat="business"]      { --cat-h: 210; }
+:root[data-theme="pastel"] [data-cat="technology"]    { --cat-h: 278; }
+:root[data-theme="pastel"] [data-cat="science"]       { --cat-h: 195; }
+:root[data-theme="pastel"] [data-cat="health"]        { --cat-h: 355; }
+:root[data-theme="pastel"] [data-cat="sports"]        { --cat-h: 150; }
+:root[data-theme="pastel"] [data-cat="entertainment"] { --cat-h: 330; }
+:root[data-theme="pastel"] [data-cat="climate"]       { --cat-h: 128; }
+
+/* The strip is the page title, so the selected category says its own colour at
+   full strength and its neighbours say theirs quietly. Lightness carries the
+   distinction, not opacity: a wash of grey over a hue reads as a disabled
+   control, where a paler version of the same hue reads as further away. */
+:root[data-theme="pastel"] .catlink {
+  color: oklch(0.64 0.100 var(--cat-h)); opacity: 1;
+}
+:root[data-theme="pastel"] .catlink[data-active="true"],
+:root[data-theme="pastel"] .catlink[aria-current="page"] {
+  color: oklch(0.44 0.185 var(--cat-h));
+}
+/* Sub-categories inherit the section's hue from the strip around them; they are
+   a refinement of that choice, not a set of choices of their own. */
+:root[data-theme="pastel"] .subpill { color: oklch(0.58 0.110 var(--cat-h)); }
+:root[data-theme="pastel"] .subpill[data-active="true"],
+:root[data-theme="pastel"] .subpill[aria-current="page"] {
+  color: oklch(0.37 0.160 var(--cat-h));
+  background: oklch(0.930 0.075 var(--cat-h));
+  border-color: oklch(0.84 0.095 var(--cat-h));
+}
+
+:root[data-theme="pastel"] .card {
+  background: linear-gradient(152deg,
+              oklch(0.935 0.080 var(--cat-h) / 0.86),
+              oklch(0.975 0.038 var(--cat-h) / 0.72));
+  border-color: oklch(0.895 0.075 var(--cat-h) / 0.90);
+  box-shadow: 0 1px 2px oklch(0.55 0.08 var(--cat-h) / 0.08),
+              0 10px 26px -12px oklch(0.55 0.14 var(--cat-h) / 0.34);
+}
+:root[data-theme="pastel"] .card .kicker { color: oklch(0.49 0.150 var(--cat-h)); }
+:root[data-theme="pastel"] .card .meta   { color: oklch(0.48 0.060 var(--cat-h)); }
+/* The placeholder plate is the one surface with no photo to carry the hue. */
+:root[data-theme="pastel"] .card .plate {
+  background: linear-gradient(150deg,
+              oklch(0.86 0.105 var(--cat-h)), oklch(0.91 0.065 var(--cat-h)));
+}
+
+/* The same hue system, read the other way up: at night the category tint is a
+   lit edge on a dark card rather than a wash on a pale one, and the type over
+   it has to come back light or the whole card inverts except its words. */
+:root[data-theme="pastel"][data-mode="dark"] .card {
+  background: linear-gradient(152deg,
+              oklch(0.30 0.055 var(--cat-h) / 0.92),
+              oklch(0.22 0.030 var(--cat-h) / 0.80));
+  border-color: oklch(0.42 0.060 var(--cat-h) / 0.55);
+  box-shadow: 0 18px 44px -22px oklch(0.10 0.04 var(--cat-h) / 0.80);
+}
+:root[data-theme="pastel"][data-mode="dark"] .card .kicker { color: oklch(0.80 0.085 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .card .meta   { color: oklch(0.72 0.040 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .card .plate {
+  background: linear-gradient(150deg,
+              oklch(0.38 0.070 var(--cat-h)), oklch(0.30 0.045 var(--cat-h)));
+}
+:root[data-theme="pastel"][data-mode="dark"] .catlink { color: oklch(0.60 0.075 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .catlink[data-active="true"],
+:root[data-theme="pastel"][data-mode="dark"] .catlink[aria-current="page"] {
+  color: oklch(0.86 0.130 var(--cat-h));
+}
+:root[data-theme="pastel"][data-mode="dark"] .subpill { color: oklch(0.72 0.070 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .subpill[data-active="true"],
+:root[data-theme="pastel"][data-mode="dark"] .subpill[aria-current="page"] {
+  color: oklch(0.90 0.110 var(--cat-h));
+  background: oklch(0.32 0.060 var(--cat-h));
+  border-color: oklch(0.44 0.075 var(--cat-h));
+}
+
+html { background: var(--ground); }
+body {
+  padding-top: var(--appbar-h);
+  background: var(--ground);
+  color: var(--ink);
+  font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* the soft ambient wash the glass reads against */
+.wash { position: fixed; inset: -80px; z-index: -1; overflow: hidden; pointer-events: none; }
+.wash i { position: absolute; border-radius: 50%; filter: blur(72px); display: block; }
+.wash i:nth-child(1) { top: -40px; left: -60px; width: 340px; height: 340px; background: oklch(0.87 0.075 252); opacity: .55; }
+.wash i:nth-child(2) { top: 24%; right: -90px; width: 300px; height: 300px; background: oklch(0.89 0.062 335); opacity: .50; }
+.wash i:nth-child(3) { bottom: 8%; left: -40px; width: 320px; height: 320px; background: oklch(0.91 0.055 85); opacity: .55; }
+
+.shell {
+  width: 100%; max-width: var(--content); margin: 0 auto; padding-bottom: 96px;
+  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+}
+
+.card {
+  display: flex; flex-direction: column; gap: 7px;
+  border-radius: var(--r-lg); padding: 15px 16px 14px;
+  background: var(--glass); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(30px) saturate(185%); backdrop-filter: blur(30px) saturate(185%);
+  box-shadow: var(--shadow);
+  color: inherit; text-decoration: none;
+}
+.card--compact { flex-direction: column; gap: 7px; }
+.card__mid { display: flex; gap: 12px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
+/* The summary keeps its own clamped height; only the thumbnail stretches to
+   the row, so the text sits at the top rather than in a stretched box. */
+.card__mid p { flex: 1 1 auto; min-width: 0; align-self: flex-start; }
+.card__mid .plate--thumb { flex: 0 0 auto; }
+.card--compact .plate--thumb {
+  width: clamp(54px, 24%, 78px); height: auto; aspect-ratio: auto; align-self: stretch;
+}
+
+.kicker {
+  display: flex; align-items: center; gap: 5px;
+  font-size: var(--t-1); letter-spacing: .06em; text-transform: uppercase;
+  font-weight: 650; color: var(--kicker);
+  min-width: 0; flex: 0 1 auto; white-space: nowrap; overflow: hidden;
+}
+.kicker > span { overflow: hidden; text-overflow: ellipsis; }
+.kicker span.sep { opacity: .35; }
+
+.card h2 { margin: 0; font-size: var(--t-6); line-height: 1.26; font-weight: 650; letter-spacing: -.016em; text-wrap: pretty;
+           display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.card p  { margin: 0; font-size: var(--t-3); line-height: 1.5; color: var(--ink-2); text-wrap: pretty;
+           display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
+.card--compact p { -webkit-line-clamp: 4; }
+/* A developing story's meta ("N sources · 21h ago · developing · updated 2h ago")
+   is wider on its own than the ~220px card track in grid mode, and as an
+   unbreakable row it printed over the neighbouring card. It now takes a second
+   line instead. The kicker still flexes from a zero basis, but a floor stops the
+   meta squeezing it to one letter per label on a phone: below that width the
+   kicker keeps the first line and the meta wraps under it. */
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.foot .kicker { flex: 1 1 0; min-width: min(100%, 9.5em); }
+.foot .meta { font-size: var(--t-1); color: var(--ink-3); min-width: 0; }
+
+.plate { position: relative; background: var(--plate); border: 1px solid rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.plate img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.plate--hero  { height: 168px; border-radius: var(--r-sm); margin: -2px -2px 2px; }
+.plate--thumb { width: 76px; height: 76px; border-radius: var(--r-sm); flex: 0 0 auto; }
+
+/* Attribution, not a caption: it sits on the photograph's own bottom-right and
+   is meant to be legible only when looked for. The shadow, not a plate, is what
+   keeps it readable over a light frame — a pill here would read as a control. */
+.credit {
+  position: absolute; right: 6px; bottom: 5px; z-index: 1;
+  font-size: 9px; line-height: 1.2; letter-spacing: 0.01em;
+  color: rgba(255,255,255,0.62);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+  pointer-events: none; max-width: 70%; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.plate--thumb .credit { display: none; }
+
+/* A floating glass pill rather than a full-width band: the disc breaks the top
+   edge, so the bar needs its own outline all the way round for the break to
+   read as deliberate. Every colour comes off --bar/--accent, so the dock
+   re-tints with the theme instead of carrying its own palette. */
+.tabbar {
+  position: fixed; left: 12px; right: 12px; z-index: 20;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  height: 66px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; overflow: visible;
+  border-radius: var(--r-xl); border: 1px solid var(--bar-edge);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04) 46%, rgba(255,255,255,0)),
+    var(--bar);
+  -webkit-backdrop-filter: blur(34px) saturate(190%); backdrop-filter: blur(34px) saturate(190%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(30,38,60,.06),
+              0 14px 36px -14px rgba(30,38,60,.42);
+}
+.tabbar > .inner { max-width: 430px; width: 100%; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+.tab { width: 52px; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ink-3); text-decoration: none; }
+.tab[data-active="true"], .tab[aria-current="page"] { color: var(--accent); }
+.tab span { font-size: var(--t-1); font-weight: 600; color: oklch(0.45 0.012 258); }
+.tab[data-active="true"] span, .tab[aria-current="page"] span { font-weight: 750; color: inherit; }
+
+/* One ball, no halo: the disc is a lit sphere in the accent's own hue, so it
+   re-tints with the theme without needing a ring to separate it from the bar. */
+.reelsbtn {
+  position: relative;
+  width: 54px; height: 54px; margin-top: -24px; flex: 0 0 auto; border-radius: 50%;
+  background:
+    radial-gradient(115% 115% at 32% 26%, rgba(255,255,255,.70), rgba(255,255,255,0) 56%),
+    linear-gradient(150deg, color-mix(in oklab, var(--reels-accent) 62%, white),
+                            var(--reels-accent) 58%,
+                            color-mix(in oklab, var(--reels-accent) 78%, black));
+  border: 1px solid color-mix(in oklab, var(--reels-accent) 55%, transparent);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.5),
+              0 8px 20px -8px color-mix(in oklab, var(--reels-accent) 66%, transparent);
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  transition: transform .18s cubic-bezier(.32,.72,0,1), box-shadow .18s;
+}
+.reelsbtn:active {
+  transform: scale(.955);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.5),
+              0 4px 12px -8px color-mix(in oklab, var(--reels-accent) 66%, transparent);
+}
+.reelsbtn svg { transform: translateY(-1px); }
+
+.panel {
+  border-radius: var(--r-lg); padding: 19px;
+  background: rgba(255,255,255,0.60); border: 1px solid rgba(255,255,255,0.80);
+  -webkit-backdrop-filter: blur(30px) saturate(185%); backdrop-filter: blur(30px) saturate(185%);
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.label { font-size: var(--t-1); letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: oklch(0.55 0.02 258); }
+.panel p { margin: 0; font-size: var(--t-4); line-height: 1.58; color: var(--ink-2); text-wrap: pretty; }
+
+/* A section heading in the detail's side column, where .label — a 10.5px
+   all-caps kicker meant to sit inside a panel — read as a caption for the thing
+   above it rather than as a title for the list below. The rule carries the
+   width the type no longer needs to. */
+.sectitle {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0; padding-left: 2px;
+  font-size: var(--t-3); font-weight: 700; letter-spacing: -0.012em; color: var(--ink);
+}
+.sectitle::after {
+  content: ''; flex: 1 1 auto; height: 1px; min-width: 16px;
+  background: var(--rule);
+}
+
+.sources {
+  margin: 0; padding: 0; list-style: none;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  font-size: var(--t-2); line-height: 1.35; color: var(--ink-3);
+}
+.sources a {
+  display: flex; align-items: center; min-height: 30px; padding: 0 9px;
+  border-radius: var(--r-md); color: var(--accent); text-decoration: none;
+  background: var(--glass); border: 1px solid var(--glass-edge);
+}
+.sources a:hover { text-decoration: underline; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Responsive pass.
+
+   The governing idea: the card track stays ~350px wide at every breakpoint,
+   so card internals — type sizes, clamps, thumb size — never need to scale.
+   Wider viewports get MORE columns, not bigger cards.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* The feed owns the horizontal axis so CategorySwipe can follow the finger:
+   without this the browser spends the first several pixels deciding whether the
+   gesture is a pan of its own, and the drag starts late or not at all. Only the
+   feed, never .shell — an ancestor's pan-y would intersect away the category
+   strip's pan-x and kill its scrolling. */
+.feed { display: flex; flex-direction: column; gap: 11px; touch-action: pan-y pinch-zoom; }
+.shell > .panel { touch-action: pan-y pinch-zoom; }
+
+/* Variants. `row` is the mobile default declared above; these add to it. */
+.card--stack { flex-direction: column; }
+.card--stack .plate--hero { aspect-ratio: 16 / 9; height: auto; }
+.card--lead  .plate--hero { aspect-ratio: 21 / 9; height: auto; }
+
+/* No image: drop the plate rather than show a grey rectangle 350px wide. */
+.card--text h2 { font-size: var(--t-7); -webkit-line-clamp: 3; }
+.card--text p  { -webkit-line-clamp: 6; }
+
+@media (min-width: 560px) {
+  :root { --content: 760px; }
+  .shell { padding-bottom: 110px; }
+
+  .feed {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;            /* else glass cards stretch and read as empty */
+  }
+  .cardwrap:has(.card--lead) { grid-column: span 2; }
+
+  .plate--hero { aspect-ratio: 16 / 9; height: auto; }
+
+
+  /* The dock stops stretching and takes a fixed width, centred. */
+  .tabbar {
+    left: 50%; transform: translateX(-50%); right: auto;
+    width: 462px; bottom: 16px; height: 68px;
+  }
+
+  /* Discrete blurred circles are sized for a 430px column; stretched across a
+     wide viewport their edges become visible seams. Radial gradients painted on
+     the container instead have no boundary to show, at any size. */
+  .wash i { display: none; }
+  .wash {
+    background:
+      radial-gradient(58% 52% at 4% 0%,   oklch(0.87 0.075 252 / .50), transparent 72%),
+      radial-gradient(52% 48% at 98% 22%, oklch(0.89 0.062 335 / .44), transparent 70%),
+      radial-gradient(60% 54% at 16% 96%, oklch(0.91 0.055 85  / .50), transparent 72%),
+      radial-gradient(46% 40% at 62% 58%, oklch(0.90 0.050 200 / .30), transparent 70%);
+  }
+}
+
+@media (min-width: 700px) {
+  :root { --content: 1080px; }
+  .shell { padding: 0 24px 110px; }
+  .plate--thumb { width: 84px; height: 84px; }
+
+  /* Thirty live backdrop-filters over a fixed wash stalls the compositor and
+     flattens to grey in Safari. The wash is already blurred 110px, so a flat
+     translucent fill is visually identical and costs nothing. Real glass is
+     kept only where it sits over scrolling content: the bar, header pill, panel. */
+  .card { background: rgba(255, 255, 255, 0.62); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* The sub-strip stops scrolling too. It is a handful of short links, and a
+   width that fits three card columns fits them on one or two lines — so they
+   wrap, and the masked edge that advertised a sweep comes off with the
+   scroller. [data-edge] rather than the bare class: StripScroller keeps setting
+   the attribute from a scrollLeft that no longer moves, and the mask rules it
+   feeds are written at that specificity. */
+@media (min-width: 1024px) {
+  .substrip, .substrip[data-edge] {
+    overflow: visible;
+    -webkit-mask-image: none; mask-image: none;
+  }
+  .substrip__row { flex-wrap: wrap; width: auto; row-gap: 4px; }
+}
+
+/* ── The category strip as a column ───────────────────────────────────────
+   A horizontal strip is right on a phone, where a thumb sweeps it and the
+   masked edge says there is more. On a desktop it is the wrong shape: fourteen
+   categories at display size cannot fit a line at any width we support, the
+   ones past the edge are simply invisible, and a mouse has no sweep — the
+   reader has to discover a scroller that looks like a heading.
+   
+   So above 1024 the strip becomes the left column of the shell and shows all
+   fourteen at once. It loses the display size doing it: a column of 40px
+   headings would out-shout the stories it exists to file. */
+@media (min-width: 1024px) {
+  .shell:has(> .catstrip) {
+    display: grid;
+    grid-template-columns: var(--catcol) minmax(0, 1fr);
+    /* The same gutter the cards keep between themselves, so the column reads as
+       one more track of the feed's grid rather than a separate region. */
+    column-gap: var(--gap); align-items: start;
+  }
+  :root { --catcol: 190px; }
+
+
+  .shell > .catstrip {
+    /* Out of the sweep and back into normal flow: no mask, no overflow, and no
+       negative margin to cancel, since the column is its own gutter now. The
+       list carries no box of its own — a panel around fourteen links read as a
+       card that happened to hold navigation, sitting beside real ones. */
+    margin-inline: 0; padding-inline: 0;
+    overflow: visible; mask-image: none; -webkit-mask-image: none;
+    /* Only the item's own padding above the first name, so the list starts on
+       the sub-strip's line rather than a row below it. */
+    padding-block: 0;
+    /* Shorter than the feed beside it, so it rides down with the reader rather
+       than scrolling away in the first screen. */
+    position: sticky; top: calc(var(--appbar-h) + 8px);
+  }
+  .shell > .catstrip .catstrip__row {
+    flex-direction: column; flex-wrap: nowrap;
+    width: auto; align-items: stretch; gap: 1px;
+  }
+  .shell > .catstrip .catlink {
+    font-size: var(--t-7); font-weight: 650; letter-spacing: -0.016em;
+    padding: 11px 12px; border-radius: var(--r-md);
+  }
+  .shell > .catstrip .catlink[aria-current="page"],
+  .shell > .catstrip .catlink[data-active="true"] {
+    background: color-mix(in oklab, var(--accent) 9%, transparent);
+  }
+  @media (hover: hover) {
+    .shell > .catstrip .catlink:hover { color: var(--ink); }
+  }
+
+  /* A grid item needs telling that it may be narrower than its 300%-wide track. */
+  .shell > .pager { min-width: 0; }
+}
+
+@media (min-width: 1024px) {
+  :root { --content: 1200px; }
+  .shell { padding: 0 28px 110px; }
+  .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  /* At three columns a two-wide lead strands a ragged hole beside it, so it
+     takes the whole row instead. Four columns has room for two cards beside. */
+  .cardwrap:has(.card--lead) { grid-column: span 3; }
+}
+
+@media (min-width: 1440px) {
+  :root { --content: 1400px; }
+  .feed { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+  .cardwrap:has(.card--lead) { grid-column: span 2; }
+}
+
+/* The disc keeps its raised-icon form at every width, so the label never has a
+   line to sit on; aria-label on the link is what carries the name. */
+.reelsbtn__label { display: none; }
+
+.savebtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 38px; padding: 0 14px; border-radius: var(--r-md); cursor: pointer;
+  font: inherit; font-size: var(--t-2); font-weight: 600;
+  background: none; border: 0;
+  color: var(--ink-2);
+}
+.savebtn[data-saved="true"] { color: var(--accent); }
+.savebtn--icon { width: 38px; padding: 0; justify-content: center; }
+@media (pointer: coarse) { .savebtn--icon { width: 44px; } }
+.savebtn:disabled { opacity: .55; }
+
+.tile {
+  display: flex; flex-direction: column; gap: 8px;
+  border-radius: var(--r-lg); padding: 15px 16px 14px; text-decoration: none; color: inherit;
+  background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--shadow);
+}
+.tile__n { font-size: var(--t-2); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.tile h3 { margin: 0; font-size: var(--t-5); font-weight: 650; letter-spacing: -0.016em; text-wrap: balance; }
+.tile p  { margin: 0; font-size: var(--t-2); line-height: 1.42; color: var(--ink-2);
+           display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+/* Two up on a phone. The old auto-fill collapsed to one column under 240px of
+   content width, which turned an index meant to be scanned into a list. */
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 600px) { .tiles { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 11px; } }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px;
+  border-radius: 17px; font-size: var(--t-2); font-weight: 600; text-decoration: none;
+  background: rgba(255,255,255,0.55); border: 1px solid var(--glass-edge); color: var(--ink-2);
+}
+.chip[data-on="true"] { background: var(--ink); border-color: transparent; color: var(--ground); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (pointer: coarse) {
+  .chip, .savebtn, .subpill { min-height: 44px; }
+}
+
+.field { display: flex; flex-direction: column; gap: 7px; }
+.field label { font-size: var(--t-2); font-weight: 650; color: var(--ink-2); }
+.field input[type="text"] {
+  height: 42px; padding: 0 13px; border-radius: var(--r-md); font: inherit; font-size: var(--t-3);
+  background: rgba(255,255,255,0.7); border: 1px solid var(--glass-edge); color: var(--ink);
+}
+.btn {
+  height: 42px; padding: 0 20px; border-radius: var(--r-md); cursor: pointer;
+  font: inherit; font-size: var(--t-3); font-weight: 650; border: none;
+  background: var(--accent); color: var(--on-accent);
+}
+.pagehead { padding: 28px 4px 18px; }
+.pagehead h1 { margin: 0; font-size: var(--t-9); line-height: 1.05; font-weight: 700; letter-spacing: -0.028em; }
+.pagehead p  { margin: 6px 0 0; font-size: var(--t-3); color: var(--ink-2); }
+@media (min-width: 700px) { .pagehead h1 { font-size: var(--t-10); } }
+@media (min-width: 1024px) { .pagehead h1 { font-size: var(--t-10); } }
+
+/* ── Reels ─────────────────────────────────────────────────────────────── */
+.reels {
+  /* Below the tab bar's z-index, not above it: navigation stays reachable
+     from the reels stack the same as from every other route. */
+  position: fixed; inset: 0; z-index: 10; overflow-y: auto;
+  scroll-snap-type: y mandatory; overscroll-behavior-y: contain;
+  background: var(--ground);
+}
+.reels__close {
+  position: fixed; top: max(18px, env(safe-area-inset-top)); left: 14px; z-index: 3;
+  width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  color: #fff; filter: drop-shadow(0 1px 4px rgba(0,0,0,.6));
+}
+.reel {
+  position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
+  display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
+}
+.reel__photo {
+  position: absolute; inset: 0 0 42% 0;
+  background: linear-gradient(158deg, oklch(0.48 0.075 252), oklch(0.31 0.06 300));
+  display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.24);
+}
+.reel__photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.reel__scrim {
+  position: absolute; inset: 0;
+  /* Only the veil under the close button, which is over a photograph at every
+     theme and so stays dark. The ground below is the body's own. */
+  background: linear-gradient(to bottom, rgba(0,0,0,.34) 0 14%, rgba(0,0,0,0) 32%);
+}
+.reel__body {
+  position: relative; padding: 14px 20px 92px; display: flex; flex-direction: column; gap: 11px;
+  max-width: 680px; background: var(--ground);
+}
+/* The fade that joins the body to the photograph above it. Anchored to the body
+   rather than to a percentage of the screen: the summary sets how tall the body
+   is, so a fixed stop lands mid-sentence on a long story and below the text on
+   a short one. */
+.reel__body::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 104px;
+  background: linear-gradient(to bottom, transparent,
+              color-mix(in oklab, var(--ground) 70%, transparent) 55%, var(--ground));
+  pointer-events: none;
+}
+/* The reel body is a narrow text column (40% of the viewport at 1280+), and a
+   developing story's age line is wider than it on its own. A card foot is a
+   single line by design, so it ellipses; here there is vertical room, so the
+   row wraps at the separators rather than clipping category and place too. */
+.reel__body .kicker { flex-wrap: wrap; row-gap: 3px; overflow: visible; color: var(--kicker); }
+.reel__body .kicker > span { overflow: visible; }
+
+/* Four facts on one line inside a phone's width. Set smaller, with the tracking
+   that suits a two-word kicker wound back — at this size the extra
+   letter-spacing is most of what pushes it to wrap. Scoped under .reel__body to
+   outrank the wrapping rule above rather than fight it with !important. */
+.reel__body .kicker--reel {
+  font-size: 0.5625rem; letter-spacing: .02em; gap: 4px;
+  flex-wrap: nowrap; min-width: 0;
+}
+/* The place is the only part that can be arbitrarily long — "Cupertino,
+   California" against a category and a source count that are both short — so it
+   is the only part that gives way. Everything else holds its width, otherwise
+   flex shrinks all four proportionally and clips the category to "TECHNOL…". */
+.reel__body .kicker--reel > * { flex: 0 0 auto; }
+.reel__body .kicker--reel .kicker__place {
+  flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
+.reel__body .kicker--reel .sep { opacity: .55; }
+.reel__body h2 {
+  margin: 0; font-size: var(--t-8); line-height: 1.18; font-weight: 700;
+  letter-spacing: -0.026em; color: var(--ink); text-wrap: pretty;
+}
+/* Unclamped. A reel is one story on a whole screen; there is nothing else on
+   it competing for the room, and a summary cut mid-sentence is the one thing
+   this surface cannot afford. */
+.reel__body p {
+  margin: 0; font-size: var(--t-4); line-height: 1.56; color: var(--ink-2); text-wrap: pretty;
+}
+.reel__head { display: flex; align-items: flex-start; gap: 12px; }
+.reel__head h2 { flex: 1 1 auto; min-width: 0; }
+
+/* The kicker line and the bookmark share the last row: the control sits at the
+   bottom right corner of the body, clear of the headline, and the kicker keeps
+   the width it gives up. Shrink-proof so a long place name ellipses instead. */
+.reel__foot { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.reel__foot .kicker--reel { flex: 1 1 auto; }
+.reel__foot .savebtn--icon { flex: 0 0 auto; margin-right: -10px; }
+
+/* Bottom right and quiet: it is a second way to the same place the whole reel
+   already goes, so it names the thing rather than asking to be pressed. */
+.reel__sources {
+  display: inline-flex; align-items: center; padding: 0;
+  font: inherit; letter-spacing: inherit; color: inherit; white-space: nowrap;
+  text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, currentColor 45%, transparent);
+}
+@media (hover: hover) { .reel__sources:hover { color: var(--ink-2); } }
+
+/* The link covers the reel and the two controls sit above it. The body must NOT
+   carry a z-index of its own: that makes it a stacking context, and its children
+   are then trapped inside it however high they climb, so both controls end up
+   under the link and stop being clickable at all. Left on auto it paints above
+   the photograph by document order and its raised children still outrank the
+   link, which is the whole arrangement. */
+.reel__open { position: absolute; inset: 0; z-index: 3; }
+.reel__foot .savebtn--icon, .reel__sources { position: relative; z-index: 4; }
+.reel__count {
+  display: none; font-size: var(--t-1); font-weight: 700; letter-spacing: .08em;
+  color: var(--ink-3); font-variant-numeric: tabular-nums;
+}
+.reel__count b { color: var(--ink); font-weight: 700; }
+.reel .savebtn { color: var(--ink); }
+.reel .savebtn[data-saved="true"] { color: var(--accent); }
+
+/* The side-by-side split needs real width: at 1024 the text column still lands
+   near 290px and the headline wraps to five lines, so the stacked layout holds
+   until there is room to do it properly. */
+/* Desktop is not the phone screen stretched. The photograph stops being a
+   full-bleed backdrop with the text lying on top of it and becomes a panel
+   beside the text, both inside the same --content column the feed and the header
+   use, so a reel lands on the app's own two edges rather than the window's. */
+@media (min-width: 1024px) {
+  .reel {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr);
+    align-items: center; gap: 44px;
+    width: 100%; max-width: var(--content); margin: 0 auto;
+    /* Clears the header above and the dock below, both of which outrank the
+       stack's z-index and would otherwise sit on the text. */
+    padding: 84px 28px 108px;
+    /* min-height, not height: the unclamped summary is occasionally taller than
+       a laptop screen, and the alternative — letting the text column scroll —
+       puts a second scroll container under the cursor, which then swallows the
+       wheel and the whole stack stops snapping. A tall reel is simply tall. */
+    height: auto; min-height: 100dvh;
+  }
+  .reel__photo {
+    position: relative; inset: auto; order: 2;
+    height: min(66dvh, 580px); border-radius: var(--r-lg); overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  /* The scrim exists to give the type a ground when it is over the photograph.
+     Side by side, it has one of its own. */
+  .reel__scrim { display: none; }
+  .reel__body {
+    order: 1; padding: 0; gap: 14px; background: none;
+    max-width: none; justify-self: stretch;
+  }
+  .reel__body::before { content: none; }
+  .reel__body h2 { font-size: var(--t-9); }
+  .reel__body p { font-size: var(--t-4); max-width: 46ch; }
+  /* Twenty reels page invisibly on a desktop: there is no thumb travelling and
+     no scrollbar inside a snap container worth reading. The count is the only
+     thing that says the stack has a length and a position in it. */
+  .reel__count { display: block; }
+}
+
+/* A laptop is wide and short. The gutters are what give way, not the type. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .reel { padding-block: 72px 96px; }
+  .reel__photo { height: min(62dvh, 520px); }
+}
+
+@media (min-width: 1440px) {
+  .reel { gap: 56px; padding: 88px 28px 112px; }
+  .reel__body h2 { font-size: var(--t-10); }
+  .reel__body p { font-size: var(--t-5); max-width: 44ch; }
+  .reel__photo { height: min(70dvh, 660px); }
+}
+
+/* ── Story detail ──────────────────────────────────────────────────────── */
+.detail { display: flex; flex-direction: column; gap: 22px; }
+.plate--detail { height: 208px; border-radius: var(--r-md); }
+@media (min-width: 560px) { .plate--detail { aspect-ratio: 16 / 9; height: auto; max-height: 380px; } }
+
+/* Detail layout lives at the end of the file on purpose: the base `.detail`
+   rule above is equal specificity, so these must come after it to win. */
+@media (min-width: 700px) {
+  .detail__main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .detail__side { display: flex; flex-direction: column; gap: 14px; }
+  .detail h1 { font-size: var(--t-9); max-width: 18em; }
+  .detail .panel p { font-size: var(--t-5); line-height: 1.62; max-width: 78ch; }
+}
+
+/* Named areas rather than source order: the page reads head → summary → how it
+   was covered → related on a phone, and the same five blocks reflow into a
+   masthead, a body-and-rail row, and two full-width bands on a desktop. */
+@media (min-width: 1024px) {
+  .detail {
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "main" "side" "cover" "rel";
+    row-gap: 30px; align-items: start;
+  }
+  .detail__main { grid-area: main; }
+  /* The outlet list stops being a sticky rail beside the summary and becomes a
+     band under it: it is a credit, read once, not a companion to the reading. */
+  .detail__side { grid-area: side; position: static; top: auto; }
+  .detail h1 { font-size: var(--t-10); max-width: none; }
+}
+
+/* ── Exploration marker ────────────────────────────────────────────────────
+   A recommended-outside-your-interests story used to be a warm-tinted card,
+   which read as an ad. It is now a dot that explains itself when tapped. */
+.cardwrap { position: relative; display: flex; }
+.cardwrap > .card { flex: 1 1 auto; min-width: 0; }
+
+.card--explore .foot .kicker { padding-left: 16px; }
+
+.expdot { position: absolute; left: 0; bottom: 0; z-index: 2; }
+.expdot__hit {
+  position: absolute; left: -1px; bottom: -1px;
+  width: 44px; height: 44px; padding: 0; border: none; background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;   /* 44px hit area, 8px ink */
+}
+.expdot__dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.75);
+}
+.expdot__hit[aria-expanded="true"] .expdot__dot { box-shadow: 0 0 0 4px oklch(0.52 0.13 252 / 0.22); }
+.expdot__tip {
+  position: absolute; left: 8px; bottom: 40px; width: 232px; z-index: 3;
+  padding: 11px 13px; border-radius: var(--r-md);
+  font-size: var(--t-2); line-height: 1.45; color: var(--ink-2);
+  background: rgba(255, 255, 255, 0.94); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 10px 30px -10px rgba(30, 38, 60, 0.28);
+}
+
+/* At a ~267px track the kicker and the source count cannot both fit, and the
+   result ellipses mid-word, which reads as broken markup rather than
+   truncation. Drop the place — the category is the part that orients. */
+@media (min-width: 1440px) {
+  .foot .kicker__place, .foot .kicker .sep { display: none; }
+}
+
+/* ── Uniform card height ───────────────────────────────────────────────────
+   In grid mode every card is the same height so rows align, whatever the
+   content length. The photo takes the slack rather than the text: headline and
+   crux are clamped to a fixed number of lines, the footer is pinned to the
+   bottom, and the hero flexes into whatever space is left. */
+@media (min-width: 560px) {
+  .feed {
+    align-items: stretch;
+    /* Row height is half a 1x card, so a 1x spans two rows and two 0.5x cards
+       stack into exactly its height, gap included. That shared rhythm is what
+       lets the three sizes mix without knocking rows out of alignment. */
+    grid-auto-rows: calc((var(--card-h) - var(--gap)) / 2);
+  }
+  .cardwrap { height: auto; }
+  .cardwrap > .card { height: 100%; }
+
+  .cardwrap:has(.card--stack)   { grid-row: span 2; }
+  .cardwrap:has(.card--lead)    { grid-row: span 2; }
+  .cardwrap:has(.card--compact) { grid-row: span 1; }
+
+  .card--compact h2 { font-size: var(--t-5); -webkit-line-clamp: 2; }
+  .card--compact p  { font-size: var(--t-2); -webkit-line-clamp: 4; }
+  /* Fluid width, because three columns leaves tracks as narrow as 235px and a
+     fixed thumb there left the summary ~15 characters a line.
+     Height comes from the row it shares with the summary. */
+  .card--compact .plate--thumb { width: clamp(54px, 24%, 78px); }
+  .card--compact:not(:has(.plate--thumb)) p { -webkit-line-clamp: 4; }
+
+  .card--stack .plate--hero,
+  .card--lead  .plate--hero { flex: 1 1 auto; min-height: 110px; aspect-ratio: auto; }
+
+  /* Only the photo flexes. Text blocks are flex items too, so without an
+     explicit flex:0 0 auto the growing hero shrinks them and headlines get
+     cut mid-phrase — a fixed card height must not cost the reader the end
+     of a headline. */
+  /* direct children only: the crux inside .card__mid must still grow */
+  .card > h2, .card > p, .card > .foot { flex: 0 0 auto; }
+  /* scoped, not `.card p`: that matched compact cards too and, being later
+     in the file at equal specificity, silently overrode their 3-line clamp */
+  .card--stack p, .card--lead p { -webkit-line-clamp: 4; }
+  .card--text p { -webkit-line-clamp: 8; }
+  .foot { margin-top: auto; }
+}
+
+:root { --card-h: 400px; --gap: 14px; }
+@media (min-width: 1024px) { :root { --card-h: 396px; --gap: 16px; } }
+@media (min-width: 1440px) { :root { --card-h: 372px; --gap: 18px; } }
+
+/* ── Focus, pointer feedback, reduced motion ───────────────────────────────
+   Every interactive surface is glass on glass, so a ring is the only
+   affordance a keyboard reader gets; :focus-visible keeps it off pointer taps. */
+.card:focus-visible,
+.tile:focus-visible,
+.chip:focus-visible,
+.tab:focus-visible,
+.catlink:focus-visible,
+.subpill:focus-visible,
+.savebtn:focus-visible,
+.btn:focus-visible,
+.reelsbtn:focus-visible,
+.expdot__hit:focus-visible,
+.field input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.card, .tile {
+  transition: transform .18s cubic-bezier(.32,.72,0,1), box-shadow .18s;
+}
+
+/* Desktop lays cards out in a 3-4 column grid where nothing else signals that
+   a card is a link; hover:hover keeps the state off touch, where it sticks. */
+@media (hover: hover) {
+  .card:hover, .tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 1px 2px rgba(30,38,60,0.05), 0 16px 34px -12px rgba(30,38,60,0.22);
+  }
+}
+.card:active { transform: scale(.988); }
+/* Everything else the thumb lands on says nothing when pressed. A press is
+   the only confirmation a touch device can give before the result arrives. */
+.tab, .chip, .savebtn, .subpill, .catlink, .expdot__hit, .btn, .pinchip {
+  transition: transform .18s cubic-bezier(.32,.72,0,1), color .18s ease, background .18s ease;
+}
+.tab:active, .chip:active, .savebtn:active, .subpill:active,
+.catlink:active, .expdot__hit:active, .btn:active, .pinchip:active { transform: scale(.96); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* proximity, not mandatory: the reels stack still lands on a story but no
+     longer yanks the scroll out of the reader's hands */
+  .reels { scroll-snap-type: y proximity; }
+  *, *::before, *::after {
+    transition: none !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  /* only the decorative lifts are dropped; translateX(-50%) centring and the
+     other layout transforms in this file still have to apply */
+  .card:hover, .tile:hover, .card:active, .reelsbtn:active,
+  .tab:active, .chip:active, .savebtn:active, .subpill:active,
+  .catlink:active, .expdot__hit:active, .btn:active, .pinchip:active { transform: none; }
+}
+
+/* The one control in the header that is not a destination. Sized to the 44pt
+   target with an icon well inside it, so it reads as quiet next to the pin. */
+.modetoggle {
+  flex: 0 0 auto; width: 44px; height: 44px; margin-right: -8px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; border: none; background: none; cursor: pointer;
+  color: var(--ink-2);
+  transition: transform .18s cubic-bezier(.32,.72,0,1), color .18s ease;
+}
+.modetoggle:active { transform: scale(.9); }
+@media (hover: hover) { .modetoggle:hover { color: var(--ink); } }
+@media (prefers-reduced-motion: reduce) { .modetoggle:active { transform: none; } }
+
+/* ── Update banner ─────────────────────────────────────────────────────────
+   Sits above the dock rather than over the header: it is an offer, not an
+   interruption, and the reader can ignore it for as long as they like. */
+.updatebar {
+  position: fixed; z-index: 25;
+  left: 12px; right: 12px; bottom: calc(88px + env(safe-area-inset-bottom));
+  margin: 0 auto; max-width: 430px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 10px 10px 14px;
+  border-radius: var(--r-md); border: 1px solid var(--bar-edge);
+  background: var(--bar);
+  -webkit-backdrop-filter: blur(28px) saturate(190%); backdrop-filter: blur(28px) saturate(190%);
+  box-shadow: 0 12px 30px -12px rgba(30, 38, 60, .45);
+  animation: updatebar-in .32s cubic-bezier(.22, .7, .25, 1) both;
+}
+@keyframes updatebar-in { from { opacity: 0; transform: translateY(10px); } }
+.updatebar__t { flex: 1 1 auto; min-width: 0; font-size: var(--t-2); color: var(--ink); }
+.updatebar__go {
+  flex: 0 0 auto; height: 32px; padding: 0 14px; border-radius: var(--r-sm);
+  border: none; cursor: pointer; font: inherit; font-size: var(--t-2); font-weight: 650;
+  background: var(--accent); color: var(--on-accent);
+}
+.updatebar__go[disabled] { opacity: .6; cursor: default; }
+.updatebar__x {
+  flex: 0 0 auto; width: 32px; height: 32px; padding: 0; border: none; border-radius: var(--r-sm);
+  background: none; cursor: pointer; color: var(--ink-3); font-size: var(--t-2);
+}
+/* With a side rail the dock is not below, so the banner returns to the corner. */
+:root[data-nav="side"] .updatebar {
+  left: calc(var(--rail) + 16px); right: 16px; bottom: 16px; margin: 0;
+}
+
+/* ── Loading skeletons ─────────────────────────────────────────────────────
+   Every route is force-dynamic over D1, so a tap otherwise freezes the old
+   screen until the next one streams in. Placeholders borrow the card's glass
+   and sit on the same row rhythm, so the real cards land where they stood. */
+.skel {
+  position: relative; overflow: hidden;
+  border-radius: var(--r-lg);
+  background: var(--glass); border: 1px solid var(--glass-edge);
+  box-shadow: var(--shadow);
+}
+.skel--lead { min-height: var(--card-h); }
+.skel--compact { min-height: calc((var(--card-h) - var(--gap)) / 2); }
+.cardwrap > .skel { flex: 1 1 auto; min-width: 0; height: 100%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .skel::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(100deg, transparent 22%, rgba(255,255,255,0.6) 50%, transparent 78%);
+    transform: translateX(-100%);
+    animation: skel-sweep 1.6s ease-in-out infinite;
+  }
+  @keyframes skel-sweep { to { transform: translateX(100%); } }
+}
+
+/* ── Place: the pin, the picker, the consent block, the local header ───────
+   All of it borrows the existing glass, chip and field language; nothing here
+   introduces a new surface, only the parts those three controls were missing. */
+
+/* The masthead pin is now the way into /local, so it has to read as a control
+   and still survive a long canonical label ("Bengaluru, Karnataka, India"). */
+.pinchip {
+  display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto;
+  height: 30px; padding: 0 11px; border-radius: 15px; max-width: min(52vw, 22ch);
+  background: rgba(255,255,255,0.6); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  font-size: var(--t-2); font-weight: 600; color: oklch(0.42 0.02 258); text-decoration: none;
+}
+.pinchip__i { display: flex; flex: 0 0 auto; color: var(--kicker-near); }
+.pinchip__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.picker__box { position: relative; }
+.picker__box input[type="text"] { width: 100%; }
+.picker__menu {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5;
+  margin: 0; padding: 5px; list-style: none; max-height: 264px; overflow-y: auto;
+  border-radius: var(--r-md);
+  background: rgba(255,255,255,0.94); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 10px 30px -10px rgba(30,38,60,0.28);
+}
+.picker__opt {
+  display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
+  padding: 8px 10px; border: none; border-radius: var(--r-sm);
+  background: none; color: inherit; font: inherit; cursor: pointer;
+}
+@media (hover: hover) { .picker__opt:hover { background: oklch(0.94 0.012 258); } }
+.picker__opt-n { font-size: var(--t-3); font-weight: 620; }
+/* The label is the whole point of the menu: it is what tells Delhi from
+   New Delhi, and a city in Karnataka from one in Telangana. */
+.picker__opt-l { font-size: var(--t-1); color: var(--ink-3); }
+.picker__empty { padding: 10px 11px; font-size: var(--t-2); line-height: 1.45; color: var(--ink-3); }
+
+.chip__x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; margin-right: -5px; padding: 0;
+  border: none; border-radius: 50%; background: rgba(255,255,255,0.18);
+  color: inherit; font: inherit; font-size: var(--t-4); line-height: 1; cursor: pointer;
+}
+.picker .chip { max-width: 100%; }
+
+.hint, .panel p.hint { margin: 0; font-size: var(--t-2); line-height: 1.45; color: var(--ink-3); }
+
+.geo__on { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.localhead { margin-top: 12px; }
+.localhead__pin { display: flex; color: var(--kicker-near); }
+
+.pinchip:focus-visible,
+.chip__x:focus-visible,
+.picker__opt:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) { .pinchip { min-height: 40px; border-radius: 20px; } }
+
+/* Six destinations, one centred disc. The tabs sit in two groups that each take
+   half the free width, so the reels button stays on the middle line however
+   many tabs flank it; each group spreads its own tabs inside its half. */
+.tabgroup {
+  display: flex; flex: 1 1 0; min-width: 0;
+  align-items: flex-start; justify-content: space-around;
+}
+.tabgroup .tab { width: auto; flex: 1 1 0; min-width: 0; max-width: 60px; }
+
+/* Consent is a switch, not a button: it has to read as a state the reader holds
+   rather than an action they fire, because that is what it is. */
+.switch {
+  display: flex; align-items: flex-start; gap: 11px; cursor: pointer;
+}
+.switch input {
+  position: absolute; width: 1px; height: 1px; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.switch__track {
+  position: relative; flex: 0 0 auto; width: 44px; height: 26px; margin-top: 1px;
+  border-radius: 13px; background: var(--track);
+  border: 1px solid var(--glass-edge);
+  transition: background .18s cubic-bezier(.32,.72,0,1);
+}
+.switch__knob {
+  position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(30,38,60,.28);
+  transition: transform .18s cubic-bezier(.32,.72,0,1);
+}
+.switch input:checked + .switch__track { background: var(--accent); }
+.switch input:checked + .switch__track .switch__knob { transform: translateX(18px); }
+.switch input:focus-visible + .switch__track { outline: 2px solid var(--ring); outline-offset: 2px; }
+.switch input:disabled + .switch__track { opacity: .55; }
+.switch__text { font-size: var(--t-3); line-height: 1.5; color: var(--ink-2); }
+
+.geo__pin { display: flex; }
+
+/* A place the gazetteer never matched still works — it falls back to the old
+   substring test — but it cannot reach down a hierarchy it is not part of, so
+   it is drawn as an outline rather than as solid ink. */
+.chip[data-unmatched] {
+  background: none; border-style: dashed; border-color: oklch(0.82 0.01 258); color: var(--ink-3);
+}
+.chip__note {
+  font-size: var(--t-1); letter-spacing: .07em; text-transform: uppercase; font-weight: 700;
+  opacity: .6;
+}
+/* Inside a filled chip the pin has to borrow the chip's own colour; the accent
+   is invisible against dark ink. */
+.chip[data-on="true"] .localhead__pin { color: inherit; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Category and sub-category strips
+
+   The bar at the bottom carries the destinations at every width; moving
+   between categories is these two strips' job. Both scroll horizontally at
+   every width, and StripScroller holds the selected item against the left
+   edge, so the strip reads as the page's title with its neighbours showing.
+
+   Neither may widen the document. Full bleed is negative inline margins
+   cancelled by equal inline padding — the box then measures exactly the
+   shell's own width, never the viewport's, so a vertical scrollbar cannot
+   push it past the edge the way a 100vw would.
+   ───────────────────────────────────────────────────────────────────────── */
+.catstrip,
+.substrip {
+  margin-inline: -16px;
+  padding-inline: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  /* both engines; the strip is the one place a visible bar would sit over glass */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+/* A side fades only while there is something past it. A mask that is always on
+   dims the first item before anything has been scrolled, which reads as a
+   rendering fault rather than as "there is more this way". StripScroller sets
+   data-edge from the live scroll offset. */
+.catstrip[data-edge="end"],   .substrip[data-edge="end"] {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+}
+.catstrip[data-edge="start"], .substrip[data-edge="start"] {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 20px);
+          mask-image: linear-gradient(90deg, transparent, #000 20px);
+}
+.catstrip[data-edge="both"],  .substrip[data-edge="both"] {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 20px,
+                                      #000 calc(100% - 34px), transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 20px,
+                                      #000 calc(100% - 34px), transparent);
+}
+.catstrip::-webkit-scrollbar,
+.substrip::-webkit-scrollbar { display: none; }
+
+.catstrip { padding-block: 10px 16px; }
+/* The sub-strip is the next line of the same heading, not the next block. */
+.catstrip:has(+ .substrip) { padding-bottom: 2px; }
+.substrip { padding-block: 0 6px; }
+
+.catstrip__row,
+.substrip__row {
+  /* positioned so an item's offsetLeft is the scrollLeft that pins it left */
+  position: relative;
+  display: flex; flex-wrap: nowrap; width: max-content; align-items: baseline;
+}
+.catstrip__row { gap: 17px; }
+.substrip__row { gap: 6px; }
+.catstrip__row > *,
+.substrip__row > * { flex: 0 0 auto; }
+
+/* A category the reader switched off, removed from the rail without the rail
+   having to know who is reading — BOOT writes the list onto <html> before the
+   first paint, and this matches a name inside it. The shells stay prerendered,
+   which is the whole reason a category switch costs nothing. Comma-delimited on
+   both sides so "India" cannot match "Indian". */
+:root[data-hidden*=",Sports,"]        .catlink[data-cat="sports"],
+:root[data-hidden*=",Health,"]        .catlink[data-cat="health"],
+:root[data-hidden*=",Climate,"]       .catlink[data-cat="climate"],
+:root[data-hidden*=",Politics,"]      .catlink[data-cat="politics"],
+:root[data-hidden*=",Business,"]      .catlink[data-cat="business"],
+:root[data-hidden*=",Technology,"]    .catlink[data-cat="technology"],
+:root[data-hidden*=",Science,"]       .catlink[data-cat="science"],
+:root[data-hidden*=",Entertainment,"] .catlink[data-cat="entertainment"],
+:root[data-hidden*=",World,"]         .catlink[data-cat="world"],
+:root[data-hidden*=",India,"]         .catlink[data-cat="india"] { display: none; }
+
+/* The strip is the page title. The selected category carries the full heading
+   weight; the others are the same type held back to a quiet grey, which is what
+   makes the row read as one title with its neighbours showing rather than as a
+   row of controls. */
+.catlink {
+  display: inline-block; padding-block: 8px;
+  font-size: var(--t-8); line-height: 1.12; font-weight: 700; letter-spacing: -0.026em;
+  white-space: nowrap; text-decoration: none;
+  /* A real colour, not a wash: at opacity .5 an idle title measured 1.93:1,
+     well under the 3:1 large-text floor, and the fix is a lighter ink rather
+     than a more transparent one. */
+  color: oklch(0.62 0.012 258); opacity: 1;
+  transition: color .18s ease;
+}
+.catlink[aria-current="page"],
+.catlink[data-active="true"] { color: var(--ink); opacity: 1; }
+
+/* One step quieter than .catlink: the sub-strip is a refinement of a choice the
+   reader has already made, so idle pills carry no border and no fill. */
+.subpill {
+  display: inline-flex; align-items: center; min-height: 30px;
+  padding: 0 11px; border-radius: var(--r-md);
+  font-size: var(--t-2); font-weight: 600;
+  white-space: nowrap; text-decoration: none; color: var(--ink-3);
+  background: none; border: 1px solid transparent;
+}
+.subpill[aria-current="page"],
+.subpill[data-active="true"] {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.62);
+  border-color: var(--glass-edge);
+}
+
+
+@media (min-width: 700px) {
+  /* Room for the whole set. A wrapped row cannot hide a category past an edge,
+     so the scroller — and the mask that advertised it — comes off. */
+  .catstrip { padding-block: 14px 20px; }
+  /* Even above and below: the row sits between the title and the first card
+     rather than being tucked under the title. */
+  .substrip { padding-block: 10px; }
+  .catstrip__row { gap: 26px; }
+  .catlink { font-size: clamp(30px, 3vw, 40px); letter-spacing: -0.028em; }
+
+  /* On a desktop the subs are a row under the title rather than a strip of
+     chips, but the current one is still marked by a filled pill: an underline
+     had to sit clear of the descenders and read as a rule under the row. */
+  .substrip__row { gap: 6px; }
+  .subpill {
+    min-height: 30px; padding: 0 12px; border-radius: 999px;
+    border: 1px solid transparent; font-size: var(--t-2);
+  }
+  .subpill[aria-current="page"],
+  .subpill[data-active="true"] {
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    border-color: color-mix(in oklab, var(--accent) 28%, transparent);
+    color: var(--accent);
+    box-shadow: none;
+  }
+  :root[data-theme="pastel"] .subpill[aria-current="page"],
+  :root[data-theme="pastel"] .subpill[data-active="true"] {
+    background: color-mix(in oklab, oklch(0.55 0.13 var(--cat-h)) 14%, transparent);
+    border-color: color-mix(in oklab, oklch(0.55 0.13 var(--cat-h)) 28%, transparent);
+    color: oklch(0.55 0.13 var(--cat-h));
+    box-shadow: none;
+  }
+}
+
+/* Chips rendered as <button>: .chip was written for <label> and <a>, neither
+   of which needs a font reset. */
+button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: pointer; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Coverage split — how many outlets on each side ran a story.
+
+   Three hues that read as distinct without borrowing party colours: the sides
+   are a spectrum, not teams, and painting left blue and right red would import
+   a claim the ratings do not make. Same oklch lightness across the three so no
+   segment reads as louder than another, and all three clear 4.5:1 on the label.
+   ───────────────────────────────────────────────────────────────────────── */
+/* The three lean hues are the sheet's only colours with no token behind them:
+   they name data, not a surface, so they hold across theme and mode. Only their
+   lightness has to move, and mixing toward --ink does that in both directions —
+   darker on a light ground, lighter on a dark one — without a second block. */
+.split, .split__keys, .framing {
+  --side-left:   oklch(0.62 0.115 268);
+  --side-centre: oklch(0.62 0.055 196);
+  --side-right:  oklch(0.62 0.105 52);
+}
+.split {
+  display: flex; gap: 3px; height: 8px; border-radius: 4px; overflow: hidden;
+  background: var(--track);
+}
+.split__seg { display: block; border-radius: 4px; min-width: 6px; }
+.split__seg[data-side="left"],   .split__dot[data-side="left"]   { background: var(--side-left); }
+.split__seg[data-side="centre"], .split__dot[data-side="centre"] { background: var(--side-centre); }
+.split__seg[data-side="right"],  .split__dot[data-side="right"]  { background: var(--side-right); }
+
+.split__keys { display: flex; flex-wrap: wrap; gap: 12px; }
+.split__key {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--t-2); font-weight: 600; color: var(--ink-2);
+}
+/* A side that ran nothing still gets a row — its absence is the information. */
+.split__key[data-on="false"] { opacity: .45; }
+.split__dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+
+.blindspot {
+  font-size: var(--t-2); line-height: 1.5; color: var(--ink-2);
+  padding: 9px 11px; border-radius: var(--r-md);
+  background: var(--glass); border: 1px solid var(--glass-edge);
+}
+.blindspot strong { color: var(--ink); }
+
+.framing { display: flex; flex-direction: column; gap: 4px; }
+.framing__side {
+  align-self: flex-start; font-size: var(--t-1); font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: var(--r-sm); color: var(--on-accent);
+}
+.framing__side[data-side="left"]   { background: color-mix(in oklab, var(--side-left) 66%, var(--ink)); }
+.framing__side[data-side="centre"] { background: color-mix(in oklab, var(--side-centre) 66%, var(--ink)); }
+.framing__side[data-side="right"]  { background: color-mix(in oklab, var(--side-right) 66%, var(--ink)); }
+.framing p { font-size: var(--t-2); line-height: 1.55; color: var(--ink-2); }
+
+/* ────────────────────────────────────────────────────────────────────────
+   Navigation placement override — html[data-nav]
+
+   The bar's form is a media query by default. A reader who prefers the other
+   one sets data-nav on <html> (see NavPlacement.tsx), and these blocks win by
+   specificity: an attribute on the root out-specifies the bare selectors the
+   media queries carry, in both directions, so no @media needs rewriting.
+
+   It is per-device on purpose — stored in localStorage, not in prefs — because
+   a phone and a laptop want different answers and a shared value makes them
+   fight. 'auto' removes the attribute and the media queries take over again.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Forced rail. Above 700px the natural --rail (200/232/260) already applies, so
+   only the widths that would otherwise show a bottom bar need a value here. */
+@media (max-width: 699.98px) { :root[data-nav="side"] { --rail: 200px; } }
+
+:root[data-nav="side"] body { padding-left: var(--rail); }
+:root[data-nav="side"] .shell { width: auto; margin: 0 auto; padding: 0 16px 48px; }
+:root[data-nav="side"] .tabbar {
+  left: 0; top: 0; bottom: 0; right: auto; transform: none;
+  width: var(--rail); height: auto; border-radius: 0;
+  flex-direction: column; align-items: stretch; justify-content: flex-start;
+  padding: 24px 16px; gap: 4px;
+  border: none; border-right: 1px solid var(--bar-edge);
+  box-shadow: none;
+}
+:root[data-nav="side"] .tabbar > .inner {
+  flex-direction: column; align-items: stretch; justify-content: flex-start;
+  gap: 4px; max-width: none;
+}
+:root[data-nav="side"] .tabgroup { display: contents; }
+:root[data-nav="side"] .tabgroup .tab { width: 100%; max-width: none; flex: 0 0 auto; }
+:root[data-nav="side"] .tab {
+  width: 100%; height: 44px; flex-direction: row; justify-content: flex-start;
+  gap: 12px; padding: 0 10px; border-radius: var(--r-md);
+}
+:root[data-nav="side"] .tab span { font-size: var(--t-4); font-weight: 600; }
+:root[data-nav="side"] .tab[data-active="true"],
+:root[data-nav="side"] .tab[aria-current="page"] { background: rgba(255, 255, 255, 0.72); }
+:root[data-nav="side"] .reelsbtn {
+  width: 100%; height: 44px; margin: 10px 0 4px; border-radius: var(--r-md);
+  gap: 12px; padding: 0 10px; justify-content: flex-start;
+  font-size: var(--t-3); font-weight: 650; color: #fff;
+  background: linear-gradient(180deg, oklch(0.31 0.016 258), oklch(0.23 0.014 258));
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 1px 2px rgba(30,38,60,.08), 0 6px 16px -10px rgba(24,30,48,.36),
+              inset 0 1px 0 rgba(255,255,255,.14);
+  transform: none;
+}
+:root[data-nav="side"] .reelsbtn svg { transform: none; width: 20px; height: 16px; }
+:root[data-nav="side"] .reelsbtn__label { display: inline; }
+
+/* Forced bottom bar. --rail drives body padding, the reels overlay and its close
+   button, so zeroing it here is most of the work; the rest restores the dock. */
+:root[data-nav="bottom"] { --rail: 0px; }
+:root[data-nav="bottom"] body { padding-left: 0; }
+:root[data-nav="bottom"] .shell { padding-bottom: 110px; }
+:root[data-nav="bottom"] .tabbar {
+  left: 12px; right: 12px; top: auto; transform: none;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  width: auto; height: 66px; border-radius: var(--r-xl);
+  flex-direction: row; align-items: center; justify-content: space-between;
+  padding: 0 12px; gap: 0;
+  border: 1px solid var(--bar-edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 2px rgba(30,38,60,.06),
+              0 14px 36px -14px rgba(30,38,60,.42);
+}
+:root[data-nav="bottom"] .tabbar > .inner {
+  flex-direction: row; align-items: center; justify-content: space-between;
+  gap: 0; max-width: 430px;
+}
+:root[data-nav="bottom"] .tabgroup {
+  display: flex; flex: 1 1 0; min-width: 0;
+  align-items: flex-start; justify-content: space-around;
+}
+:root[data-nav="bottom"] .tabgroup .tab { width: auto; flex: 1 1 0; min-width: 0; max-width: 60px; }
+:root[data-nav="bottom"] .tab {
+  height: 44px; flex-direction: column; justify-content: center;
+  gap: 3px; padding: 0; border-radius: 0;
+}
+:root[data-nav="bottom"] .tab span { font-size: var(--t-1); font-weight: 600; }
+:root[data-nav="bottom"] .tab[data-active="true"],
+:root[data-nav="bottom"] .tab[aria-current="page"] { background: none; }
+:root[data-nav="bottom"] .reelsbtn {
+  width: 54px; height: 54px; margin: -24px 0 0; border-radius: 50%;
+  gap: 0; padding: 0; justify-content: center; flex: 0 0 auto;
+  background:
+    radial-gradient(115% 115% at 32% 26%, rgba(255,255,255,.70), rgba(255,255,255,0) 56%),
+    linear-gradient(150deg, color-mix(in oklab, var(--accent) 62%, white),
+                            var(--accent) 58%,
+                            color-mix(in oklab, var(--accent) 78%, black));
+  border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.5),
+              0 8px 20px -8px color-mix(in oklab, var(--accent) 66%, transparent);
+}
+:root[data-nav="bottom"] .reelsbtn svg { transform: translateY(-1px); width: auto; height: auto; }
+:root[data-nav="bottom"] .reelsbtn__label { display: none; }
+
+/* Past 560px the default bottom bar is a centred floating dock, not a full-width
+   band; a forced bottom bar has to become one too or it reads as a phone bar
+   stretched across a desktop. */
+@media (min-width: 560px) {
+  :root[data-nav="bottom"] .tabbar {
+    left: 50%; right: auto; transform: translateX(-50%);
+    width: 462px; bottom: 16px; height: 68px;
+    border: 1px solid var(--glass-edge); border-radius: var(--r-xl);
+    box-shadow: 0 8px 30px -10px rgba(30, 38, 60, 0.22);
+  }
+}
+
+/* The placement control's own buttons: .chip was written for <label> and <a>,
+   neither of which needs a font reset. */
+button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: pointer; }
+
+/* ── App header ────────────────────────────────────────────────────────────
+   The wordmark lived in the rail; with the rail gone this is where it goes. */
+.appbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 15;
+  display: flex; justify-content: center;
+  padding-block: calc(10px + env(safe-area-inset-top)) 10px;
+  /* Near the ground rather than the dock's tint: the header is the page's own
+     top edge, where the dock is an object floating over it. */
+  background: color-mix(in oklab, var(--ground) 84%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  backdrop-filter: blur(28px) saturate(190%);
+  border-bottom: 1px solid var(--glass-edge);
+}
+.appbar__brand {
+  display: flex; align-items: center; gap: 9px; line-height: 1.1;
+  font-weight: 700; font-size: var(--t-8); letter-spacing: -0.02em;
+  color: var(--ink); text-decoration: none;
+}
+.appbar__inner {
+  width: 100%; max-width: var(--content); margin: 0 auto;
+  /* A fixed height, not a floor: --appbar-h is a constant the page reserves, so
+     anything that can make the row taller — the wordmark's line box grows past
+     44px once it takes the display size at 700 — silently puts the header over
+     the first paragraph. 44px is the mode toggle's target, the tallest control. */
+  height: 44px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+}
+/* The gutter has to be the shell's own at every step, not a value of its own:
+   the column is centred, so the wordmark's distance from the card edge is
+   exactly the difference between these two paddings. */
+@media (min-width: 700px)  { .appbar__inner { padding-inline: 24px; } }
+@media (min-width: 1024px) { .appbar__inner { padding-inline: 28px; } }
+
+.appbar__aside {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+}
+.appbar__date {
+  font-size: var(--t-2); font-weight: 600; color: var(--kicker); white-space: nowrap;
+}
+/* The date is the first thing to go: the pin names a place the reader chose,
+   and today's date is the one line they can read off any other clock. */
+@media (max-width: 439.98px) { .appbar__date { display: none; } }
+
+@media (min-width: 700px) {
+  .appbar__brand { font-size: var(--t-9); }
+  .appbar__date { font-size: var(--t-2); }
+}
+/* ─────────────────────────────────────────────────────────────────────────
+   Theme B — Quiet Broadsheet, and Theme C — Ambient Lens
+
+   Both were designed on the canvas beside Frosted Stack and carry only its
+   colour and type; where a design collides with A, A's geometry wins, which
+   is why neither redefines the grid, the card sizes or the bar.
+   ───────────────────────────────────────────────────────────────────────── */
+:root[data-theme="broadsheet"] {
+  --ground:        oklch(0.972 0.008 82);
+  --ink:           oklch(0.21 0.014 62);
+  --ink-2:         oklch(0.47 0.014 62);
+  --ink-3:         oklch(0.56 0.014 62);
+  --kicker:        oklch(0.52 0.08 62);
+  --kicker-near:   oklch(0.44 0.09 158);
+  --kicker-new:    oklch(0.48 0.11 32);
+  --accent:        oklch(0.48 0.11 32);
+  --reels-accent:  oklch(0.48 0.11 32);
+  --glass:         transparent;
+  --glass-edge:    oklch(0.89 0.010 72);
+  --glass-warm:    none;
+  --plate:         linear-gradient(150deg, oklch(0.905 0.016 78), oklch(0.935 0.012 78));
+  --shadow:        none;
+  --rule:          oklch(0.89 0.010 72);
+  --ring:          oklch(0.48 0.11 32);
+  /* Newsprint keeps its restraint: a deeper shade of the same paper, and the
+     ember rule the rest of the theme uses for its one accent. */
+  --bar:           oklch(0.935 0.016 76 / 0.94);
+  --bar-edge:      oklch(0.84 0.024 72);
+}
+/* Paper, not glass: the ambient wash is what makes A translucent, so it goes. */
+:root[data-theme="broadsheet"] .wash { display: none; }
+/* Hairlines instead of cards. The card keeps its box — the grid still owns the
+   rhythm — and gives up only its fill, its corners and its shadow. */
+:root[data-theme="broadsheet"] .card {
+  background: none; border: none; border-radius: 0; box-shadow: none;
+  border-bottom: 1px solid var(--rule);
+  padding: 12px 2px 14px;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+:root[data-theme="broadsheet"] .card h2,
+:root[data-theme="broadsheet"] .catlink,
+:root[data-theme="broadsheet"] .pagehead h1,
+:root[data-theme="broadsheet"] .appbar__brand {
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-weight: 600; letter-spacing: -0.008em;
+}
+:root[data-theme="broadsheet"] .plate { border-radius: 3px; border-color: var(--rule); }
+
+
+
+/* Theme D — Fjordlight. Cold northern daylight, and the one theme with no lift
+   at all: no shadow, no blur, no translucency. A card parts from the ground by
+   a single tonal step and a hairline, the way a timetable parts a platform from
+   a departure. One hue — petrol — carries every accent; the category is said by
+   the strip's position rather than by a colour of its own. */
+:root[data-theme="fjord"] {
+  --ground:        oklch(0.938 0.010 195);
+  --ink:           oklch(0.262 0.030 205);
+  --ink-2:         oklch(0.470 0.030 205);
+  --ink-3:         oklch(0.615 0.022 205);
+  --kicker:        oklch(0.470 0.060 195);
+  --kicker-near:   oklch(0.470 0.080 172);
+  /* The one warm value in the theme, and it is spent on unread. */
+  --kicker-new:    oklch(0.600 0.110 78);
+  --accent:        oklch(0.470 0.080 190);
+  --reels-accent:  oklch(0.470 0.080 190);
+  /* Opaque on purpose: the card is the brighter surface, not a window. */
+  --glass:         oklch(0.992 0.003 195);
+  --glass-edge:    oklch(0.882 0.012 195);
+  --glass-warm:    none;
+  --plate:         linear-gradient(150deg, oklch(0.845 0.028 196), oklch(0.895 0.022 100));
+  --shadow:        none;
+  --rule:          oklch(0.882 0.012 195);
+  --ring:          oklch(0.470 0.080 190);
+  --track:         oklch(0.895 0.014 195);
+  --bar:           oklch(0.958 0.008 195 / 0.90);
+  --bar-edge:      oklch(0.882 0.014 195);
+}
+/* The wash is what makes A translucent; a flat theme has nothing to shine through. */
+:root[data-theme="fjord"] .wash { display: none; }
+:root[data-theme="fjord"] .card {
+  border-radius: 10px;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+:root[data-theme="fjord"] .plate { border-radius: 6px; border-color: var(--rule); }
+/* Serif for what is read, the UI sans for everything that is a control. */
+:root[data-theme="fjord"] .card h2,
+:root[data-theme="fjord"] .pagehead h1 {
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-weight: 600; letter-spacing: -0.008em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Dark mode
+
+   A second axis, not a fifth theme. BOOT resolves the reader's choice — or the
+   system's, when they have not made one — into an explicit data-mode before the
+   first paint, so every rule below can test one attribute and no token set has
+   to be written twice for the auto case.
+
+   Each block redefines only what a dark ground changes. Geometry, type and the
+   category hues are the theme's, and they are the same in both modes.
+   ───────────────────────────────────────────────────────────────────────── */
+:root[data-mode="dark"] {
+  --ground:        oklch(0.165 0.014 262);
+  --ink:           oklch(0.97 0.003 258);
+  --ink-2:         oklch(0.74 0.008 258);
+  --ink-3:         oklch(0.66 0.008 258);
+  --kicker:        oklch(0.78 0.06 258);
+  --kicker-near:   oklch(0.85 0.07 158);
+  --kicker-new:    oklch(0.87 0.08 74);
+  --accent:        oklch(0.80 0.11 254);
+  --on-accent:     oklch(0.20 0.02 258);
+  --glass:         rgba(255, 255, 255, 0.075);
+  --glass-edge:    rgba(255, 255, 255, 0.12);
+  --glass-warm:    linear-gradient(140deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045));
+  --plate:         linear-gradient(150deg, oklch(0.34 0.045 258), oklch(0.27 0.040 296));
+  --shadow:        0 18px 44px -22px rgba(0, 0, 0, 0.70);
+  --rule:          rgba(255, 255, 255, 0.10);
+  --ring:          oklch(0.80 0.11 254);
+  --track:         rgba(255, 255, 255, 0.14);
+  --bar:           oklch(0.225 0.024 262 / 0.76);
+  --bar-edge:      oklch(0.40 0.035 262 / 0.70);
+}
+
+:root[data-theme="pastel"][data-mode="dark"] {
+  --ground:        oklch(0.170 0.018 274);
+  --accent:        oklch(0.80 0.13 274);
+  --ring:          oklch(0.80 0.13 274);
+  --kicker:        oklch(0.79 0.07 274);
+  --plate:         linear-gradient(150deg, oklch(0.35 0.055 274), oklch(0.28 0.045 320));
+  --bar:           oklch(0.235 0.030 274 / 0.78);
+  --bar-edge:      oklch(0.42 0.048 274 / 0.70);
+}
+
+:root[data-theme="broadsheet"][data-mode="dark"] {
+  --ground:        oklch(0.155 0.008 76);
+  --ink:           oklch(0.94 0.006 76);
+  --ink-2:         oklch(0.72 0.008 76);
+  --ink-3:         oklch(0.63 0.008 76);
+  --kicker:        oklch(0.76 0.07 62);
+  --accent:        oklch(0.78 0.12 36);
+  --ring:          oklch(0.78 0.12 36);
+  --glass:         transparent;
+  --glass-edge:    rgba(255, 255, 255, 0.14);
+  --glass-warm:    none;
+  --plate:         linear-gradient(150deg, oklch(0.32 0.020 78), oklch(0.26 0.016 78));
+  --shadow:        none;
+  --rule:          rgba(255, 255, 255, 0.13);
+  --bar:           oklch(0.215 0.012 76 / 0.90);
+  --bar-edge:      rgba(255, 255, 255, 0.16);
+}
+
+
+/* Fjordlight at night: the same flat surfaces read off a deep sea ground. The
+   accent is re-lit rather than dimmed — a petrol that survives a dark ground is
+   a paler teal, not the same teal at lower opacity. */
+:root[data-theme="fjord"][data-mode="dark"] {
+  --ground:        oklch(0.175 0.012 200);
+  --ink:           oklch(0.935 0.008 195);
+  --ink-2:         oklch(0.735 0.016 200);
+  --ink-3:         oklch(0.595 0.016 200);
+  --kicker:        oklch(0.775 0.070 180);
+  --kicker-near:   oklch(0.820 0.080 165);
+  --kicker-new:    oklch(0.860 0.090 80);
+  --accent:        oklch(0.775 0.095 180);
+  --on-accent:     oklch(0.200 0.020 200);
+  --ring:          oklch(0.775 0.095 180);
+  --glass:         oklch(0.225 0.014 200);
+  --glass-edge:    oklch(0.300 0.016 200);
+  --glass-warm:    none;
+  --plate:         linear-gradient(150deg, oklch(0.330 0.035 190), oklch(0.300 0.030 130));
+  --shadow:        none;
+  --rule:          oklch(0.300 0.016 200);
+  --track:         oklch(0.300 0.018 200);
+  --bar:           oklch(0.205 0.014 200 / 0.92);
+  --bar-edge:      oklch(0.320 0.018 200);
+}
+/* A card is a surface here, not a sheet of lit glass, in either mode. */
+:root[data-theme="fjord"][data-mode="dark"] .card { background: var(--glass); }
+:root[data-mode="dark"] .wash i:nth-child(1) { background: oklch(0.62 0.14 62); opacity: .30; }
+:root[data-mode="dark"] .wash i:nth-child(2) { background: oklch(0.50 0.16 18); opacity: .30; }
+:root[data-mode="dark"] .wash i:nth-child(3) { background: oklch(0.52 0.09 108); opacity: .26; }
+:root[data-mode="dark"] .card {
+  background: linear-gradient(155deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045));
+}
+/* Every surface A wrote as translucent white has to come back the other way. */
+:root[data-mode="dark"] .panel,
+:root[data-mode="dark"] .chip,
+:root[data-mode="dark"] .pinchip,
+:root[data-mode="dark"] .subpill[data-active="true"],
+:root[data-mode="dark"] .subpill[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.075);
+  border-color: var(--glass-edge);
+  color: var(--ink);
+}
+
+:root[data-mode="dark"] .plate { border-color: rgba(255, 255, 255, 0.10); }
+
+/* The wash is a set of pale blobs lighting a pale ground. Unchanged on a dark
+   one they read as four lamps behind the page, so they dim to a glow instead. */
+:root[data-mode="dark"] .wash i { opacity: .18; filter: blur(96px); }
+:root[data-mode="dark"] .wash { opacity: .5; }
+
+/* The surfaces theme A wrote as opaque white, which no token reaches: the text
+   over them all resolves to a near-white ink, so each one has to come back the
+   other way explicitly or it renders white on white. */
+:root[data-mode="dark"] .expdot__tip,
+:root[data-mode="dark"] .picker__menu {
+  /* Lifted off the ground rather than a fixed colour: these float above the
+     page, and the page is a different hue in each of the four themes. */
+  background: color-mix(in oklab, var(--ink) 8%, var(--ground));
+  border-color: var(--glass-edge);
+}
+:root[data-mode="dark"] .field input[type="text"] {
+  background: rgba(255, 255, 255, 0.07); border-color: var(--glass-edge); color: var(--ink);
+}
+:root[data-mode="dark"] .field input::placeholder { color: var(--ink-3); }
+@media (hover: hover) {
+  :root[data-mode="dark"] .picker__opt:hover { background: rgba(255, 255, 255, 0.09); }
+}
+/* The blanket dark .chip rule above is (0,3,0) and out-specifies
+   .chip[data-on="true"] at (0,2,0), which left a selected chip and an unselected
+   one pixel-identical. Selected has to be restated at the same weight. */
+:root[data-mode="dark"] .chip[data-on="true"] {
+  background: var(--accent); border-color: transparent; color: var(--on-accent);
+}
+:root[data-mode="dark"] .tabbar {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02) 46%, rgba(255,255,255,0)),
+    var(--bar);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 14px 36px -14px rgba(0,0,0,.55);
+}
+
+/* ── Explore ───────────────────────────────────────────────────────────── */
+/* The hue map again, off the theme selector this time: on Explore the colour is
+   the index's organising idea rather than a tint the Pastel theme opts into, so
+   a category has to say its hue in every theme. Themes that set their own
+   [data-cat] hues still win — they carry a :root in the selector. */
+.exploretint                      { --cat-h: 252; }
+.exploretint[data-cat="top"]           { --cat-h: 252; }
+.exploretint[data-cat="local"]         { --cat-h: 158; }
+.exploretint[data-cat="national"]      { --cat-h: 62; }
+.exploretint[data-cat="international"] { --cat-h: 232; }
+.exploretint[data-cat="world"]         { --cat-h: 252; }
+.exploretint[data-cat="india"]         { --cat-h: 62; }
+.exploretint[data-cat="politics"]      { --cat-h: 305; }
+.exploretint[data-cat="business"]      { --cat-h: 210; }
+.exploretint[data-cat="technology"]    { --cat-h: 278; }
+.exploretint[data-cat="science"]       { --cat-h: 195; }
+.exploretint[data-cat="health"]        { --cat-h: 355; }
+.exploretint[data-cat="sports"]        { --cat-h: 150; }
+.exploretint[data-cat="entertainment"] { --cat-h: 330; }
+.exploretint[data-cat="climate"]       { --cat-h: 128; }
+
+.explorestack { display: flex; flex-direction: column; gap: 26px; }
+.exploresec   { display: flex; flex-direction: column; gap: 12px; }
+
+/* The hue arrives as a wash laid over --glass rather than as a fixed pastel, so
+   the same one declaration tints white glass on the light ground and dark glass
+   at night; the type stays on the ink tokens and never has to be re-picked. */
+.exploretile {
+  min-height: 104px; justify-content: flex-start; padding: 13px 13px 12px;
+  background: linear-gradient(150deg,
+              oklch(0.62 0.17 var(--cat-h) / 0.28),
+              oklch(0.62 0.17 var(--cat-h) / 0.09)),
+              var(--glass);
+  border-color: oklch(0.62 0.15 var(--cat-h) / 0.30);
+}
+.exploretile__top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.exploretile h3 { color: var(--ink); }
+.exploretile p  { color: var(--ink-2); }
+
+/* Places keep the tiles' grid and tokens but drop the fill and the shadow: a
+   place is a filter over the same stories, not another subject, and a hairline
+   row says that without a second vocabulary of shapes. */
+.exploreplaces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 600px) { .exploreplaces { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
+.exploreplace {
+  display: flex; align-items: center; gap: 9px; min-height: 52px;
+  padding: 8px 12px; border-radius: var(--r-md); text-decoration: none;
+  background: var(--glass); border: 1px solid var(--rule); color: var(--ink);
+}
+.exploreplace__pin  { flex: none; color: var(--accent); }
+.exploreplace__name { display: flex; flex-direction: column; min-width: 0; }
+.exploreplace__name b {
+  font-size: var(--t-3); font-weight: 650; letter-spacing: -0.012em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.exploreplace__name small {
+  font-size: var(--t-1); font-weight: 500; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.exploreplace__n {
+  margin-left: auto; font-size: var(--t-2); font-weight: 650;
+  font-variant-numeric: tabular-nums; color: var(--ink-3);
+}
+
+/* The filtered head answers the tile that was tapped, so it repeats that tile's
+   hue; the unfiltered index leaves --cat-h at its default and reads as ink. */
+.exploreback  { display: inline-block; text-decoration: none; }
+.exploretitle { margin-top: 8px; }
+.pagehead.exploretint[data-cat] .exploretitle { color: oklch(0.56 0.170 var(--cat-h)); }
+
+.exploretile:focus-visible, .exploreplace:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+@media (pointer: coarse) { .exploreplace { min-height: 56px; } }
+
+/* ── Settings ──────────────────────────────────────────────────────────────
+   A grouped inset list. Rows share one surface and are parted by a hairline
+   instead of by a gap, so a screen of controls reads as one object rather than
+   as a stack of cards. The three preference controls are other people's
+   components and each renders its own .panel; rather than ask them to render
+   something different, a panel that finds itself inside a group is reshaped
+   into a row here. Every rule is specific enough to outrank the dark-mode
+   surface rules, which reach .panel and .chip through :root[data-mode].
+   ───────────────────────────────────────────────────────────────────────── */
+/* Settings are not a feed and must not take the feed's width. At 1440 the
+   column is 1400px, which turned every row into a band with a word at one end
+   and a control at the other, and every segmented track into a toolbar of
+   400px segments holding a single 12px word. A settings page is a reading
+   measure wide; nothing on it gets better for being wider. */
+.setpage {
+  display: flex; flex-direction: column; gap: 24px;
+  max-width: 680px; margin-inline: auto;
+}
+.setsection { display: flex; flex-direction: column; gap: 8px; }
+.sethead {
+  margin: 0; padding: 0 14px;
+  font-size: var(--t-1); font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+/* The footer text under a group, where iOS puts the sentence a row has no room
+   for. Outside the surface on purpose: it is about the group, not in it. */
+.setnote {
+  margin: 2px 0 0; padding: 0 14px; max-width: 65ch;
+  font-size: var(--t-2); line-height: 1.5; color: var(--ink-3);
+}
+.setnote code { font-size: var(--t-1); }
+
+.setgroup {
+  display: flex; flex-direction: column;
+  border-radius: var(--r-lg); overflow: hidden;
+  background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(30px) saturate(185%); backdrop-filter: blur(30px) saturate(185%);
+  /* .shell > .panel carried this and no longer matches: the page still has to
+     scroll under a finger that comes down on a row. */
+  touch-action: pan-y pinch-zoom;
+}
+.setgroup > * + * { border-top: 1px solid var(--rule); }
+
+.setrow {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 44px; padding: 9px 14px;
+}
+.setrow--stack { flex-direction: column; align-items: stretch; gap: 9px; }
+.setrow__title {
+  font-size: var(--t-4); font-weight: 600; letter-spacing: -0.01em; color: var(--ink);
+}
+
+/* A panel inside a group is a row: the card it draws for itself would be a
+   second surface on top of the one the group already provides. */
+.setsection .setgroup > .panel {
+  padding: 11px 14px 13px; gap: 7px;
+  border: 0; border-radius: 0; box-shadow: none; background: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.setsection .setgroup > .panel > .label {
+  font-size: var(--t-4); font-weight: 600; letter-spacing: -0.01em;
+  text-transform: none; color: var(--ink);
+}
+.setsection .setgroup > .panel > p {
+  max-width: 65ch; font-size: var(--t-2); line-height: 1.45; color: var(--ink-3);
+}
+
+/* Those panels each offer one choice from a short closed set, which is a
+   segmented control, not a scatter of pills: one track, equal segments, and
+   the row underneath it stays quiet. */
+.setgroup > .panel > .chips {
+  gap: 3px; padding: 3px;
+  border-radius: var(--r-md); background: var(--track); border: 1px solid var(--glass-edge);
+  /* Sized by its options, not by the page — and all three the same, because
+     three tracks stacked in one group at three widths read as a ragged edge
+     rather than as three settings. The widest set decides it; the others have
+     fewer segments, which simply makes each segment roomier. */
+  max-width: 480px;
+}
+/* Below that, two rows of the full width: a segmented control that has wrapped
+   one option onto a second line is no longer a segmented control. */
+@media (max-width: 419.98px) {
+  .setgroup > .panel > .chips {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.setgroup > .panel > .chips > .chip {
+  flex: 1 1 auto; justify-content: center;
+  height: 34px; padding: 0 10px; border-radius: calc(var(--r-md) - 3px);
+  background: transparent; border-color: transparent; color: var(--ink-2);
+}
+.setgroup > .panel > .chips > .chip[data-on="true"] {
+  background: var(--accent); border-color: transparent; color: var(--on-accent);
+}
+
+/* A grid, not a wrapped row. Ten category names of very different lengths
+   ragged themselves into a shape that read as decoration; equal cells make the
+   set look like the closed list of ten it is, and the eye can count it. */
+/* A settings row that opens. The closed state has to read as a row like any
+   other — same height, same padding, the value on the right — so the marker is
+   ours rather than the browser's triangle, which sits at the wrong end and at
+   the wrong size. */
+.setdrop > summary {
+  cursor: pointer; list-style: none; gap: 10px;
+}
+.setdrop > summary::-webkit-details-marker { display: none; }
+.setdrop > summary::after {
+  content: ''; flex: 0 0 auto; width: 7px; height: 7px; margin-left: 2px;
+  border-right: 1.8px solid var(--ink-3); border-bottom: 1.8px solid var(--ink-3);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform .18s cubic-bezier(.32,.72,0,1);
+}
+.setdrop[open] > summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+.setdrop > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+
+/* The chosen set, said in the row itself: a settings row that hides its own
+   value makes the reader open it to find out whether they need to. */
+.setdrop__value {
+  margin-left: auto; min-width: 0; text-align: right;
+  font-size: var(--t-2); color: var(--ink-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.setdrop__body { padding: 0 14px 13px; display: flex; flex-direction: column; gap: 9px; }
+.setdrop__body > p {
+  margin: 0; max-width: 65ch; font-size: var(--t-2); line-height: 1.45; color: var(--ink-3);
+}
+
+.setchips {
+  display: grid; gap: 7px;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+}
+.setchips .chip { justify-content: flex-start; }
+.setchips .chip { cursor: pointer; font: inherit; font-size: var(--t-2); font-weight: 600; }
+.setchips .chip input { margin: 0; accent-color: var(--accent); }
+/* Hiding is the destructive half of the pair, so its on-state is not the accent
+   the interests use — an accent here would read as "chosen", which is the
+   opposite of what it says. */
+.setchips .chip--off[data-on="true"] {
+  background: color-mix(in oklab, var(--ink) 82%, transparent);
+  border-color: transparent; color: var(--ground);
+}
+.setselect {
+  margin-left: auto; min-width: 180px; max-width: 260px;
+  cursor: pointer; appearance: none;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-size: 5px 5px, 5px 5px;
+  background-position: right 15px center, right 10px center;
+  background-repeat: no-repeat;
+}
+
+.setinput {
+  height: 36px; padding: 0 11px; border-radius: var(--r-sm);
+  font: inherit; font-size: var(--t-3); color: var(--ink);
+  background: color-mix(in oklab, var(--ink) 8%, var(--ground));
+  border: 1px solid var(--glass-edge);
+}
+/* The label and its field are one control and have to look like it. Left to
+   space-between they drifted to opposite ends of the row and stopped being a
+   pair; the title takes only the width it needs and the gap closes. */
+.setrow > .setrow__title { flex: 0 1 auto; }
+
+/* The picker brings its own .field, whose caption-sized label reads as a hint
+   rather than as the title of the row it now heads. */
+.setgroup .setrow .field > label { font-size: var(--t-4); font-weight: 600; color: var(--ink); }
+
+.setstats { display: grid; grid-template-columns: minmax(0, 1fr); }
+.setstat  { display: flex; flex-direction: column; gap: 1px; padding: 10px 14px; }
+.setstat b {
+  font-size: var(--t-7); font-weight: 700; letter-spacing: -0.028em;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.setstat span {
+  font-size: var(--t-1); font-weight: 650; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+/* Five stats in threes leaves an orphan row of two, and the group's hairline
+   rule only parts its children, not the rows inside one of them. Below 600
+   they go in a column of pairs, where five is simply five. */
+.setstats > * + * { border-top: 1px solid var(--rule); }
+@media (min-width: 600px) {
+  .setstats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .setstats > * + * { border-top: 0; }
+}
+
+/* The rows look tight; the targets inside them are not. 40px here would have
+   read as tighter still, but this selector outranks the sheet's own coarse
+   pointer bump on .chip, so anything under 44 silently un-fixes every control
+   on the one page that is nothing but controls. */
+@media (pointer: coarse) {
+  .setgroup > .panel > .chips > .chip { min-height: 44px; }
+  .setinput { min-height: 44px; }
+}
+.setinput:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Category pager
+
+   Three sections on one track — previous, current, next — with the track held
+   one pane to the left so the middle one is what you see. A swipe moves the
+   track and nothing else, which is why the neighbour is already painted when
+   the finger arrives at it instead of being routed to afterwards.
+   ───────────────────────────────────────────────────────────────────────── */
+.pager {
+  /* Clip, not hidden: hidden on one axis makes the other a scroll container,
+     and a feed that scrolls inside a box of its own is not the page scrolling.
+     The margin/padding pair widens the clip box by the amount a card's shadow
+     spills, so the gutters keep their soft edge and the neighbour's matching
+     padding is all that ever shows through. */
+  margin-inline: -10px;
+  overflow: clip;
+  overflow-clip-margin: 10px;
+  touch-action: pan-y pinch-zoom;
+}
+
+.pagerTrack {
+  display: flex; align-items: flex-start;
+  width: 300%;
+  transform: translate3d(-33.3333%, 0, 0);
+}
+
+.pagerPane { flex: 0 0 33.3333%; min-width: 0; padding-inline: 10px; }
+
+/* A neighbour only ever has to be right for the length of a gesture, and an
+   unbounded one would give the document the tallest section's height whichever
+   section you were actually reading. */
+.pagerPane--side { max-height: 100svh; overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pagerTrack { transition: none !important; }
+}
+
+/* ── Story detail, desktop composition ─────────────────────────────────────
+   The page used to be the phone layout with a rail bolted on, which left the
+   coverage split — the only thing here a feed reader could not show you — as
+   small print in that rail. It is now a full-width band under the summary, and
+   the rail keeps the one thing that genuinely wants to be a narrow list. */
+.story__topbar { display: flex; align-items: center; gap: 4px; padding: 4px 0 6px; }
+.story__back {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; margin-left: -12px; color: var(--accent);
+}
+/* One line, and it must stay one line: the dateline gives up characters from
+   its end before the bookmark is pushed off the row. */
+.story__meta {
+  display: flex; align-items: center; gap: 7px; min-width: 0;
+  font-size: var(--t-1); font-weight: 650; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden;
+}
+.story__meta > span { overflow: hidden; text-overflow: ellipsis; }
+.story__meta span.sep { opacity: .4; flex: 0 0 auto; }
+.story__save { margin-left: auto; flex: 0 0 auto; }
+
+.story__head { display: flex; flex-direction: column; gap: 14px; }
+.story__headtext { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.story__title {
+  margin: 0; font-size: var(--t-8); line-height: 1.16; font-weight: 700;
+  letter-spacing: -0.026em; text-wrap: pretty;
+}
+.story__coverage { display: flex; flex-direction: column; gap: 18px; }
+.story__framings { display: flex; flex-direction: column; gap: 14px; }
+/* A rule in the side's own colour, so a column is identifiable before its badge
+   is read — the badge alone made three columns look like one block of prose. */
+.story__framings .framing {
+  gap: 7px; padding: 2px 0 2px 13px; min-width: 0;
+  border-left: 3px solid var(--side-centre);
+}
+.story__framings .framing:has(.framing__side[data-side="left"])  { border-left-color: var(--side-left); }
+.story__framings .framing:has(.framing__side[data-side="right"]) { border-left-color: var(--side-right); }
+.story__framings .framing p { font-size: var(--t-3); }
+
+.story__related { display: flex; flex-direction: column; gap: 12px; }
+.story__relgrid { display: flex; flex-direction: column; gap: 10px; }
+
+@media (min-width: 700px) {
+  .story__relgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  /* auto-fit, not three fixed tracks: most stories carry one or two sides,
+     and fixed tracks left the band two-thirds empty on those. */
+  .story__framings { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 360px)); gap: 22px; }
+}
+
+@media (min-width: 1024px) {
+  .story__head {
+    grid-area: head; display: grid; align-items: center; gap: 32px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
+  }
+  .story__title { max-width: none; }
+  .story__head .plate--detail { max-height: 288px; }
+  .story__meta { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
+
+  /* The meter and its blindspot note are a fixed-width object; the framing is
+     prose and takes everything left over. */
+  .story__coverage {
+    grid-area: cover; display: grid; align-items: start;
+    grid-template-columns: 320px minmax(0, 1fr); gap: 32px;
+  }
+  .story__framings { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 26px; }
+  .story__related { grid-area: rel; }
+  /* Six cards, two rows of three. A compact card is a row with its own thumbnail,
+     so three across is already half the width each card wants. */
+  .story__relgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+}
+.story__sides { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.story__rail { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 1024px) {
+  .story__rail { flex-direction: row; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+}

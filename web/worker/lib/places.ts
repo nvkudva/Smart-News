@@ -23,15 +23,9 @@
  */
 
 import { d1 } from './d1';
+import type { Place, PlaceKind } from '../../shared/types';
+export type { Place, PlaceKind };
 import { ALIASES, PLACES, type PlaceRow } from './gazetteer.gen';
-
-export type PlaceKind = 'city' | 'admin1' | 'country';
-
-export type Place = {
-  id: string; kind: PlaceKind; name: string; label: string; country: string;
-  admin1_id: string | null; parent_id: string | null;
-  lat: number | null; lon: number | null; population: number | null;
-};
 
 const fromRow = (r: PlaceRow): Place => ({
   id: r[0], kind: r[1], name: r[2], label: r[3], country: r[4],

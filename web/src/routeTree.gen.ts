@@ -10,33 +10,128 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as LocalRouteImport } from './routes/local'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ReelsRouteImport } from './routes/reels'
+import { Route as SavedRouteImport } from './routes/saved'
+import { Route as CCatRouteImport } from './routes/c.$cat'
+import { Route as StoryIdRouteImport } from './routes/story.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocalRoute = LocalRouteImport.update({
+  id: '/local',
+  path: '/local',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReelsRoute = ReelsRouteImport.update({
+  id: '/reels',
+  path: '/reels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SavedRoute = SavedRouteImport.update({
+  id: '/saved',
+  path: '/saved',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CCatRoute = CCatRouteImport.update({
+  id: '/c/$cat',
+  path: '/c/$cat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoryIdRoute = StoryIdRouteImport.update({
+  id: '/story/$id',
+  path: '/story/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/explore': typeof ExploreRoute
+  '/local': typeof LocalRoute
+  '/profile': typeof ProfileRoute
+  '/reels': typeof ReelsRoute
+  '/saved': typeof SavedRoute
+  '/c/$cat': typeof CCatRoute
+  '/story/$id': typeof StoryIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/explore': typeof ExploreRoute
+  '/local': typeof LocalRoute
+  '/profile': typeof ProfileRoute
+  '/reels': typeof ReelsRoute
+  '/saved': typeof SavedRoute
+  '/c/$cat': typeof CCatRoute
+  '/story/$id': typeof StoryIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/explore': typeof ExploreRoute
+  '/local': typeof LocalRoute
+  '/profile': typeof ProfileRoute
+  '/reels': typeof ReelsRoute
+  '/saved': typeof SavedRoute
+  '/c/$cat': typeof CCatRoute
+  '/story/$id': typeof StoryIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/explore'
+    | '/local'
+    | '/profile'
+    | '/reels'
+    | '/saved'
+    | '/c/$cat'
+    | '/story/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/explore'
+    | '/local'
+    | '/profile'
+    | '/reels'
+    | '/saved'
+    | '/c/$cat'
+    | '/story/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/explore'
+    | '/local'
+    | '/profile'
+    | '/reels'
+    | '/saved'
+    | '/c/$cat'
+    | '/story/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ExploreRoute: typeof ExploreRoute
+  LocalRoute: typeof LocalRoute
+  ProfileRoute: typeof ProfileRoute
+  ReelsRoute: typeof ReelsRoute
+  SavedRoute: typeof SavedRoute
+  CCatRoute: typeof CCatRoute
+  StoryIdRoute: typeof StoryIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +143,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/local': {
+      id: '/local'
+      path: '/local'
+      fullPath: '/local'
+      preLoaderRoute: typeof LocalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reels': {
+      id: '/reels'
+      path: '/reels'
+      fullPath: '/reels'
+      preLoaderRoute: typeof ReelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/saved': {
+      id: '/saved'
+      path: '/saved'
+      fullPath: '/saved'
+      preLoaderRoute: typeof SavedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$cat': {
+      id: '/c/$cat'
+      path: '/c/$cat'
+      fullPath: '/c/$cat'
+      preLoaderRoute: typeof CCatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/story/$id': {
+      id: '/story/$id'
+      path: '/story/$id'
+      fullPath: '/story/$id'
+      preLoaderRoute: typeof StoryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ExploreRoute: ExploreRoute,
+  LocalRoute: LocalRoute,
+  ProfileRoute: ProfileRoute,
+  ReelsRoute: ReelsRoute,
+  SavedRoute: SavedRoute,
+  CCatRoute: CCatRoute,
+  StoryIdRoute: StoryIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

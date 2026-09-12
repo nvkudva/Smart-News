@@ -1,6 +1,6 @@
 import { cycleStamp } from './cycle';
 import { SECTION_PAGE, getSection, outletsFor } from './sections';
-import { TAXONOMY, slug, subCategoriesFor, subSlugsFor, type SubCount } from './taxonomy';
+import { TAXONOMY, slug, subCategoriesFor, subSlugsFor, type SubCount } from '../../shared/taxonomy';
 import type { Outlet, Story } from './feed';
 
 /**
