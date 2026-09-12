@@ -15,6 +15,18 @@
  * lets the browser's own update cycle fire at all - see ServiceWorker.tsx.
  */
 const VERSION = '__SW_VERSION__';
+
+/**
+ * Every hashed file this build produced, substituted alongside VERSION.
+ *
+ * Precached as one set with the shell. The shell names these exact hashes, and
+ * the next deploy will not serve them - so a cached shell whose assets were
+ * only cached lazily asks for files that no longer exist, gets index.html from
+ * not_found_handling, and dies on a MIME error with a blank page. Caching them
+ * together is the difference between an app that is out of date and one that is
+ * broken.
+ */
+const ASSETS = __SW_ASSETS__;
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const MEDIA = 'media-v1';   // content is not build-specific; the name must not be either
@@ -49,13 +61,26 @@ const MEDIA_MAX = 300;
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
+    const shell = await caches.open(SHELL);
+    // The shell and its assets go in together or not at all: a partial set is
+    // the failure this precache exists to prevent. addAll is already
+    // all-or-nothing, so one array does it.
     try {
-      const shell = await caches.open(SHELL);
-      await shell.addAll([SHELL_URL, '/manifest.webmanifest', '/icon.svg']);
-    } catch { /* a worker with nothing precached still works */ }
+      await shell.addAll([SHELL_URL, ...ASSETS, '/manifest.webmanifest', '/icon.svg']);
+    } catch {
+      // A worker with nothing precached still works - every handler falls
+      // through to the network - so this must not abort the install.
+    }
+    // Takes over at once rather than waiting.
+    //
+    // Waiting was the better default while a cached shell could be broken:
+    // the reader got a banner and chose when to be disrupted. But a broken
+    // shell cannot run the banner, which left the only recovery as closing
+    // every tab. Now that the precache is a complete set, an immediate
+    // takeover cannot serve a half-updated app, and it means a bad deploy
+    // heals on the next navigation instead of needing the reader's help.
+    await self.skipWaiting();
   })());
-  // Deliberately no skipWaiting(). A new worker waits, which is the whole
-  // signal UpdateBanner shows the reader; it takes over when they accept.
 });
 
 self.addEventListener('activate', (e) => {
@@ -66,7 +91,13 @@ self.addEventListener('activate', (e) => {
   })());
 });
 
-/** The page asking to be taken over, which only happens on Refresh. */
+/**
+ * The page asking to be taken over.
+ *
+ * Install already skips waiting, so this is normally a no-op - it stays because
+ * UpdateBanner's Refresh posts it, and a worker that somehow is waiting should
+ * still answer.
+ */
 self.addEventListener('message', (e) => {
   if (e.data === 'sn:skip-waiting') void self.skipWaiting();
 });
@@ -139,9 +170,13 @@ self.addEventListener('fetch', (e) => {
       const hit = await c.match(request);
       if (hit) return hit;
       const res = await fetch(request);
-      // waitUntil: put() returns a promise, and one left unawaited inside
-      // respondWith is cut short when the worker is terminated - which is why
-      // nothing but the precache was ever landing here.
+      // An asset that is gone answers with index.html, because
+      // not_found_handling cannot tell a stale hash from a deep link. Caching
+      // that would persist the failure; returning it is a MIME error either
+      // way, so it is refused as a 504 that names the cause.
+      if (res.ok && (res.headers.get('content-type') || '').includes('text/html')) {
+        return new Response('Asset is not part of this deployment', { status: 504 });
+      }
       if (res.ok) e.waitUntil(c.put(request, res.clone()));
       return res;
     }));

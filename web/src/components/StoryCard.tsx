@@ -45,10 +45,29 @@ export function variantFor(story: Story, index: number): Variant {
   return 'compact';
 }
 
-function Plate({ kind, src, credit }: { kind: 'hero' | 'thumb'; src: string | null; credit?: string | null }) {
+/**
+ * `priority` is the one image worth fetching before layout says to.
+ *
+ * Lazy-loading the largest image above the fold defers its fetch until layout
+ * has run, which Lighthouse measured as 1.7-2.1s of Load Delay inside a 2.8-3.8s
+ * LCP - the wait was most of the number and was self-inflicted. Everything
+ * below it stays lazy, which is what lazy is for.
+ *
+ * Chosen by the caller, not by the variant. Tying it to 'lead' looked
+ * equivalent and was not: a lead story with no image renders no hero at all,
+ * and then the largest image on the page is some later card that is still
+ * lazy - which is exactly what Lighthouse kept pointing at.
+ */
+function Plate({ kind, src, credit, priority = false }: {
+  kind: 'hero' | 'thumb'; src: string | null; credit?: string | null; priority?: boolean;
+}) {
   return (
     <div className={`plate plate--${kind}`}>
-      {src ? <img src={src} alt="" loading="lazy" /> : <Photo size={kind === 'hero' ? 26 : 19} />}
+      {src
+        ? <img src={src} alt=""
+               loading={priority ? 'eager' : 'lazy'}
+               fetchPriority={priority ? 'high' : undefined} />
+        : <Photo size={kind === 'hero' ? 26 : 19} />}
       {src && credit && <span className="credit">Source : {credit}</span>}
     </div>
   );
@@ -63,7 +82,9 @@ function Kicker({ story }: { story: Story }) {
   return <div className="kicker">{place && <span className="kicker__place">{place}</span>}</div>;
 }
 
-export function StoryCard({ story, variant = 'compact' }: { story: Story; variant?: Variant }) {
+export function StoryCard({ story, variant = 'compact', priority = false }: {
+  story: Story; variant?: Variant; priority?: boolean;
+}) {
   const meta = `${story.source_count} source${story.source_count === 1 ? '' : 's'} · ${storyWhen(story)}`;
   // A grey placeholder is fine at 76px and dreadful at 350px, so wide cards
   // without a photo drop the plate and take the room back as text.
@@ -102,7 +123,8 @@ export function StoryCard({ story, variant = 'compact' }: { story: Story; varian
           </>
         ) : (
           <>
-            {!textOnly && <Plate kind="hero" src={story.image_url} credit={story.image_source} />}
+            {!textOnly && <Plate kind="hero" src={story.image_url} credit={story.image_source}
+                                  priority={priority} />}
             {head}{crux}{foot}
           </>
         )}

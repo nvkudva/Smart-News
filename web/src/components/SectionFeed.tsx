@@ -239,7 +239,15 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
         </div>
       ) : (
         <div className="feed">
-          {shown.map((s, i) => <StoryCard key={s.id} story={s} variant={variantFor(s, i)} />)}
+          {/* The first story carrying an image, which is the one that becomes
+              LCP - not simply the first story, which may have none. */}
+          {(() => {
+            const lcp = shown.find((s) => s.image_url)?.id;
+            return shown.map((s, i) => (
+              <StoryCard key={s.id} story={s} variant={variantFor(s, i)}
+                         priority={s.id === lcp} />
+            ));
+          })()}
         </div>
       )}
     </>

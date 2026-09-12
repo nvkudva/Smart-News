@@ -2,17 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
+    <!--BOOT-->
     <!--
-      What layout.tsx's `metadata` and `viewport` exports described. In an SPA
-      the document is written once, so it belongs here rather than in a
-      component - and there is no generateMetadata to vary it per route, which
-      is the trade the no-SSR decision already made.
+      Nothing above the charset, not even a comment. A declaration that arrives
+      after the first kilobyte is one the parser has already had to guess at,
+      and injecting the boot script ahead of it put it there.
 
-      The BOOT script is injected into the top of this head by a plugin in
-      vite.config.ts rather than pasted in. It is built out of NAV_KEY,
-      THEME_KEY, MODE_KEY and THEME_CHROME in src/lib/boot.ts, and a copy here
+      The slot on the line above is replaced with that script by a plugin in
+      vite.config.ts rather than being pasted in: it is built out of NAV_KEY,
+      THEME_KEY, MODE_KEY and THEME_CHROME in shared/boot.ts, and a copy here
       would drift from the module the components read those same keys from.
+      It sits here, before every stylesheet, because a script placed later in
+      the head waits for pending CSS and would apply the theme after the first
+      paint rather than before it.
+
+      The rest is what layout.tsx's `metadata` and `viewport` exports
+      described. In an SPA the document is written once, so it belongs here
+      rather than in a component - and there is no generateMetadata to vary it
+      per route, which is the trade the no-SSR decision already made.
     -->
     <title>smartnews</title>
     <meta
