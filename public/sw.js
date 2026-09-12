@@ -10,7 +10,7 @@
  *   · documents come from a cache named after the build that wrote them, so a
  *     page can only ever be handed to the build whose chunks it names
  */
-const VERSION = 'v5';   // bumped: shells are served without a revalidation
+const VERSION = 'v6';   // bumped: no HTML outside the build's own cache
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const MEDIA = `media-${VERSION}`;
@@ -32,14 +32,41 @@ const KEEP = new Set([SHELL, DATA, MEDIA]);
  * the words in a story do not change after it is filed.
  */
 let buildId;
+let buildAt = 0;
+
+/**
+ * Long enough not to be a fetch per navigation, short enough that a worker
+ * still running across a deploy stops naming the old build within a minute.
+ * /BUILD_ID is a static asset: free, and uncounted against the daily limit.
+ */
+const BUILD_TTL_MS = 60_000;
+
+function readBuildId() {
+  return fetch('/BUILD_ID', { cache: 'no-store' })
+    .then((r) => (r.ok ? r.text() : null))
+    .then((t) => (t && /^[\w-]{1,64}$/.test(t.trim()) ? t.trim() : null))
+    // In development /BUILD_ID is the not-found page. No id, no document
+    // cache, and the old network-first behaviour is what is left.
+    .catch(() => null);
+}
+
 async function docs() {
-  if (buildId === undefined) {
-    buildId = await fetch('/BUILD_ID', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.text() : null))
-      .then((t) => (t && /^[\w-]{1,64}$/.test(t.trim()) ? t.trim() : null))
-      // In development /BUILD_ID is the not-found page. No id, no document
-      // cache, and the old network-first behaviour is what is left.
-      .catch(() => null);
+  if (buildId === undefined || Date.now() - buildAt > BUILD_TTL_MS) {
+    const fresh = await readBuildId();
+    buildAt = Date.now();
+    if (buildId === undefined) {
+      buildId = fresh;
+    } else if (fresh !== null && fresh !== buildId) {
+      // A deploy landed under a worker that is still running. Take the new
+      // name and drop the old cache with it — nothing will ask for it again,
+      // and activate may not run for a long time: sw.js only changes when
+      // somebody edits it.
+      const stale = buildId;
+      buildId = fresh;
+      void caches.delete(`docs-${stale}`);
+    }
+    // A failed read is not a new build. Keeping the id we had beats turning
+    // the cache off every time the network blinks.
   }
   return buildId ? caches.open(`docs-${buildId}`) : null;
 }
@@ -56,10 +83,22 @@ const isShell = (url) => url.pathname === '/' || url.pathname.startsWith('/c/');
 const MEDIA_MAX = 300;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(SHELL)
-    .then((c) => c.addAll(['/', '/manifest.webmanifest', '/icon.svg']))
-    .then(() => self.skipWaiting())
-    .catch(() => self.skipWaiting()));
+  e.waitUntil((async () => {
+    try {
+      const shell = await caches.open(SHELL);
+      // Only things that do not name a build. SHELL is in KEEP and survives
+      // every deploy, so anything here has to be true of all of them.
+      await shell.addAll(['/manifest.webmanifest', '/icon.svg']);
+
+      // The home page is precached too — a reader who installs the app from a
+      // story and later opens / offline should still land somewhere — but into
+      // the build's own cache, because it is HTML and HTML names the chunks of
+      // exactly one build. Held in SHELL it would outlive them.
+      const cache = await docs();
+      if (cache) await cache.add('/');
+    } catch { /* a worker with nothing precached still works */ }
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (e) => {
@@ -196,8 +235,10 @@ self.addEventListener('fetch', (e) => {
 
       try {
         const res = await fetch(request);
+        // Only into the build's own cache. With no build id there is nowhere
+        // safe to put a document, so it simply is not kept.
         if (res.ok) {
-          (cache ?? await caches.open(SHELL)).put(request, res.clone());
+          if (cache) cache.put(request, res.clone());
           return res;
         }
         // A daily limit answers 429 or 503 — a response, not a throw, so this
@@ -210,11 +251,14 @@ self.addEventListener('fetch', (e) => {
   }
 });
 
-/** The last page we hold for this request, then the shell, then nothing. */
+/**
+ * The last page we hold for this request, then the home page, then nothing —
+ * and both out of this build's cache. Falling back to a copy from an older
+ * build would hand the reader a page naming scripts that are no longer served:
+ * it renders, and then ignores every tap.
+ */
 async function fallback(request) {
   const cache = await docs();
-  const shell = await caches.open(SHELL);
-  return (cache ? await cache.match(request) : null)
-      ?? await shell.match(request)
-      ?? await shell.match('/');
+  if (!cache) return null;
+  return (await cache.match(request)) ?? (await cache.match('/'));
 }

@@ -73,3 +73,34 @@ test('a dynamic page is still asked about', async ({ page }) => {
   // it from a cache and leaving it there would show them somebody else's.
   expect(asked, 'a dynamic page must still reach the origin').toEqual(['/saved']);
 });
+
+test('no HTML is held outside the build it belongs to', async ({ page }) => {
+  await page.route('**/*', (r) =>
+    new URL(r.request().url()).origin === ORIGIN ? r.continue() : r.abort());
+
+  await page.goto('/');
+  await controlled(page);
+  await page.goto('/c/technology');
+  await page.goto('/');
+  await page.waitForTimeout(2_000);
+
+  const held = await page.evaluate(async () => {
+    const out: Record<string, string[]> = {};
+    for (const name of await caches.keys()) {
+      const c = await caches.open(name);
+      out[name] = (await c.keys()).map((r) => new URL(r.url).pathname);
+    }
+    return out;
+  });
+
+  const shell = Object.entries(held).find(([k]) => k.startsWith('shell-'))?.[1] ?? [];
+  // A cache that survives every deploy may only hold things true of all of
+  // them. A page held here could be handed to a build whose chunks it does
+  // not name — it would render, and then ignore every tap.
+  expect(shell.filter((p) => p === '/' || p.startsWith('/c/')), `shell holds: ${shell.join(' ')}`)
+    .toEqual([]);
+
+  // …and the home page is still precached, just under the build's own key.
+  const docs = Object.entries(held).find(([k]) => k.startsWith('docs-'))?.[1] ?? [];
+  expect(docs, `docs holds: ${docs.join(' ')}`).toContain('/');
+});
