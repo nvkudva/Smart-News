@@ -1,6 +1,8 @@
 import { d1 } from './d1';
+import type { CategoryFacet, PlaceFacet } from '../../shared/types';
+export type { CategoryFacet, PlaceFacet };
 import { idList, storyCols, storyFrom, withPlaceLabels, type Story } from './feed';
-import { expandPlaceIds, placesReady, type PlaceKind } from './places';
+import { expandPlaceIds, placesReady } from './places';
 
 // Shape shared with the feed, so an unmigrated store degrades identically here.
 const cols = (ready: boolean) => `${storyCols(ready)},
@@ -54,8 +56,6 @@ export async function getSaved(userId: string): Promise<(Story & { saved_at: num
 
 // -------------------------------------------------------------- explore ---
 
-export type CategoryFacet = { category: string; stories: number; sources: number; lead: Story | null };
-
 export async function getCategoryFacets(): Promise<CategoryFacet[]> {
   const d = await d1();
   const since = Date.now() - 48 * 3_600_000;
@@ -76,8 +76,6 @@ export async function getCategoryFacets(): Promise<CategoryFacet[]> {
 
   return rows.map((r) => ({ ...r, lead: leadBy.get(r.category) ?? null }));
 }
-
-export type PlaceFacet = { place_id: string; label: string; kind: PlaceKind; country: string; stories: number };
 
 /** Grouped by the canonical place, so "Delhi" and "New Delhi" are one facet.
  *  A cluster the gazetteer could not resolve simply does not appear. */

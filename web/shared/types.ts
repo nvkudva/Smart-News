@@ -51,3 +51,85 @@ export type Place = {
   admin1_id: string | null; parent_id: string | null;
   lat: number | null; lon: number | null; population: number | null;
 };
+
+export type Coverage = {
+  /** Distinct outlets per side — outlets, not articles: one paper filing six
+   *  times is one voice, and counting articles would let it drown the rest. */
+  counts: Record<Bias, number>;
+  total: number;
+  /** The side holding at least BLINDSPOT_SHARE of the outlets, if any. */
+  dominant: Bias | null;
+  /** Sides with a rating that ran nothing. Only meaningful once `total` is
+   *  large enough that silence is a choice rather than a small sample. */
+  missing: Bias[];
+  rated: number;
+  unrated: number;
+};
+
+export type CategoryFacet = {
+  category: string; stories: number; sources: number; lead: Story | null;
+};
+
+export type PlaceFacet = {
+  place_id: string; label: string; kind: PlaceKind; country: string; stories: number;
+};
+
+export type Stats = {
+  articles: number; clusters: number; summarised: number;
+  sources: number; saved: number; newest: number;
+};
+
+/**
+ * One payload per page, which is what each route's loader awaits.
+ *
+ * Named here rather than inferred from the Worker's handlers: the client
+ * cannot import those, and a page that renders a shape it did not agree to is
+ * the failure this file exists to prevent.
+ */
+export type LocalPayload = {
+  stamp: string | null;
+  stories: Story[];
+  places: Place[];
+  /** prefs.places, and only when nothing canonical resolved - see /local. */
+  typed: string[];
+  /** Which of `places` the device resolved, so the page can fill that chip in
+   *  rather than outline it: the reader did not type it. */
+  geoPlaceId: string | null;
+};
+
+export type SavedPayload = { stories: (Story & { saved_at: number })[] };
+
+export type ReelsPayload = { stories: Story[]; saved: string[] };
+
+export type ExploreIndex = {
+  stamp: string | null;
+  categories: CategoryFacet[];
+  places: PlaceFacet[];
+};
+
+export type ExploreFiltered = {
+  stamp: string | null;
+  title: string;
+  category: string | null;
+  stories: Story[];
+};
+
+export type ExplorePayload = ExploreIndex | ExploreFiltered;
+
+export type ProfilePayload = {
+  prefs: Prefs;
+  stats: Stats;
+  countries: string[];
+  /** The reader's placeIds, resolved through the gazetteer. */
+  resolved: Place[];
+  /** The consented geo place, if there is one. */
+  geo: Place[];
+};
+
+export type StoryPayload = {
+  cluster: Story;
+  articles: Article[];
+  related: Story[];
+  coverage: Coverage;
+  saved: boolean;
+};

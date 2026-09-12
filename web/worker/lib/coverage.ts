@@ -1,4 +1,6 @@
 import { SOURCES, type Bias } from '../../shared/sources';
+import type { Coverage } from '../../shared/types';
+export type { Coverage };
 
 /**
  * The bias split behind a story, and the only part of a story's payload the
@@ -10,20 +12,6 @@ import { SOURCES, type Bias } from '../../shared/sources';
  * input is articles the section already ships, so the answer is derivable
  * wherever those are — server or browser.
  */
-export type Coverage = {
-  /** Distinct outlets per side — outlets, not articles: one paper filing six
-   *  times is one voice, and counting articles would let it drown the rest. */
-  counts: Record<Bias, number>;
-  total: number;
-  /** The side holding at least BLINDSPOT_SHARE of the outlets, if any. */
-  dominant: Bias | null;
-  /** Sides with a rating that ran nothing. Only meaningful once `total` is
-   *  large enough that silence is a choice rather than a small sample. */
-  missing: Bias[];
-  rated: number;
-  unrated: number;
-};
-
 const BLINDSPOT_SHARE = 0.75;
 const BLINDSPOT_MIN_OUTLETS = 5;
 
