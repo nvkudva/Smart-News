@@ -1,47 +1,52 @@
 import { defineConfig } from '@playwright/test';
 
 /**
- * Against a production build, never `next dev`.
+ * Against a production build, never the dev server.
  *
- * Neither server builds: `pretest` does both builds first, in order. Playwright
- * starts webServers in parallel, and two `next build` runs writing .next at the
- * same time is a race the budget suite then measures.
+ * React Strict Mode double-invokes effects in development, so every fetch a
+ * component makes on mount appears twice and a request budget would be
+ * measuring the dev server rather than the app. The dev server also disables
+ * the service worker on purpose, which is the entire subject of one of these
+ * suites.
  *
- * React's Strict Mode double-invokes effects in development, so every fetch a
- * component makes on mount appears twice and a request budget measures the
- * dev server rather than the app. The build is the slow part of this suite and
- * the reason it is not a watch-mode test.
+ * One server now, where the Next tree needed two: `next start` could not serve
+ * the OpenNext artifact the service worker was written against, so the budget
+ * suite and the cache suite ran against different servers. `vite preview` runs
+ * the real Worker in workerd with the real assets, so both suites share it.
+ *
+ * The build is part of the command rather than a separate step, and has to be:
+ * vite preview reads the asset manifest once at startup, so a preview started
+ * before a build serves the previous build's sw.js and asset hashes - which
+ * looks exactly like the caching bug these tests exist to catch.
+ *
+ * localhost and not 127.0.0.1: vite preview binds the hostname, which resolves
+ * to ::1 here, so the v4 literal never answers and Playwright waits out the
+ * whole webServer timeout for a server that is already up.
+ *
+ * D1 is the local miniflare database, shared with the dev server through
+ * persistState. Seed it with `npm run seed:local-d1` from the repo root; an
+ * empty one makes every feed assertion fail for a reason that has nothing to
+ * do with the code.
  */
+const PORT = 4178;
+
 export default defineConfig({
   testDir: 'tests',
+  // The two suites disagree about whether the service worker may run, and a
+  // worker registered by one would outlive into the other on a shared origin.
   fullyParallel: false,
   workers: 1,
-  reporter: process.env.CI ? 'list' : [['list']],
+  reporter: [['list']],
   use: {
-    baseURL: 'http://127.0.0.1:3000',
-    // The hand-written service worker answers from its own caches and would
-    // hide the very requests this suite counts.
+    baseURL: `http://localhost:${PORT}`,
+    // Overridden in serviceworker.spec.ts, which is about the cache rather
+    // than about what reaches the Worker.
     serviceWorkers: 'block',
   },
-  webServer: [
-    {
-      command: 'npm start',
-      url: 'http://127.0.0.1:3000',
-      env: { SMARTNEWS_LOCAL_D1: '1' },
-      reuseExistingServer: !process.env.CI,
-      timeout: 300_000,
-    },
-    // The service worker's document cache is keyed on /BUILD_ID, and that file
-    // only exists at that URL in the OpenNext build — `next start` serves only
-    // public/, so docs() gets a 404, returns null, and the cache it guards can
-    // never be reached. Testing that policy at all means serving the artifact
-    // that actually ships. D1 is the local miniflare one and stays empty: the
-    // shells under test are prerendered and carry no rows.
-    {
-      command: 'npx wrangler dev --port 8787',
-      url: 'http://127.0.0.1:8787/BUILD_ID',
-      reuseExistingServer: !process.env.CI,
-      timeout: 600_000,
-    },
-  ],
+  webServer: {
+    command: `bun run build && bunx vite preview --port ${PORT} --strictPort`,
+    url: `http://localhost:${PORT}/api/stamp`,
+    reuseExistingServer: !process.env.CI,
+    timeout: 300_000,
+  },
 });

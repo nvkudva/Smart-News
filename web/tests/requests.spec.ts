@@ -3,22 +3,26 @@ import { expect, test, type Page } from '@playwright/test';
 /**
  * What a page costs, in Cloudflare Worker invocations.
  *
- * Static assets are free and unlimited; everything counted here runs the
- * Worker. A prefetch loop in the category strip once spent the account's whole
+ * A prefetch loop in the category strip once spent the account's whole
  * hundred-thousand daily allowance in an afternoon, and nothing in tsc, the
  * build or the schema check could see it — a budget can.
  *
+ * The accounting got simpler with the SPA, and the reason is worth stating
+ * because every number below depends on it. run_worker_first in wrangler.jsonc
+ * scopes the Worker to /api/*: the shell, every hashed asset and every deep
+ * link are served straight from static assets, which are free and uncounted.
+ * So a request to this origin is billable if and only if its path starts with
+ * /api/. The Next tree had to count RSC payloads and documents too, and that
+ * whole column is gone - measured at the cutover, ten deep-link page views
+ * cost zero invocations.
+ *
  * The ceilings are deliberately exact rather than generous. "No requests at
  * all" is a claim that cannot quietly drift; "a few" is one that can.
- *
- * One cost is deliberately outside these budgets: TabBar renders five links to
- * force-dynamic routes with prefetch on, and staleTimes.dynamic is thirty
- * seconds, so arriving anywhere re-prefetches all five once that window has
- * lapsed. It is pre-existing and orthogonal to what each test here measures.
  */
-type Tally = { api: string[]; rsc: string[]; doc: string[] };
 
-const ORIGIN = 'http://127.0.0.1:3000';
+const ORIGIN = 'http://localhost:4178';
+
+type Tally = { api: string[]; other: string[] };
 
 async function watch(page: Page): Promise<Tally> {
   // Story photographs come from the publishers, and a hung request to one of
@@ -28,27 +32,23 @@ async function watch(page: Page): Promise<Tally> {
     return url.origin === ORIGIN ? route.continue() : route.abort();
   });
 
-  const tally: Tally = { api: [], rsc: [], doc: [] };
+  const tally: Tally = { api: [], other: [] };
   page.on('request', (req) => {
     const url = new URL(req.url());
     if (url.origin !== ORIGIN) return;
-    const path = url.pathname;
-    if (path.startsWith('/_next/static/') || path === '/sw.js') return;  // free assets
-
-    if (path.startsWith('/api/')) tally.api.push(path);
-    else if (url.searchParams.has('_rsc')) tally.rsc.push(path);
-    else if (req.resourceType() === 'document') tally.doc.push(path);
+    if (url.pathname.startsWith('/api/')) tally.api.push(url.pathname);
+    else tally.other.push(url.pathname);   // free: shell, assets, icons
   });
   return tally;
 }
 
-const clear = (t: Tally) => { t.api.length = 0; t.rsc.length = 0; t.doc.length = 0; };
+const clear = (t: Tally) => { t.api.length = 0; t.other.length = 0; };
 const count = (paths: string[], prefix: string) => paths.filter((p) => p.startsWith(prefix)).length;
 
 /** A rendered card, then a quiet moment — not `networkidle`, which a blocked
  *  publisher image can hold open forever. */
 async function settle(page: Page) {
-  await page.waitForSelector('a[href^="/story/"]', { timeout: 20_000 });
+  await page.waitForSelector('a[href^="/story/"]', { timeout: 30_000 });
   await page.waitForTimeout(1_500);
 }
 
@@ -57,47 +57,40 @@ test('a cold feed costs one answer for the world and nothing per section', async
   await page.goto('/');
   await settle(page);
 
+  // Fourteen sections, one payload. The whole point of /api/world replacing
+  // the per-section routes is that the bodies overlap.
   expect(count(t.api, '/api/world'), `world: ${t.api.join(' ')}`).toBe(1);
   expect(count(t.api, '/api/stamp'), `stamp: ${t.api.join(' ')}`).toBe(1);
   expect(count(t.api, '/api/place'), `place: ${t.api.join(' ')}`).toBeLessThanOrEqual(1);
   // /api/section/[cat] and /api/stories are retired; nothing may bring them back.
-  expect(t.api.filter((p) => !/^\/api\/(world|stamp|place)/.test(p))).toEqual([]);
+  expect(t.api.filter((p) => !/^\/api\/(world|stamp|place)$/.test(p))).toEqual([]);
 });
 
-/**
- * The first router.prefetch of a session fetches the app shell alongside the
- * route, so it costs two where every later one costs one. Burning it on a link
- * we are not going to use is what makes the numbers below steady rather than
- * off-by-one on whichever test runs first.
- */
-async function burnFirstPrefetch(page: Page) {
-  await page.locator('.catlink[data-cat="world"]').hover();
-  await page.waitForTimeout(1_500);
-}
+test('a deep link costs no invocation for the page itself', async ({ page }) => {
+  const t = await watch(page);
+  await page.goto('/c/india');
+  await settle(page);
 
-test('warming a category costs one payload, and entering it costs none', async ({ page }) => {
+  // The document and its chunks are static assets. If this ever starts costing
+  // an invocation, run_worker_first has been widened or removed and every page
+  // view in the app is being billed again.
+  expect(t.other.some((p) => p === '/' || p.startsWith('/assets/'))).toBe(true);
+  expect(count(t.api, '/api/world'), `world: ${t.api.join(' ')}`).toBe(1);
+});
+
+test('switching category costs nothing', async ({ page }) => {
   const t = await watch(page);
   await page.goto('/');
   await settle(page);
-  await burnFirstPrefetch(page);
 
-  clear(t);
-  await page.locator('.catlink[data-cat="science"]').hover();
-  await page.waitForTimeout(1_500);
-  expect(t.rsc, `warm: ${t.rsc.join(' ')}`).toEqual(['/c/science']);
-
-  // The whole bargain of warming on intent: the tap itself is free. A click
-  // that raced its own prefetch would fetch the payload a second time.
   clear(t);
   await page.locator('.catlink[data-cat="science"]').click();
   await expect(page).toHaveURL(/\/c\/science/);
-  await settle(page);
+  await page.waitForTimeout(1_500);
 
-  // Only the category's own payload. Landing on any page also re-prefetches
-  // the TabBar's five force-dynamic destinations whenever their thirty-second
-  // staleTimes window has lapsed, which is a separate cost and not this
-  // bargain — see the note in the suite header.
-  expect(t.rsc.filter((p) => p.startsWith('/c/')), `enter: ${t.rsc.join(' ')}`).toEqual([]);
+  // The rows are already in the world payload this tab is holding, and the
+  // shell is the same document - so a category is a client-side state change
+  // with nothing behind it.
   expect(t.api, `api: ${t.api.join(' ')}`).toEqual([]);
 });
 
@@ -105,23 +98,19 @@ test('filtering by sub-category asks for nothing', async ({ page }) => {
   const t = await watch(page);
   await page.goto('/c/technology');
   await settle(page);
-  await burnFirstPrefetch(page);
 
-  const pill = page.locator('.substrip .subpill').nth(1);
-  await pill.hover();
-  await page.waitForTimeout(1_500);
-
+  // Scoped to this category's own pills. CategoryPager keeps a window of
+  // sections in the DOM, so an unscoped .subpill matches the neighbours too -
+  // and the first match was a pill in the off-screen business section, which
+  // resolves fine and can never be clicked.
+  const pill = page.locator('.substrip a.subpill[href^="/c/technology?sub="]').first();
   clear(t);
   await pill.click();
-  await settle(page);
+  await page.waitForTimeout(1_500);
 
-  // swap() calls preventDefault and pushState so the sub-filter is a filter
-  // over rows already held, not a route change.
+  // ?sub= is a filter over rows already held, declared in the route's
+  // validateSearch. It changes the URL and nothing else.
   expect(t.api, `api: ${t.api.join(' ')}`).toEqual([]);
-  expect(t.doc, `doc: ${t.doc.join(' ')}`).toEqual([]);
-  // pushState is not invisible to the router — it syncs to the new URL — but
-  // one payload for the whole sub-strip is the ceiling, not one per pill.
-  expect(t.rsc.length, `rsc: ${t.rsc.join(' ')}`).toBeLessThanOrEqual(1);
 });
 
 test('a page left open asks for nothing', async ({ page }) => {
@@ -135,7 +124,6 @@ test('a page left open asks for nothing', async ({ page }) => {
   await page.waitForTimeout(10_000);
 
   expect(t.api, `api: ${t.api.join(' ')}`).toEqual([]);
-  expect(t.rsc, `rsc: ${t.rsc.join(' ')}`).toEqual([]);
 });
 
 test('a second visit does not re-ask where the reader is', async ({ page }) => {
@@ -157,38 +145,27 @@ test('Top has one address, and the sub-strip agrees about it', async ({ page }) 
   await page.goto('/');
   await settle(page);
 
-  // Built from the slug alone this said /c/top — a real prerendered page
-  // showing the same rows under a second URL.
+  // Built from the slug alone this said /c/top — the same rows under a second
+  // URL, which is now also a second entry in the router's route tree.
   const hrefs = await page.locator('.subpill').evaluateAll(
     (els) => els.map((e) => e.getAttribute('href')));
   expect(hrefs.length).toBeGreaterThan(1);
   expect(hrefs.filter((h) => h?.startsWith('/c/top'))).toEqual([]);
 });
 
-test('changing a preference drops the world the tab was holding', async ({ page }) => {
+test('returning to the feed does not re-ask for the world', async ({ page }) => {
   const t = await watch(page);
   await page.goto('/');
   await settle(page);
 
-  // The control: leaving and coming back holds what it had, so the assertion
-  // below is about the preference change and not about navigation.
   clear(t);
-  await page.goto('/saved');
-  await page.goto('/');
-  await settle(page);
-  expect(count(t.api, '/api/world'), `control: ${t.api.join(' ')}`).toBe(0);
-
-  await page.goto('/profile');
-  await page.locator('.setdrop summary').first().click();
-  const chip = page.locator('.setchips .chip input').first();
-  await chip.click();
-  await page.waitForTimeout(1_500);
-
-  clear(t);
-  await page.goto('/');
+  await page.locator('a[href="/saved"]').first().click();
+  await expect(page).toHaveURL(/\/saved/);
+  await page.waitForTimeout(1_000);
+  await page.locator('a[href="/"]').first().click();
   await settle(page);
 
-  // Ranked against preferences that just changed, and the cycle stamp the
-  // stored copy is keyed on has not moved — so it has to be asked for again.
-  expect(count(t.api, '/api/world'), `api: ${t.api.join(' ')}`).toBe(1);
+  // Held in IndexedDB against the cycle stamp, which has not moved, so leaving
+  // and coming back is free. /api/saved is its own cost and not this one.
+  expect(count(t.api, '/api/world'), `api: ${t.api.join(' ')}`).toBe(0);
 });

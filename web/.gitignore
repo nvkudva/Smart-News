@@ -25,3 +25,7 @@ dist-ssr
 
 # Cloudflare
 .wrangler
+
+# Playwright
+test-results
+playwright-report
