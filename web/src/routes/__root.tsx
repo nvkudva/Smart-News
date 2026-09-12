@@ -1,6 +1,8 @@
 import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
 import { AppHeader } from '../components/AppHeader'
+import { ServiceWorker } from '../components/ServiceWorker'
 import { StoryWarm } from '../components/StoryWarm'
+import { UpdateBanner } from '../components/UpdateBanner'
 import { TabBar } from '../components/TabBar'
 
 /**
@@ -8,11 +10,6 @@ import { TabBar } from '../components/TabBar'
  *
  * The metadata, viewport and the BOOT script move to index.html: they belong
  * to the document, and in an SPA the document is written once.
- *
- * ServiceWorker and UpdateBanner are still missing. Both depend on
- * public/sw.js, which is keyed on Next's BUILD_ID and caches paths this app
- * does not serve - shipping it would have a service worker holding the old
- * app's shells. That is its own step.
  */
 export const Route = createRootRoute({
   component: () => (
@@ -21,6 +18,8 @@ export const Route = createRootRoute({
       <AppHeader />
       <Outlet />
       <StoryWarm />
+      <ServiceWorker />
+      <UpdateBanner />
     </>
   ),
   notFoundComponent: NotFound,
