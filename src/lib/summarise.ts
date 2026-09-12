@@ -204,13 +204,22 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
     // compares this against the reader's two-letter home country.
     const cc = typeof s.country === 'string' && /^[A-Za-z]{2}$/.test(s.country.trim())
       ? s.country.trim().toUpperCase() : null;
+    // A model writing JSON as text hands back the word "null" as readily as the
+    // value, and `?? null` cannot see the difference: the story bar then prints
+    // `null · 3d ago · 2 outlets`, and the place resolver goes looking for a
+    // town called null. A placeholder name is no place at all.
+    const named = (v: unknown) => {
+      const t = typeof v === 'string' ? v.trim() : '';
+      return t && !/^(null|undefined|none|nil|n\/?a|unknown|-{1,2})$/i.test(t) ? t : null;
+    };
+    const place = named(s.place);
     // The free text stays exactly as the model wrote it; place_id is the
     // canonical row it points at, and is simply NULL when nothing matches.
-    const resolved = resolvePlaceLocal(d, s.place ?? null, cc);
+    const resolved = resolvePlaceLocal(d, place, cc);
     // A one-sentence field the model padded to a paragraph is still useful, but
     // an empty string is not — it renders as a side that said nothing.
     const framing = (v: unknown) => (typeof v === 'string' && v.trim().length > 15 ? v.trim() : null);
-    save.run(s.headline, s.crux, category, s.place ?? null, resolved.country, resolved.place_id,
+    save.run(s.headline, s.crux, category, place, resolved.country, resolved.place_id,
              Math.max(1, Math.min(5, Math.round(s.importance) || 3)),
              framing(s.framing_left), framing(s.framing_centre), framing(s.framing_right),
              Date.now(), t.article_count, t.id);
