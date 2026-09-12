@@ -72,10 +72,15 @@ export function currentUserId(request: Request): string {
 /**
  * The Set-Cookie header for a reader who arrived without one.
  *
- * Lax rather than Strict: a reader following a shared link should still be
- * recognised. Not HttpOnly — no client code reads it today, but the id is not
- * a secret and marking it so would only misstate what it protects.
+ * HttpOnly and Lax, matching what middleware.ts set in the Next tree: nothing
+ * in the browser needs to read it, and the less script can touch it the
+ * better, while Lax rather than Strict means arriving from a shared link still
+ * carries the reader's own settings.
+ *
+ * Secure follows the scheme rather than being unconditional, so a cookie is
+ * still issued over http on localhost.
  */
-export function issue(id: string): string {
-  return `${COOKIE}=${id}; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+export function issue(id: string, secure: boolean): string {
+  return `${COOKIE}=${id}; Path=/; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax`
+    + (secure ? '; Secure' : '');
 }

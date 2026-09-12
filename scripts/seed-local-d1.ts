@@ -89,6 +89,22 @@ function main() {
   }
   src.close();
 
+  /**
+   * The cycle stamp, derived here rather than copied.
+   *
+   * sync-d1.ts computes it against D1 at the end of a real run and nothing
+   * else writes it, so the sync_meta row in the local file is whatever the
+   * last sync left there - or, on a machine that has never synced, a
+   * hand-written test value. Copying that gives local D1 a stamp that does not
+   * describe its own rows, and every 304 in the app keys off it.
+   *
+   * Same expression as sync-d1.ts, evaluated over the rows just inserted, so
+   * the stamp and the data cannot disagree.
+   */
+  sql.push("INSERT OR REPLACE INTO sync_meta (key, value) " +
+    "SELECT 'cycle', COUNT(*) || '-' || COALESCE(MAX(last_seen), 0) " +
+    "FROM clusters WHERE headline IS NOT NULL;");
+
   const file = join(tmpdir(), `seed-local-d1-${process.pid}.sql`);
   writeFileSync(file, sql.join('\n') + '\n');
 
