@@ -1,3 +1,5 @@
+import { runAction } from './actions'
+import { ACTION_PATH } from '../shared/actions'
 import { withRequestCache } from './lib/cache'
 import { cacheHeaders, conditional, notModified } from './lib/cycle'
 import { setD1 } from './lib/d1'
@@ -71,6 +73,35 @@ async function place(request: Request, userId: string): Promise<Response> {
   return Response.json({ stamp: version.stamp, here }, { headers })
 }
 
+/**
+ * The write side: one path, the action named in the body.
+ *
+ * Never cached and never conditional - every one of these mutates the caller's
+ * own prefs row and the answer is the new state, which is what lets the control
+ * that called it render from the result rather than guess at it.
+ */
+async function action(request: Request, userId: string): Promise<Response> {
+  if (request.method !== 'POST') {
+    return Response.json({ error: 'POST only' }, { status: 405, headers: { allow: 'POST' } })
+  }
+
+  let body: { name?: unknown; args?: unknown }
+  try {
+    body = (await request.json()) as { name?: unknown; args?: unknown }
+  } catch {
+    return Response.json({ error: 'Body must be JSON' }, { status: 400 })
+  }
+
+  const result = await runAction(userId, body.name, body.args)
+  if (!result.ok) return Response.json({ error: result.error }, { status: result.status })
+
+  // { value } rather than the bare answer: three of these resolve to void, and
+  // Response.json(undefined) writes a body that will not parse.
+  return Response.json({ value: result.value }, {
+    headers: { 'cache-control': 'no-store' },
+  })
+}
+
 export default {
   async fetch(request, env) {
     setD1(env.DB)
@@ -93,7 +124,8 @@ export default {
       const userId = minted ?? held
 
       const response = await (
-        url.pathname === '/api/stamp' ? stamp(request)
+        url.pathname === ACTION_PATH ? action(request, userId)
+        : url.pathname === '/api/stamp' ? stamp(request)
         : url.pathname === '/api/world' ? world(request, url, userId)
         : url.pathname === '/api/place' ? place(request, userId)
         : Promise.resolve(new Response('Not found', { status: 404 }))

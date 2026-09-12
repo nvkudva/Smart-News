@@ -2,9 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>web</title>
+
+    <!--
+      What layout.tsx's `metadata` and `viewport` exports described. In an SPA
+      the document is written once, so it belongs here rather than in a
+      component - and there is no generateMetadata to vary it per route, which
+      is the trade the no-SSR decision already made.
+
+      The BOOT script is injected into the top of this head by a plugin in
+      vite.config.ts rather than pasted in. It is built out of NAV_KEY,
+      THEME_KEY, MODE_KEY and THEME_CHROME in src/lib/boot.ts, and a copy here
+      would drift from the module the components read those same keys from.
+    -->
+    <title>smartnews</title>
+    <meta
+      name="description"
+      content="World news, clustered from many sources and summarised into one paragraph."
+    />
+
+    <!-- viewport-fit=cover: the dock sits in the home-indicator inset. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- One static value, which BOOT overwrites in place before the first
+         paint, so an installed app's status bar has the page's own ground to
+         sit on from the moment the document is parsed. -->
+    <meta name="theme-color" content="#f7f7fa" />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="smartnews" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
     <div id="root"></div>
