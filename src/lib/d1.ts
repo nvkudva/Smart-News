@@ -1,9 +1,12 @@
 /**
  * D1 access for the web app.
  *
- * Two backends, one interface. Inside a Worker we use the `DB` binding; from
- * Node (`next dev`, scripts) we use D1's REST API. Same SQL either way, so the
- * deployed path is the path exercised in development — no divergence.
+ * Two backends, one interface: D1's REST API, or the pipeline's own SQLite file
+ * when SMARTNEWS_LOCAL_D1 is set. Same SQL either way.
+ *
+ * There is no binding backend here. This client is Node-only - scripts/ on a
+ * GitHub Actions runner - and the Worker that serves the site has its own in
+ * web/worker/lib/d1.ts, where the binding is the only backend there is.
  *
  * The ingest/cluster/summarise pipeline deliberately does NOT go through here.
  * It keeps working against local SQLite in db.ts, where a cluster run issues
@@ -17,30 +20,6 @@ export interface D1 {
   all<T = Row>(sql: string, params?: unknown[]): Promise<T[]>;
   get<T = Row>(sql: string, params?: unknown[]): Promise<T | undefined>;
   run(sql: string, params?: unknown[]): Promise<void>;
-}
-
-type D1Binding = {
-  prepare(sql: string): {
-    bind(...p: unknown[]): { all(): Promise<{ results: unknown[] }>; run(): Promise<unknown> };
-    all(): Promise<{ results: unknown[] }>;
-    run(): Promise<unknown>;
-  };
-};
-
-function fromBinding(binding: D1Binding): D1 {
-  const stmt = (sql: string, params: unknown[] = []) =>
-    params.length ? binding.prepare(sql).bind(...params) : binding.prepare(sql);
-  return {
-    async all<T>(sql: string, params: unknown[] = []) {
-      return (await stmt(sql, params).all()).results as T[];
-    },
-    async get<T>(sql: string, params: unknown[] = []) {
-      return ((await stmt(sql, params).all()).results as T[])[0];
-    },
-    async run(sql: string, params: unknown[] = []) {
-      await stmt(sql, params).run();
-    },
-  };
 }
 
 function fromHttp(accountId: string, databaseId: string, token: string): D1 {
@@ -98,21 +77,10 @@ let cached: D1 | null = null;
 export async function d1(): Promise<D1> {
   if (cached) return cached;
 
-  // Only take the binding when this really is the Workers runtime. Under
-  // `next dev` on Node the adapter still hands back a binding, but it points at
-  // a local miniflare database that is empty — which surfaces as "no such
-  // table" rather than as a missing binding. Node falls through to HTTP so
-  // development reads the same rows the deployed site does.
-  const onWorkers = typeof navigator !== 'undefined' &&
-    navigator.userAgent === 'Cloudflare-Workers';
-  if (onWorkers) {
-    try {
-      const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-      const env = (await getCloudflareContext({ async: true })).env as unknown as { DB?: D1Binding };
-      if (env?.DB) return (cached = fromBinding(env.DB));
-    } catch { /* fall through to HTTP */ }
-  }
-
+  // No binding branch here any more. This file is the pipeline's client and the
+  // pipeline is Node: it runs from scripts/ on a GitHub Actions runner, never
+  // inside a Worker. web/worker/lib/d1.ts is the binding one, and it is the
+  // only place a binding exists.
   if (process.env.SMARTNEWS_LOCAL_D1 === '1') return (cached = await fromSqlite());
 
   const account = process.env.CLOUDFLARE_ACCOUNT_ID;

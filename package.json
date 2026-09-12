@@ -3,10 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0",
-    "dev:local": "SMARTNEWS_LOCAL_D1=1 next dev -H 0.0.0.0",
-    "build": "next build",
-    "start": "next start -H 0.0.0.0",
     "ingest": "tsx scripts/ingest.ts",
     "pipeline": "tsx scripts/pipeline.ts",
     "pipeline:local": "LLM_PROVIDER=openai LLM_BASE_URL=http://localhost:1234/v1 LLM_MODEL=ornith-1.5-9b-mlx LLM_API_KEY=lm-studio LLM_CONCURRENCY=4 LLM_JSON_MODE=text tsx scripts/pipeline.ts",
@@ -17,35 +13,22 @@
     "gazetteer:gen": "tsx scripts/gen-gazetteer.ts",
     "sync": "tsx scripts/sync-d1.ts",
     "migrate:d1": "tsx scripts/migrate-d1.ts",
-    "deploy": "npm run migrate:d1 && opennextjs-cloudflare build && wrangler deploy",
     "hydrate": "tsx scripts/hydrate-d1.ts",
-    "seed:local-d1": "tsx scripts/seed-local-d1.ts",
-    "prebuild": "tsx scripts/gen-gazetteer.ts",
-    "test": "playwright test",
-    "pretest": "next build && opennextjs-cloudflare build"
+    "seed:local-d1": "tsx scripts/seed-local-d1.ts"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
     "@mozilla/readability": "^0.6.0",
     "@supabase/supabase-js": "^2.115.0",
     "jsdom": "^30.0.1",
-    "next": "16.3.4",
     "p-limit": "^7.3.2",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260910.1",
-    "@opennextjs/cloudflare": "^1.20.6",
-    "@playwright/test": "^1.63.0",
-    "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.4.1",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
-    "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5",
     "wrangler": "^4.129.0"
