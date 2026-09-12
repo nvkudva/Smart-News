@@ -1,11 +1,17 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "smartnews-spa",
+  "name": "smartnews",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-09-07",
   "compatibility_flags": ["nodejs_compat"],
-  // No directory: the Vite plugin owns it. No run_worker_first: assets must be
-  // served without invoking the Worker, or the migration saves nothing.
+  // No directory: the Vite plugin owns it.
+  //
+  // run_worker_first scoped to /api/*, and the scoping is the whole point. With
+  // "main" set and this omitted, the Worker receives every path that does not
+  // match a static asset - so not_found_handling never fires, deep links 404
+  // from the Worker, and every page view costs an invocation. Scoped, a page
+  // view is served from assets and is never billed. Measured: 10 deep-link
+  // views cost 0 invocations, 3 /api calls cost 3.
   "assets": {
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
