@@ -102,8 +102,31 @@ export async function summariseCluster(members: Member[]): Promise<LlmOutcome<Su
   // goes straight into the database as the story's headline.
   const s = out.value;
   if (typeof s.headline !== 'string' || typeof s.crux !== 'string') return { ok: false, reason: 'content' };
-  if (!s.headline.trim() || s.crux.trim().length < 40) return { ok: false, reason: 'content' };
-  return out;
+  const crux = whole(s.crux);
+  if (!s.headline.trim() || crux.length < 40) return { ok: false, reason: 'content' };
+  return { ok: true, value: { ...s, crux } };
+}
+
+/**
+ * The last complete sentence, and nothing after it.
+ *
+ * A small model routinely stops mid-sentence and still closes its JSON, so the
+ * object parses and the fragment reads as a finished summary. Ten of 234 live
+ * stories were like that - one of them 72 characters ending "used its AI model
+ * for ", mid-clause, with a trailing space. Length alone cannot tell a short
+ * summary from a severed one, which is why the floor below let them through.
+ *
+ * Cuts back to the last terminator rather than rejecting outright: a crux
+ * severed after four good sentences is still four good sentences, while one
+ * severed after half of the first has nothing left and fails the floor - and a
+ * failed summary is retried on a later cycle rather than stored.
+ */
+function whole(text: string): string {
+  const t = text.trim();
+  // Already finished, allowing for a closing quote or bracket after the stop.
+  if (/[.!?][")\u2019\u201d]?$/.test(t)) return t;
+  const cut = Math.max(t.lastIndexOf('.'), t.lastIndexOf('!'), t.lastIndexOf('?'));
+  return cut === -1 ? '' : t.slice(0, cut + 1);
 }
 
 /**
@@ -116,12 +139,14 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
   if (!best) return { ok: false, reason: 'content' };
   const text = (best.body ?? best.lead ?? '').replace(/\s+/g, ' ').trim();
   const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z"'“])/).slice(0, 5).join(' ');
-  if (!sentences) return { ok: false, reason: 'content' };
+  // The 620 is a hard cut and lands mid-sentence as readily as a model does.
+  const crux = whole(sentences.slice(0, 620));
+  if (!crux) return { ok: false, reason: 'content' };
   return {
     ok: true,
     value: {
       headline: best.title.replace(/\s*[|–-]\s*[^|–-]{0,24}$/, '').slice(0, 90),
-      crux: sentences.slice(0, 620),
+      crux,
       category: 'World',
       place: null,
       country: null,

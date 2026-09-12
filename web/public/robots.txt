@@ -1,0 +1,12 @@
+# Nothing here is worth indexing, so nothing is offered.
+#
+# Every path returns the same empty shell - there is no server render and no
+# generateMetadata - and the stories arrive afterwards from /api/*, which a
+# crawler does not execute. An indexed page would be a blank one.
+#
+# Crawler traffic is already free rather than merely cheap: the shell and the
+# hashed assets are served straight from static assets, and run_worker_first in
+# wrangler.jsonc scopes the Worker to /api/*, which nothing links to. This file
+# is about not wasting a crawler's time, and about not being indexed blank.
+User-agent: *
+Disallow: /
