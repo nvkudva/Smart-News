@@ -1,4 +1,5 @@
 import { d1 } from './d1';
+import { logWarn } from './log';
 
 /**
  * The version of the readable world, as one string.
@@ -25,8 +26,13 @@ export async function cycleStamp(): Promise<string | null> {
     if (!row?.value) return null;
     cached = { value: row.value, at: Date.now() };
     return row.value;
-  } catch {
-    return null;   // no stamp is not an error; it only means no 304s
+  } catch (err) {
+    // Not an error to the reader: they still get a correct answer, just a whole
+    // one. Worth knowing about anyway - with no stamp there are no ETags, so
+    // every response ships in full and the caching this app is built around
+    // quietly stops working.
+    logWarn('cycle.stamp_unavailable', err);
+    return null;
   }
 }
 

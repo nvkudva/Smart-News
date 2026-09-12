@@ -6,6 +6,7 @@ import {
 import { cycleStamp } from './cycle';
 import { placesReady } from './places';
 import { categoryBySlug, type Section } from '../../shared/taxonomy';
+import { logError } from './log';
 
 /**
  * The query layer behind the category strip. Every function here returns the
@@ -178,9 +179,12 @@ export async function getSection(
       if (category.slug === 'national') return getNationalSection(limit, userId);
       return getInternationalSection(limit, userId);
     });
-  } catch {
+  } catch (err) {
     // A store that predates the v1.5 migration answers some of these with a
-    // missing column. An empty section beats a 500 on a live deploy.
+    // missing column. An empty section beats a 500 on a live deploy - but this
+    // catch is not that narrow, so a D1 outage lands here too and renders as a
+    // section with nothing in it. Which of the two it was is what this records.
+    logError('section.failed', err, { section: category.slug });
     stories = [];
   }
   return { category, stories };

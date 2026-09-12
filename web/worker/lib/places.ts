@@ -23,6 +23,7 @@
  */
 
 import { d1 } from './d1';
+import { logWarn } from './log';
 import type { Place, PlaceKind } from '../../shared/types';
 export type { Place, PlaceKind };
 import { ALIASES, PLACES, type PlaceRow } from './gazetteer.gen';
@@ -121,7 +122,8 @@ export async function placesReady(): Promise<boolean> {
               (SELECT COUNT(*) FROM pragma_table_info('prefs') WHERE name='place_ids') AS prefs`);
     gazetteer = Boolean(row?.places && row?.cluster && row?.prefs);
     if (!gazetteer) negativeUntil = Date.now() + NEGATIVE_TTL_MS;
-  } catch {
+  } catch (err) {
+    logWarn('places.probe_failed', err);
     // An unreachable store is not an unmigrated one, and conflating them was
     // the worse half: a transient error made the whole request tree fall back
     // to pre-v1.5 shapes with no place data. Held for a much shorter moment, so

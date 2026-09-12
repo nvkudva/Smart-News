@@ -1,4 +1,5 @@
 import { cache } from './cache';
+import { logError } from './log';
 import { d1 } from './d1';
 import type { Article, Outlet, Prefs, Story } from '../../shared/types';
 // Re-exported: sections.ts, world.ts and library.ts import these from here,
@@ -354,7 +355,10 @@ export async function getLocalFeed(limit: number, userId: string): Promise<Story
       .sort((a, b) => b.k - a.k)
       .slice(0, limit)
       .map(({ s }) => ({ ...s, exploration: 0 as const, exploration_kind: null }));
-  } catch {
+  } catch (err) {
+    // /local renders this as "Nothing filed here in the last two days", which
+    // is a sentence about the news and not about a database.
+    logError('local_feed.failed', err);
     return [];
   }
 }

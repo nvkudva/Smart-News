@@ -2,6 +2,7 @@ import { ACTION_PATH } from '../shared/actions'
 import { runAction } from './actions'
 import { withRequestCache } from './lib/cache'
 import { setD1 } from './lib/d1'
+import { logError, requestContext, withLogContext } from './lib/log'
 import { SYSTEM_USER, currentUserId, issue, newUserId } from './lib/session'
 import * as read from './read'
 
@@ -55,8 +56,9 @@ export default {
   async fetch(request, env) {
     setD1(env.DB)
 
-    return withRequestCache(async () => {
-      const url = new URL(request.url)
+    const url = new URL(request.url)
+
+    return withLogContext(requestContext(request, url), () => withRequestCache(async () => {
 
       // Everything else is a static asset. run_worker_first in wrangler.jsonc
       // scopes this Worker to /api/*, so a page view never arrives here.
@@ -72,12 +74,27 @@ export default {
       const minted = held === SYSTEM_USER ? newUserId() : null
       const userId = minted ?? held
 
-      const response = await route(request, url, userId)
-      if (!minted) return response
+      try {
+        const response = await route(request, url, userId)
+        if (!minted) return response
 
-      const headers = new Headers(response.headers)
-      headers.append('set-cookie', issue(minted, url.protocol === 'https:'))
-      return new Response(response.body, { status: response.status, headers })
-    })
+        const headers = new Headers(response.headers)
+        headers.append('set-cookie', issue(minted, url.protocol === 'https:'))
+        return new Response(response.body, { status: response.status, headers })
+      } catch (err) {
+        // The boundary. Without it a thrown handler returns Cloudflare's own
+        // error page - HTML, to a caller that asked for JSON, with nothing on
+        // our side saying what happened. Cloudflare records the exception
+        // either way; this is what makes the answer usable and names the route.
+        //
+        // Nothing from the error reaches the client: the message could name a
+        // column or a query, and the reader can do nothing with either.
+        logError('request.unhandled', err)
+        return Response.json({ error: 'Internal server error' }, {
+          status: 500,
+          headers: { 'cache-control': 'no-store' },
+        })
+      }
+    }))
   },
 } satisfies ExportedHandler<Env>
