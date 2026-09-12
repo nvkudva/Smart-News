@@ -5,7 +5,7 @@
     "lib": ["ES2023"],
     "module": "esnext",
     "moduleResolution": "bundler",
-    "types": ["./worker-configuration.d.ts"],
+    "types": ["node", "./worker-configuration.d.ts"],
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
