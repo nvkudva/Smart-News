@@ -27,7 +27,7 @@ export type SectionData = {
 type WorldSection = {
   name: string; kind: 'scope' | 'topic'; total: number; ids: string[]; subs: SubCount[];
 };
-type World = {
+export type World = {
   stamp: string | null; sections: Record<string, WorldSection>; stories: SectionStory[];
 };
 
@@ -47,7 +47,6 @@ const TTL_MS = 60_000;
  * the tab.
  */
 let inflight: Promise<World> | null = null;
-let held: World | null = null;
 let at = 0;
 
 export function loadWorld(): Promise<World> {
@@ -55,8 +54,7 @@ export function loadWorld(): Promise<World> {
   at = Date.now();
   const p = resolve();
   inflight = p;
-  p.then((w) => { if (inflight === p) held = w; })
-   .catch(() => { if (inflight === p) { inflight = null; at = 0; } });
+  p.catch(() => { if (inflight === p) { inflight = null; at = 0; } });
   return p;
 }
 
@@ -143,24 +141,12 @@ export function sectionFrom(w: World, cat: string): SectionData {
 }
 
 /**
- * What is already in hand, or nothing. A cached section renders in the first
- * commit, with no loading state at all.
- */
-export function peekSection(cat: string): SectionData | null {
-  return held ? sectionFrom(held, cat) : null;
-}
-
-export function loadSection(cat: string): Promise<SectionData> {
-  return loadWorld().then((w) => sectionFrom(w, cat));
-}
-
-/**
  * Drop it outright. Saving preferences re-ranks four of the fourteen
  * orderings, and what is held here was built before the save; a TTL would let
  * the old order stand for up to a minute after the reader watched it change.
  */
 export function clearSections() {
-  inflight = null; held = null; at = 0;
+  inflight = null; at = 0;
   // IndexedDB outlives the tab and is keyed on the cycle stamp, which a
   // preference change does not move. Dropping the map alone would read the
   // old ranking straight back off disk.

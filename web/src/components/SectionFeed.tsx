@@ -1,6 +1,5 @@
-import { useSearch } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
-import { loadSection, peekSection, type SectionData } from '../lib/world';
+import { useLoaderData, useSearch } from '@tanstack/react-router';
+import { sectionFrom, type World } from '../lib/world';
 import { StoryCard, variantFor } from './StoryCard';
 import { SubcategoryStrip } from './SubcategoryStrip';
 
@@ -8,35 +7,14 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
   // strict:false because this renders under several routes; each one declares
   // ?sub= in its own validateSearch.
   const sub = (useSearch({ strict: false }) as { sub?: string }).sub ?? null;
-  // A cached section renders in the first commit, with no loading state at all.
-  const [data, setData] = useState<SectionData | null>(() => peekSection(cat));
-  const [failed, setFailed] = useState(false);
-
-  // Only `cat`. Changing the sub used to re-run this and fetch the same rows
-  // back under a different query string; it is now a filter over what is
-  // already here, so the strip responds with no request at all.
-  useEffect(() => {
-    let live = true;
-    const cached = peekSection(cat);
-    if (cached) { setData(cached); setFailed(false); return; }
-
-    setData(null);
-    setFailed(false);
-    loadSection(cat)
-      .then((d) => { if (live) setData(d); })
-      .catch(() => { if (live) setFailed(true); });
-    return () => { live = false; };
-  }, [cat]);
-
-  if (failed) {
-    return (
-      <div className="panel">
-        <div className="label">Could not load</div>
-        <p>{name} did not come back. Check your connection and try again.</p>
-      </div>
-    );
-  }
-  if (!data) return <SectionSkeleton />;
+  // strict:false again because both feed routes load the same world, so either
+  // match answers with it. This component used to fetch it a second time and
+  // hold its own loading and error states beside the route's; the loader has
+  // awaited it before this renders, which is why there is nothing to wait for
+  // and nothing to fail here. A pane the pager builds for a neighbouring
+  // category is another read of the same object, not another request.
+  const world = useLoaderData({ strict: false }) as World;
+  const data = sectionFrom(world, cat);
 
   // An unknown or now-empty ?sub= shows the whole section rather than an empty
   // one: the keyword lists run against live rows, and yesterday's link should

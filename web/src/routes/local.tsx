@@ -93,7 +93,7 @@ function LoadingLocal() {
           {Array.from({ length: 6 }, (_, i) => <div key={i} className="skel skel--compact" />)}
         </div>
       </main>
-      <TabBar active="home" />
+      <TabBar active="local" />
     </>
   )
 }
