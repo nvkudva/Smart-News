@@ -93,7 +93,10 @@ function StoryPage() {
           </div>
 
           <div className="detail__side story__rail">
-            <h2 className="sectitle">Sources</h2>
+            {/* Not "Sources". The list is not a citation to be checked - it is
+                where the reporting is, and this page is a summary of it. The
+                title says what tapping one gets you. */}
+            <h2 className="sectitle">Read the full story at</h2>
             <ul className="sources">
               {outlets.map((a) => (
                 <li key={a.url}>
