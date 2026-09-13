@@ -189,7 +189,6 @@ about volume: fourteen stored, ten browsed.
 | Catch-all | 318 clusters, 43% | ~19, 3% |
 | Subject subs | keyword lenses only | keyword lenses + the scope set |
 | Scope subs | 5 topic pills, capped | all 14 subjects present, by volume |
-| Recency | ranked into the list | a "Stories older than 24h" divider |
 
 India and World are removed as subjects. They were scopes wearing a subject's
 clothes: 187 of India's 191 clusters are `country = IN`, which is the National
@@ -320,9 +319,8 @@ emit two to four per cluster for almost nothing, since it already reads the text
 
 ## Open questions
 
-1. ~~**"Recent" is a sort, not a filter.**~~ Settled by Particle's pattern: break
-   the list with a "Stories older than 24h" divider and drop the pill. Removes
-   it from every subject's sub-row above.
+1. ~~**"Recent" is a sort, not a filter.**~~ Settled: no pill. The divider meant
+   to replace it is gone too — it took a grid cell and read as a stray card.
 2. **Transport** measured 8 after Disasters took its share. Folded in as
    Transport Accidents — but flight delays and metro openings are not accidents.
    Own subject, or accept the gap?

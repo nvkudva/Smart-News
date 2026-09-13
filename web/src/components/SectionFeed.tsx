@@ -1,4 +1,3 @@
-import { Fragment } from 'react';
 import { useLoaderData, useSearch } from '@tanstack/react-router';
 import { sectionFrom, type World } from '../lib/world';
 import { StoryCard, variantFor } from './StoryCard';
@@ -50,16 +49,9 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
               LCP - not simply the first story, which may have none. */}
           {(() => {
             const lcp = shown.find((s) => s.image_url)?.id;
-            // Recency is a divider rather than a pill: every pill in the strip
-            // above narrows the set, and a sort sitting among them would be the
-            // one control in the row that does something else.
-            const stale = Date.now() - 24 * 3_600_000;
-            const firstOld = shown.findIndex((s) => s.last_seen < stale);
             return shown.map((s, i) => (
-              <Fragment key={s.id}>
-                {i === firstOld && <p className="feed__divider">Stories older than 24 hours</p>}
-                <StoryCard story={s} variant={variantFor(s, i)} priority={s.id === lcp} />
-              </Fragment>
+              <StoryCard key={s.id} story={s} variant={variantFor(s, i)}
+                         priority={s.id === lcp} />
             ));
           })()}
         </div>
