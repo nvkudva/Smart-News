@@ -19,7 +19,6 @@
   "dependencies": {
     "@google/genai": "^2.21.0",
     "@mozilla/readability": "^0.6.0",
-    "@supabase/supabase-js": "^2.115.0",
     "jsdom": "^30.0.1",
     "p-limit": "^7.3.2",
     "rss-parser": "^3.13.0"
