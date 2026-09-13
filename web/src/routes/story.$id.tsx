@@ -56,12 +56,14 @@ function StoryPage() {
         <CategoryStrip active={slug(cluster.category)} />
         {/* Back, dateline and the save control read as one line: the story's
             own metadata sits in the bar rather than repeating under the title. */}
-        {/* The bar carries the two controls and nothing else. The dateline
-            was in here because there was room, but it belongs to the story
-            rather than to the chrome, and under the headline it reads as a
-            dateline instead of as a third button. */}
         <header className="story__topbar">
           <Link to="/" className="story__back" aria-label="Back"><Back /></Link>
+          <div className="story__meta">
+            {cluster.place && <><span>{cluster.place}</span><span className="sep">·</span></>}
+            <span>{ago(cluster.first_seen)}</span>
+            <span className="sep">·</span>
+            <span>{outlets.length} outlet{outlets.length === 1 ? '' : 's'}</span>
+          </div>
           <div className="story__save">
             <SaveButton clusterId={cluster.id} initial={saved} iconOnly />
           </div>
@@ -71,12 +73,6 @@ function StoryPage() {
           <div className="story__head">
             <div className="story__headtext">
               <h1 className="story__title">{cluster.headline}</h1>
-              <div className="story__meta">
-                {cluster.place && <><span>{cluster.place}</span><span className="sep">·</span></>}
-                <span>{ago(cluster.first_seen)}</span>
-                <span className="sep">·</span>
-                <span>{outlets.length} outlet{outlets.length === 1 ? '' : 's'}</span>
-              </div>
             </div>
 
             <div className="plate plate--detail">
@@ -86,13 +82,9 @@ function StoryPage() {
           </div>
 
           <div className="detail__main">
-            {/* No "What happened" over it. A label naming what a news page
-                obviously contains is the tell of an app screen; the first
-                paragraph, set larger, says the same thing by being the lede. */}
             <div className="panel">
-              {paragraphs.map((group, i) => (
-                <p key={i} className={i === 0 ? 'lede' : undefined}>{group.join(' ')}</p>
-              ))}
+              <div className="label">What happened</div>
+              {paragraphs.map((group, i) => <p key={i}>{group.join(' ')}</p>)}
             </div>
           </div>
 
@@ -122,7 +114,7 @@ function StoryPage() {
             <section className="story__related">
               <h2 className="sectitle">Related</h2>
               <div className="story__relgrid">
-                {related.slice(0, 3).map((r) => (
+                {related.map((r) => (
                   <StoryCard key={r.id} story={r} variant="compact" />
                 ))}
               </div>
