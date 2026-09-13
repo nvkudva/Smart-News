@@ -1487,6 +1487,10 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   border-bottom: 1px solid var(--glass-edge);
 }
 .appbar__brand {
+  /* Stated rather than inherited: the wordmark is the app's name and it is the
+     same app under every theme, so it does not take the reading face the way
+     the rest of the page does. */
+  font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
   display: flex; align-items: center; gap: 9px; line-height: 1.1;
   font-weight: 700; font-size: var(--t-8); letter-spacing: -0.02em;
   color: var(--ink); text-decoration: none;
@@ -1591,6 +1595,19 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    on a screen: a large x-height and open counters hold at the 15px the crux is
    set in, where a display serif would close up. The UI keeps the system sans -
    a control is not something you read. */
+/* The whole page, not a list of selectors. Type was set on headlines and
+   paragraphs and left the rest of the app in the UI sans, so a settings row, a
+   tab label, a source credit and a date all came from a different family than
+   the story beside them - four faces on one screen. Everything inherits the
+   reading face now; the headings above take the display serif on top of it,
+   and the wordmark is exempt on its own rule. */
+:root[data-theme="broadsheet"] body {
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+}
+:root[data-theme="fjord"] body {
+  font-family: Literata, Georgia, 'Times New Roman', serif;
+}
+
 :root[data-theme="broadsheet"] .card p,
 :root[data-theme="broadsheet"] .detail__main p,
 :root[data-theme="broadsheet"] .pagehead p {
