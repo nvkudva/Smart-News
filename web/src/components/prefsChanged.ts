@@ -1,6 +1,6 @@
 
-import { forgetPlace } from './HeaderAside';
-import { clearSections } from './SectionFeed';
+import { forgetPlaceLine } from '../lib/placeLine';
+import { clearSections } from '../lib/world';
 
 /**
  * What a preference change has to invalidate, and none of it reachable from the
@@ -16,7 +16,7 @@ import { clearSections } from './SectionFeed';
  */
 export function prefsChanged(): void {
   clearSections();
-  forgetPlace();
+  forgetPlaceLine();
   // Cache names are versioned; the prefix is what stays true.
   void caches?.keys()
     .then((names) => Promise.all(

@@ -46,7 +46,13 @@ export default defineConfig({
   webServer: {
     command: `bun run build && bunx vite preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}/api/stamp`,
-    reuseExistingServer: !process.env.CI,
+    // Never reuse, not even locally. Reuse skips the whole command - including
+    // the build - so a preview left running from earlier serves a stale bundle
+    // and the suite reports on code that is not the code in the tree. That cost
+    // an hour: thirteen green became thirteen red after a refactor the app was
+    // fine with, because the server answering was three builds old. The ten
+    // seconds a build costs is worth never wondering which bundle was tested.
+    reuseExistingServer: false,
     timeout: 300_000,
   },
 });

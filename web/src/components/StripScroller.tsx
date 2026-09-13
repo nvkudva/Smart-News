@@ -1,7 +1,7 @@
 
 import { useRouter } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
-import { warmSection } from './SectionFeed';
+import { warmSection } from '../lib/world';
 
 /**
  * Module scope on purpose: it survives a client navigation and resets on a hard

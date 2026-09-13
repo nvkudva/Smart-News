@@ -3,18 +3,12 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Pin } from './icons';
 import { ModeToggle } from './Mode';
+import { forgetPlaceLine, readPlaceLine, writePlaceLine, type PlaceLine } from '../lib/placeLine';
 import { sessionStamp } from '../lib/store';
 
-const KEY = 'sn_here';
-
-/** The stored line, against the cycle it was true for. */
-type Held = { stamp: string | null; here: string };
-
-/** Saving preferences can move this without moving the cycle stamp, so the
- *  purge that empties the section caches empties this too. */
-export function forgetPlace() {
-  try { localStorage.removeItem(KEY); } catch { /* nothing to forget */ }
-}
+/** Re-exported so nothing that already imports it from here has to move; the
+ *  storage itself lives in lib/placeLine.ts. */
+export const forgetPlace = forgetPlaceLine;
 
 /**
  * The date and the place are the only part of the header that is not the same
@@ -31,13 +25,8 @@ export function HeaderAside() {
     setToday(new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }));
 
     let live = true;
-    let held: Held | null = null;
-    try {
-      const raw = localStorage.getItem(KEY);
-      // Anything stored before this carried the line on its own.
-      if (raw) held = raw.startsWith('{') ? JSON.parse(raw) as Held : { stamp: null, here: raw };
-      if (held?.here) setHere(held.here);
-    } catch { /* first visit, or storage refused */ }
+    const held: PlaceLine | null = readPlaceLine();
+    if (held?.here) setHere(held.here);
 
     void (async () => {
       const stamp = await sessionStamp();
@@ -53,8 +42,7 @@ export function HeaderAside() {
         const { here: h } = await res.json() as { here: string };
         if (!live || !h) return;
         setHere(h);
-        try { localStorage.setItem(KEY, JSON.stringify({ stamp, here: h } satisfies Held)); }
-        catch { /* the label still shows */ }
+        writePlaceLine({ stamp, here: h });
       } catch { /* the pin keeps whatever it had; it is not the story */ }
     })();
 

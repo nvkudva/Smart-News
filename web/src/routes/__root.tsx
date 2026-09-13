@@ -1,8 +1,10 @@
 import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { AppHeader } from '../components/AppHeader'
 import { ServiceWorker } from '../components/ServiceWorker'
 import { StoryWarm } from '../components/StoryWarm'
 import { UpdateBanner } from '../components/UpdateBanner'
+import { startWorldRefresh } from '../lib/world'
 import { TabBar } from '../components/TabBar'
 
 /**
@@ -12,7 +14,18 @@ import { TabBar } from '../components/TabBar'
  * to the document, and in an SPA the document is written once.
  */
 export const Route = createRootRoute({
-  component: () => (
+  component: Root,
+  notFoundComponent: NotFound,
+})
+
+function Root() {
+  // The pipeline moves every fifteen minutes and the world follows it on the
+  // same clock. This used to arm itself when SectionFeed was imported, which
+  // meant a timer nothing had asked for and nothing could stop; it is the
+  // app's clock, so the app's root starts it.
+  useEffect(startWorldRefresh, [])
+
+  return (
     <>
       <div className="wash" aria-hidden><i /><i /><i /></div>
       <AppHeader />
@@ -21,9 +34,8 @@ export const Route = createRootRoute({
       <ServiceWorker />
       <UpdateBanner />
     </>
-  ),
-  notFoundComponent: NotFound,
-})
+  )
+}
 
 /** What not-found.tsx was. */
 function NotFound() {
