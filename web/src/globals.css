@@ -1520,10 +1520,12 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   padding: 12px 2px 14px;
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
+/* The masthead is not in this list. The wordmark is the app's name and it is
+   the same app under every theme, so it keeps Frosted's sans throughout - a
+   logo that changes typeface with a setting stops being a logo. */
 :root[data-theme="broadsheet"] .card h2,
 :root[data-theme="broadsheet"] .catlink,
-:root[data-theme="broadsheet"] .pagehead h1,
-:root[data-theme="broadsheet"] .appbar__brand {
+:root[data-theme="broadsheet"] .pagehead h1 {
   font-family: Newsreader, Georgia, 'Times New Roman', serif;
   font-weight: 600; letter-spacing: -0.008em;
 }
