@@ -4,7 +4,6 @@ import type { ProfilePayload } from '../../shared/types'
 import { PageSkeleton } from '../components/PageSkeleton'
 import { PlaceChoice, type PickedPlace } from '../components/PlaceChoice'
 import { CountryPicker, type CountryOption } from '../components/CountryPicker'
-import { GeoConsent } from '../components/GeoConsent'
 import { ModeControl } from '../components/Mode'
 import { PrefChips } from '../components/PrefChips'
 import { NavPlacementControl } from '../components/NavPlacement'
@@ -29,7 +28,7 @@ const nameOf = (c: string) => {
 }
 
 function Profile() {
-  const { prefs, countries, resolved, places, geo } = Route.useLoaderData()
+  const { prefs, countries, resolved, places } = Route.useLoaderData()
 
   // Anything chosen before this list existed - or typed as plain text back when
   // the control was a search box - stays on show so it can still be unticked.
@@ -76,14 +75,13 @@ function Profile() {
           <p className="setnote">Everything saves as you tap it.</p>
         </section>
 
-        {/* What is left under Location is the one thing that really is about
-            where the device is, rather than what the feed is tuned to. */}
-        <section className="setsection">
-          <h2 className="sethead">Location</h2>
-          <div className="setgroup">
-            <GeoConsent initialConsent={prefs.geoConsent} initialLabel={geo[0]?.label ?? null} />
-          </div>
-        </section>
+        {/* Location is hidden, not removed. Consent, the nearest-place
+            resolution and the gazetteer behind it all work; what does not is
+            the promise the row makes - a resolved place only joins the list
+            the feed ranks against, which is the same weighting a place picked
+            by hand already gets. Until it does something a reader can see,
+            asking for their location is asking for more than we spend. The
+            row goes back with the feature. */}
 
         <section className="setsection">
           <h2 className="sethead">Appearance</h2>
