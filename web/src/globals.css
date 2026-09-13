@@ -791,8 +791,13 @@ body {
    flex container at every width is what lets it be one. */
 .detail__main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .detail__main > .plate--detail { order: -1; }
-.plate--detail { height: 208px; border-radius: var(--r-md); }
-@media (min-width: 560px) { .plate--detail { aspect-ratio: 16 / 9; height: auto; max-height: 380px; } }
+/* Ratio rather than a fixed height. At 208px on a 375px screen the frame was
+   1.8:1 — wider than the 16/9 the larger breakpoints use — so a portrait
+   photograph lost most of itself to object-fit: cover. 4/3 gives the same
+   picture 281px on that screen and grows with the viewport instead of holding
+   still; the max-height keeps it off the whole fold on a wide phone. */
+.plate--detail { aspect-ratio: 4 / 3; max-height: 340px; border-radius: var(--r-md); }
+@media (min-width: 560px) { .plate--detail { aspect-ratio: 16 / 9; max-height: 380px; } }
 
 /* Detail layout lives at the end of the file on purpose: the base `.detail`
    rule above is equal specificity, so these must come after it to win. */
