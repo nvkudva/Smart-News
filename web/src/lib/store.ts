@@ -93,11 +93,12 @@ export function sessionStamp(): Promise<string | null> {
   return stamp;
 }
 
-/** A reader coming back to a tab left open wants this asked again. */
+/**
+ * A reader coming back to a tab left open wants this asked again.
+ *
+ * Called by the refresh in lib/world.ts, which listens for visibilitychange as
+ * part of a cancellable timer the root starts. This module used to register the
+ * same listener at import time - the same call on the same event, so one of
+ * them was always redundant, and the import-time one could not be stopped.
+ */
 export function forgetStamp() { stamp = null; stampAt = 0; }
-
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') forgetStamp();
-  });
-}
