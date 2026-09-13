@@ -55,7 +55,7 @@ function Profile() {
         </div>
 
         <section className="setsection">
-          <h2 className="sethead">Feed</h2>
+          <h2 className="sethead">Feed tuning</h2>
 
           <div className="setgroup">
             <PrefChips categories={CATEGORIES} initialPicked={[...prefs.categories]}
