@@ -352,7 +352,10 @@ body {
   box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 14px;
 }
-.label { font-size: var(--t-1); letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: oklch(0.55 0.02 258); }
+/* var(--kicker), not a literal: this was a fixed blue-grey, which is the frost
+   palette's, and it stayed blue-grey on Broadsheet's paper and in Northlight's
+   dark - one wrong colour on every panel of two themes. */
+.label { font-size: var(--t-1); letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: var(--kicker); }
 .panel p { margin: 0; font-size: var(--t-4); line-height: 1.58; color: var(--ink-2); text-wrap: pretty; }
 
 /* A section heading in the detail's side column, where .label — a 10.5px
@@ -371,15 +374,18 @@ body {
 
 .sources {
   margin: 0; padding: 0; list-style: none;
-  display: flex; flex-wrap: wrap; gap: 6px;
-  font-size: var(--t-2); line-height: 1.35; color: var(--ink-3);
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  font-size: var(--t-2); line-height: 1.5; color: var(--ink-3);
 }
+/* A credit line, not a toolbar. Twelve filled pills with borders and a radius
+   carried more ink than the paragraph they credit; an underline is what a link
+   in prose looks like. */
 .sources a {
-  display: flex; align-items: center; min-height: 30px; padding: 0 9px;
-  border-radius: var(--r-md); color: var(--accent); text-decoration: none;
-  background: var(--glass); border: 1px solid var(--glass-edge);
+  display: inline; color: var(--ink-2); text-decoration: none;
+  border-bottom: 1px solid var(--rule);
 }
-.sources a:hover { text-decoration: underline; }
+.sources a:hover { color: var(--ink); border-bottom-color: var(--ink-3); }
+
 
 /* ─────────────────────────────────────────────────────────────────────────
    Responsive pass.
@@ -791,22 +797,31 @@ body {
   .detail__main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
   .detail__side { display: flex; flex-direction: column; gap: 14px; }
   .detail h1 { font-size: var(--t-9); }
-  .detail .panel p { font-size: var(--t-5); line-height: 1.62; max-width: 78ch; }
+  /* The measure comes from the track this sits in, not from a cap on the
+     paragraph: capped here it left half the panel empty on the wide themes. */
+  .detail__main .panel p { font-size: var(--t-5); line-height: 1.72; }
 }
 
 /* Named areas rather than source order: the page reads head → summary → how it
    was covered → related on a phone, and the same five blocks reflow into a
    masthead, a body-and-rail row, and two full-width bands on a desktop. */
 @media (min-width: 1024px) {
+  /* The measure is the point, at every width above the phone: the body used to
+     run the whole track at about ninety-seven characters a line, past anything
+     a reader holds. Here it is one column, capped. */
   .detail {
     display: grid; grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "head" "main" "side" "cover" "rel";
-    row-gap: 30px; align-items: start;
+    /* Not one gap for every join. A blank line between the headline and the
+       body is not the same event as the end of the story, so the spacing says
+       which is which and a rule marks the one that matters. */
+    row-gap: 0; align-items: start;
   }
-  .detail__main { grid-area: main; }
-  /* The outlet list stops being a sticky rail beside the summary and becomes a
-     band under it: it is a credit, read once, not a companion to the reading. */
-  .detail__side { grid-area: side; position: static; top: auto; }
+  .detail__main { grid-area: main; margin-top: 26px; max-width: 68ch; }
+  .detail__side { grid-area: side; position: static; top: auto; margin-top: 30px; }
+  .story__coverage, .story__related {
+    margin-top: 44px; padding-top: 30px; border-top: 1px solid var(--rule);
+  }
   .detail h1 { font-size: var(--t-10); }
 }
 
@@ -2142,6 +2157,25 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .story__meta span.sep { opacity: .4; flex: 0 0 auto; }
 .story__save { margin-left: auto; flex: 0 0 auto; }
 
+/* The summary is the story, so it is set on the page rather than in a box.
+   Glass, a 20px radius and a shadow gave it the same chrome as the meter
+   beside it, which is what made the page read as five widgets. */
+/* Named twice on purpose: the dark-mode rule that gives every panel a lit
+   sheet is `:root[data-mode="dark"] .panel`, which outranks a plain
+   `.detail__main > .panel` whatever the order, so the dark half has to be
+   said explicitly or the summary keeps its card after dark. */
+.detail__main > .panel,
+:root[data-mode="dark"] .detail__main > .panel {
+  background: none; border: 0; border-radius: 0; box-shadow: none; padding: 0;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  gap: 0;
+}
+.detail__main .panel p { color: var(--ink); }
+.detail__main .panel p + p { margin-top: .85em; }
+/* The lede carries the weight the kicker used to. */
+.detail__main .panel p.lede { font-size: var(--t-6); line-height: 1.5; color: var(--ink); }
+.detail__main .panel p:not(.lede) { color: var(--ink-2); }
+
 .story__head { display: flex; flex-direction: column; gap: 14px; }
 .story__headtext { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
 .story__title {
@@ -2171,8 +2205,11 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 
 @media (min-width: 1024px) {
+  /* align-items: end, so the headline and its dateline sit on the hero's
+     bottom edge. Centred, a two-line headline floated in the middle of a
+     288px photograph with air above and below it and no line to sit on. */
   .story__head {
-    grid-area: head; display: grid; align-items: center; gap: 32px;
+    grid-area: head; display: grid; align-items: end; gap: 32px;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
   }
   .story__head .plate--detail { max-height: 288px; }
@@ -2185,10 +2222,24 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
     grid-template-columns: 320px minmax(0, 1fr); gap: 32px;
   }
   .story__framings { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 26px; }
+  .story__framings .framing p { font-size: var(--t-2); }
   .story__related { grid-area: rel; }
   /* Six cards, two rows of three. A compact card is a row with its own thumbnail,
      so three across is already half the width each card wants. */
   .story__relgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+}
+
+/* Past 1280 there is room for the credit to sit beside the prose rather than
+   in a band under it. Below that there is not: at 1024 a 260px rail left the
+   reading column 462px, which is forty-six characters - narrower than the
+   phone's, on a desktop. */
+@media (min-width: 1280px) {
+  .detail {
+    grid-template-columns: minmax(0, 68ch) minmax(260px, 1fr);
+    grid-template-areas: "head head" "main side" "cover cover" "rel rel";
+    column-gap: 40px;
+  }
+  .detail__main { max-width: none; }
 }
 .story__sides { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .story__rail { display: flex; flex-direction: column; gap: 12px; }
