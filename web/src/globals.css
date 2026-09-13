@@ -800,7 +800,11 @@ body {
   .detail__main { gap: 22px; }
   .detail__side { display: flex; flex-direction: column; gap: 14px; }
   .detail h1 { font-size: var(--t-9); }
-  .detail .panel p { font-size: var(--t-5); line-height: 1.62; max-width: 78ch; }
+  /* No measure cap. 78ch held the body to 596px inside a 793px column on a
+     folding phone's inner screen, which reads as the text having failed to
+     fill the page rather than as a considered measure. The column is what
+     limits the line length now - and above 1024 the photograph beside it does. */
+  .detail .panel p { font-size: var(--t-5); line-height: 1.62; }
 }
 
 /* Named areas rather than source order: the page reads head → summary → how it
