@@ -74,18 +74,20 @@ async function resolve(): Promise<World> {
   if (current) return current;
 
   const stale = await readEntry<World>(WORLD);
-  const have = stale?.data;
-  const since = have?.stories.length
+  // Nothing stored is the same shape as nothing worth keeping: `since` is 0, so
+  // `ask` returns the whole world and merging it over an empty one is itself.
+  // Special-casing that was a branch and a non-null assertion for a state merge
+  // already answers.
+  const have = stale?.data ?? { stamp: null, sections: {}, stories: [] };
+  const since = have.stories.length
     ? Math.max(...have.stories.map((s) => s.last_seen))
     : 0;
-  const fresh = await ask(since);
-  if (!since) { keep(WORLD, fresh.stamp, fresh); return fresh; }
 
-  const merged = merge(have!, fresh);
+  // `short` is merge's answer, not part of the world, so it does not get stored.
+  const { short, ...merged } = merge(have, await ask(since));
   // A delta naming a body we no longer hold means storage was evicted under
   // us. One full answer is cheaper and simpler than an endpoint per id.
-  const wanted = new Set(Object.values(merged.sections).flatMap((x) => x.ids));
-  if (merged.stories.length < wanted.size) {
+  if (short) {
     const whole = await ask(0);
     keep(WORLD, whole.stamp, whole);
     return whole;
@@ -103,16 +105,20 @@ function ask(since: number): Promise<World> {
  * appearing is how this learns a story was reaped, which a `since` alone could
  * never say.
  */
-function merge(have: World, delta: World): World {
+function merge(have: World, delta: World): World & { short: boolean } {
   const bodies = new Map<string, SectionStory>();
   for (const s of have.stories) bodies.set(s.id, s);
   for (const s of delta.stories) bodies.set(s.id, s);
 
+  // The set was built here and then again by the caller to ask the one question
+  // it wanted of it: is a named body missing.
   const wanted = new Set(Object.values(delta.sections).flatMap((x) => x.ids));
+  const stories = [...wanted].map((id) => bodies.get(id)).filter((s): s is SectionStory => !!s);
   return {
     stamp: delta.stamp,
     sections: delta.sections,
-    stories: [...wanted].map((id) => bodies.get(id)).filter((s): s is SectionStory => !!s),
+    stories,
+    short: stories.length < wanted.size,
   };
 }
 
@@ -127,12 +133,15 @@ function byId(w: World): Map<string, SectionStory> {
 
 export function sectionFrom(w: World, cat: string): SectionData {
   const s = w.sections[cat];
+  // One missing-section case, stated once, instead of a default per field.
+  if (!s) return { name: cat, kind: 'topic', subs: [], stories: [] };
+
   const by = byId(w);
   return {
-    name: s?.name ?? cat,
-    kind: s?.kind ?? 'topic',
-    subs: s?.subs ?? [],
-    stories: (s?.ids ?? []).map((id) => by.get(id)).filter((x): x is SectionStory => !!x),
+    name: s.name,
+    kind: s.kind,
+    subs: s.subs,
+    stories: s.ids.map((id) => by.get(id)).filter((x): x is SectionStory => !!x),
   };
 }
 

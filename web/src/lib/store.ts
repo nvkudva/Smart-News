@@ -42,17 +42,25 @@ function db(): Promise<IDBDatabase | null> {
   return open;
 }
 
-function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest): Promise<T | null> {
-  return db().then((d) => {
+/**
+ * Every way this can fail is the same answer: null, and the caller fetches.
+ *
+ * It said so three times - a try/catch inside the promise, an onerror handler,
+ * and a trailing .catch on the then-chain outside it - for a store whose whole
+ * contract is "the copy on disk, or nothing".
+ */
+async function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest): Promise<T | null> {
+  try {
+    const d = await db();
     if (!d) return null;
-    return new Promise<T | null>((resolve) => {
-      try {
-        const req = run(d.transaction(SECTIONS, mode).objectStore(SECTIONS));
-        req.onsuccess = () => resolve(req.result as T);
-        req.onerror = () => resolve(null);
-      } catch { resolve(null); }
+    const req = run(d.transaction(SECTIONS, mode).objectStore(SECTIONS));
+    return await new Promise<T | null>((resolve) => {
+      req.onsuccess = () => resolve(req.result as T);
+      req.onerror = () => resolve(null);
     });
-  }).catch(() => null);
+  } catch {
+    return null;
+  }
 }
 
 export function readEntry<T>(key: string): Promise<Entry<T> | null> {
