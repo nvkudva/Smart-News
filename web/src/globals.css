@@ -1668,13 +1668,27 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   --accent:        oklch(0.790 0.105 66);
   --ring:          oklch(0.790 0.105 66);
   --glass:         transparent;
-  --glass-edge:    rgba(255, 255, 255, 0.14);
+  /* Warm tones, not white at low alpha: a white hairline over a brown ground
+     is a grey one, and grey is the thing this theme does not have. */
+  --glass-edge:    oklch(0.315 0.022 74);
   --glass-warm:    none;
   --plate:         linear-gradient(150deg, oklch(0.325 0.026 80), oklch(0.265 0.022 80));
   --shadow:        none;
-  --rule:          rgba(255, 255, 255, 0.13);
+  --rule:          oklch(0.315 0.022 74);
   --bar:           oklch(0.222 0.020 74 / 0.90);
-  --bar-edge:      rgba(255, 255, 255, 0.16);
+  --bar-edge:      oklch(0.330 0.024 74);
+}
+/* Paper does not light up after dark either.
+   The generic dark rules lay a translucent white sheet over every card and
+   panel. That is right for the glass themes and it is exactly the card this
+   theme gave up in the light half - fill, corners and shadow - so it is taken
+   back off here. Two attributes, so specificity settles it wherever those
+   rules sit in the file; a panel keeps a surface because it is a box around
+   something, but the surface is a lighter brown rather than lit glass. */
+:root[data-theme="broadsheet"][data-mode="dark"] .card { background: none; }
+:root[data-theme="broadsheet"][data-mode="dark"] .panel {
+  background: oklch(0.202 0.020 72);
+  border-color: oklch(0.288 0.022 74);
 }
 
 
