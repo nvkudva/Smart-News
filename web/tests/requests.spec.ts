@@ -61,7 +61,10 @@ test('a cold feed costs one answer for the world and nothing per section', async
   // the per-section routes is that the bodies overlap.
   expect(count(t.api, '/api/world'), `world: ${t.api.join(' ')}`).toBe(1);
   expect(count(t.api, '/api/stamp'), `stamp: ${t.api.join(' ')}`).toBe(1);
-  expect(count(t.api, '/api/place'), `place: ${t.api.join(' ')}`).toBeLessThanOrEqual(1);
+  // Exact, not a ceiling. A cold load has no stored place line, so the header
+  // asks once - and "at most one" is the kind of bound a second caller can
+  // creep under without anyone noticing.
+  expect(count(t.api, '/api/place'), `place: ${t.api.join(' ')}`).toBe(1);
   // /api/section/[cat] and /api/stories are retired; nothing may bring them back.
   expect(t.api.filter((p) => !/^\/api\/(world|stamp|place)$/.test(p))).toEqual([]);
 });
