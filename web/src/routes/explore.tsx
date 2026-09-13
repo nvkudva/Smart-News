@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import type { ExplorePayload } from '../../shared/types'
+import { PageSkeleton } from '../components/PageSkeleton'
 import { CategoryTile, PlaceTile } from '../components/ExploreTiles'
 import { StoryCard, variantFor } from '../components/StoryCard'
 import { TabBar } from '../components/TabBar'
@@ -32,7 +33,7 @@ export const Route = createFileRoute('/explore')({
       persist: true, signal: abortController.signal,
     })
   },
-  pendingComponent: LoadingExplore,
+  pendingComponent: () => <PageSkeleton title="Explore" tab="explore" />,
   component: Explore,
 })
 
@@ -99,17 +100,3 @@ function Explore() {
   )
 }
 
-/** What explore/loading.tsx was. */
-function LoadingExplore() {
-  return (
-    <>
-      <main className="shell">
-        <div className="pagehead"><h1>Explore</h1></div>
-        <div className="feed" aria-busy="true" aria-label="Loading">
-          {Array.from({ length: 6 }, (_, i) => <div key={i} className="skel skel--compact" />)}
-        </div>
-      </main>
-      <TabBar active="explore" />
-    </>
-  )
-}

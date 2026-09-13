@@ -1,11 +1,6 @@
 
-import { useEffect, useState } from 'react';
-import { paintChrome, resolveMode, MODE_KEY } from '../lib/boot';
-
-// Repeated rather than imported from lib/boot: the root layout is a server
-// component and reads BOOT from there, and pulling the same module into the
-// client graph leaves this page's subtree unhydrated.
-const KEY = 'sn_theme';
+import { useState } from 'react';
+import { paintChrome, resolveMode, MODE_KEY, THEME_KEY } from '../lib/boot';
 
 export type Theme = 'frost' | 'pastel' | 'broadsheet' | 'fjord';
 
@@ -16,18 +11,20 @@ const OPTIONS: [Theme, string, string][] = [
   ['fjord', 'Northlight', 'Cold daylight. Flat surfaces, one petrol accent, serif headlines.'],
 ];
 
-export function ThemeControl() {
-  // 'frost' on the server and on the first client render alike: localStorage is
-  // unreadable during SSR, and rendering the stored value straight away would
-  // mismatch the markup React is hydrating against.
-  const [theme, setTheme] = useState<Theme>('frost');
+function read(): Theme {
+  try {
+    const v = localStorage.getItem(THEME_KEY) as Theme | null;
+    if (v && OPTIONS.some(([o]) => o === v)) return v;
+  } catch { /* storage blocked — the default is the right answer anyway */ }
+  return 'frost';
+}
 
-  useEffect(() => {
-    try {
-      const v = localStorage.getItem(KEY) as Theme | null;
-      if (v && OPTIONS.some(([o]) => o === v)) setTheme(v);
-    } catch { /* storage blocked — the default is the right answer anyway */ }
-  }, []);
+export function ThemeControl() {
+  // BOOT applied the stored theme to <html> before first paint, so reading it
+  // here agrees with what is already on screen. Defaulting and then correcting
+  // in an effect was a hydration workaround; there is no server render left to
+  // mismatch, and it showed the reader 'frost' selected for one frame.
+  const [theme, setTheme] = useState<Theme>(read);
 
   function choose(v: Theme) {
     setTheme(v);
@@ -37,8 +34,8 @@ export function ThemeControl() {
     try { stored = localStorage.getItem(MODE_KEY); } catch { /* auto is fine */ }
     paintChrome(v, resolveMode(stored));
     try {
-      if (v === 'frost') localStorage.removeItem(KEY);
-      else localStorage.setItem(KEY, v);
+      if (v === 'frost') localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, v);
     } catch { /* the theme still applies for this page's lifetime */ }
   }
 

@@ -7,12 +7,11 @@
  * there pulled `document` and `matchMedia` into a compilation that cannot see
  * them.
  *
- * Re-exported so the components keep importing every boot symbol from one
- * place, as they did when this file held all of them.
+ * The keys are re-exported because the controls and the BOOT snippet have to
+ * agree about them: Theme and NavPlacement each declared their own 'sn_theme'
+ * and 'sn_nav' literals, which is two sources for one fact.
  */
-export {
-  NAV_KEY, HIDDEN_KEY, THEME_KEY, MODE_KEY, THEME_CHROME, BOOT,
-} from '../../shared/boot';
+export { NAV_KEY, HIDDEN_KEY, THEME_KEY, MODE_KEY } from '../../shared/boot';
 
 import { THEME_CHROME } from '../../shared/boot';
 

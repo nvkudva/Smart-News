@@ -29,13 +29,12 @@ function apply(stored: Stored) {
 
 /** Shared so the header toggle and the settings control cannot disagree. */
 export function useMode() {
-  // 'auto' on the server and on the first client render alike: localStorage is
-  // unreadable during SSR, and reading it straight away would mismatch the
-  // markup React is hydrating against.
-  const [stored, setStored] = useState<Stored>('auto');
+  // BOOT resolved the pair before first paint, so the stored value is what is
+  // already on screen; defaulting to 'auto' and correcting in the effect was a
+  // hydration workaround with no server render left to protect.
+  const [stored, setStored] = useState<Stored>(read);
 
   useEffect(() => {
-    setStored(read());
     // Following the system means following it as it changes, not only as it was
     // at boot — a phone that dims itself at sunset should take the app with it.
     const mq = matchMedia('(prefers-color-scheme: dark)');

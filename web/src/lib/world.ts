@@ -20,8 +20,7 @@ import { deleteEntry, forgetStamp, readEntry } from './store';
  *  fetched, but the same shape this component has always rendered. */
 export type SectionStory = Story & { subs: string[]; cslug: string; outlets: Outlet[] };
 export type SectionData = {
-  stamp: string | null; name: string; kind: 'scope' | 'topic'; subs: SubCount[];
-  total: number; ids: string[]; stories: SectionStory[];
+  name: string; kind: 'scope' | 'topic'; subs: SubCount[]; stories: SectionStory[];
 };
 
 type WorldSection = {
@@ -130,12 +129,9 @@ export function sectionFrom(w: World, cat: string): SectionData {
   const s = w.sections[cat];
   const by = byId(w);
   return {
-    stamp: w.stamp,
     name: s?.name ?? cat,
     kind: s?.kind ?? 'topic',
     subs: s?.subs ?? [],
-    total: s?.total ?? 0,
-    ids: s?.ids ?? [],
     stories: (s?.ids ?? []).map((id) => by.get(id)).filter((x): x is SectionStory => !!x),
   };
 }

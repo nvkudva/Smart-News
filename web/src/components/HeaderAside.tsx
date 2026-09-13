@@ -3,12 +3,11 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Pin } from './icons';
 import { ModeToggle } from './Mode';
-import { forgetPlaceLine, readPlaceLine, writePlaceLine, type PlaceLine } from '../lib/placeLine';
+import { readPlaceLine, writePlaceLine, type PlaceLine } from '../lib/placeLine';
 import { sessionStamp } from '../lib/store';
 
 /** Re-exported so nothing that already imports it from here has to move; the
  *  storage itself lives in lib/placeLine.ts. */
-export const forgetPlace = forgetPlaceLine;
 
 /**
  * The date and the place are the only part of the header that is not the same

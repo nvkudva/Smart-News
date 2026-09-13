@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Bookmark, Compass, Home, Person } from './icons';
 import { Logo } from './Logo';
 
-type Tab = 'home' | 'local' | 'explore' | 'reels' | 'saved' | 'profile';
+export type Tab = 'home' | 'local' | 'explore' | 'reels' | 'saved' | 'profile';
 // 'local' stays in the union: /local still exists and marks itself active,
 // it simply no longer has its own tab now that Local is a category.
 

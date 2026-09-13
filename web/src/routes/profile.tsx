@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { CATEGORIES } from '../../shared/categories'
 import type { ProfilePayload } from '../../shared/types'
+import { PageSkeleton } from '../components/PageSkeleton'
 import { CountryPicker, type CountryOption } from '../components/CountryPicker'
 import { GeoConsent } from '../components/GeoConsent'
 import { ModeControl } from '../components/Mode'
@@ -15,7 +16,7 @@ import { load } from '../lib/load'
 export const Route = createFileRoute('/profile')({
   loader: ({ abortController }) =>
     load<ProfilePayload>('/api/profile', { signal: abortController.signal }),
-  pendingComponent: LoadingProfile,
+  pendingComponent: () => <PageSkeleton title="Profile" tab="profile" />,
   component: Profile,
 })
 
@@ -137,17 +138,3 @@ function Profile() {
   )
 }
 
-/** What profile/loading.tsx was. */
-function LoadingProfile() {
-  return (
-    <>
-      <main className="shell">
-        <div className="pagehead"><h1>Profile</h1></div>
-        <div className="feed" aria-busy="true" aria-label="Loading">
-          {Array.from({ length: 6 }, (_, i) => <div key={i} className="skel skel--compact" />)}
-        </div>
-      </main>
-      <TabBar active="profile" />
-    </>
-  )
-}

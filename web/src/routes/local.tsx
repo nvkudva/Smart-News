@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import type { LocalPayload } from '../../shared/types'
+import { PageSkeleton } from '../components/PageSkeleton'
 import { StoryCard, variantFor } from '../components/StoryCard'
 import { TabBar } from '../components/TabBar'
 import { Pin } from '../components/icons'
@@ -8,7 +9,7 @@ import { load } from '../lib/load'
 export const Route = createFileRoute('/local')({
   loader: ({ abortController }) =>
     load<LocalPayload>('/api/local', { persist: true, signal: abortController.signal }),
-  pendingComponent: LoadingLocal,
+  pendingComponent: () => <PageSkeleton title="Local" tab="local" />,
   component: Local,
 })
 
@@ -83,17 +84,3 @@ function Local() {
   )
 }
 
-/** What local/loading.tsx was. */
-function LoadingLocal() {
-  return (
-    <>
-      <main className="shell">
-        <div className="pagehead"><h1>Local</h1></div>
-        <div className="feed" aria-busy="true" aria-label="Loading">
-          {Array.from({ length: 6 }, (_, i) => <div key={i} className="skel skel--compact" />)}
-        </div>
-      </main>
-      <TabBar active="local" />
-    </>
-  )
-}

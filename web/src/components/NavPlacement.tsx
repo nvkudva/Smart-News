@@ -1,10 +1,6 @@
 
-import { useEffect, useState } from 'react';
-
-// Repeated rather than imported from lib/boot: the root layout is a server
-// component and reads BOOT from there, and pulling the same module into the
-// client graph leaves this page's subtree unhydrated.
-const KEY = 'sn_nav';
+import { useState } from 'react';
+import { NAV_KEY } from '../lib/boot';
 
 export type Placement = 'auto' | 'bottom' | 'side';
 
@@ -19,25 +15,24 @@ function applyPlacement(v: Placement) {
   else document.documentElement.dataset.nav = v;
 }
 
-export function NavPlacementControl() {
-  // 'auto' on the server and on the first client render alike: localStorage is
-  // unreadable during SSR, and rendering the stored value straight away would
-  // mismatch the markup React is hydrating against.
-  const [placement, setPlacement] = useState<Placement>('auto');
+function read(): Placement {
+  try {
+    const v = localStorage.getItem(NAV_KEY);
+    if (v === 'bottom' || v === 'side') return v;
+  } catch { /* storage blocked — 'auto' is the right answer anyway */ }
+  return 'auto';
+}
 
-  useEffect(() => {
-    try {
-      const v = localStorage.getItem(KEY);
-      if (v === 'bottom' || v === 'side') setPlacement(v);
-    } catch { /* storage blocked — 'auto' is the right answer anyway */ }
-  }, []);
+export function NavPlacementControl() {
+  // BOOT applied the stored placement before first paint; see ThemeControl.
+  const [placement, setPlacement] = useState<Placement>(read);
 
   function choose(v: Placement) {
     setPlacement(v);
     applyPlacement(v);
     try {
-      if (v === 'auto') localStorage.removeItem(KEY);
-      else localStorage.setItem(KEY, v);
+      if (v === 'auto') localStorage.removeItem(NAV_KEY);
+      else localStorage.setItem(NAV_KEY, v);
     } catch { /* the placement still applies for this page's lifetime */ }
   }
 
