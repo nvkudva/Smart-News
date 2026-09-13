@@ -175,6 +175,48 @@
 }
 
 html { background: var(--ground); }
+/* ── Faces ────────────────────────────────────────────────────────────────
+   Self-hosted, latin subset, straight from Google Fonts.
+
+   The <link> to fonts.googleapis.com was tried first and taken out again. A
+   stylesheet is render-blocking, so a slow or unreachable Google left the page
+   painting nothing at all - which is exactly what happened locally - and the
+   service worker can neither precache nor serve another origin, so the two
+   reading themes would have lost their type the moment the reader went
+   offline. Same-origin, sw.js caches these first-hit and serves them from the
+   cache thereafter. Three files are variable, which is why one face serves
+   every weight of them.
+
+   Declared for every theme and downloaded by none of them until a rule below
+   actually sets one: the two glass themes name only the system sans, so a
+   reader on Frosted pays nothing for any of this.
+   ───────────────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Newsreader';
+  src: url('/fonts/newsreader-var.woff2') format('woff2-variations');
+  font-weight: 200 800; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Source Serif 4';
+  src: url('/fonts/source-serif-4-var.woff2') format('woff2-variations');
+  font-weight: 200 900; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Public Sans';
+  src: url('/fonts/public-sans-var.woff2') format('woff2-variations');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Spectral';
+  src: url('/fonts/spectral-400.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Spectral';
+  src: url('/fonts/spectral-600.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+
 body {
   padding-top: var(--appbar-h);
   background: var(--ground);
@@ -1485,6 +1527,17 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   font-family: Newsreader, Georgia, 'Times New Roman', serif;
   font-weight: 600; letter-spacing: -0.008em;
 }
+/* The body face, not only the headlines. Source Serif 4 was drawn for reading
+   on a screen: a large x-height and open counters hold at the 15px the crux is
+   set in, where a display serif would close up. The UI keeps the system sans -
+   a control is not something you read. */
+:root[data-theme="broadsheet"] .card p,
+:root[data-theme="broadsheet"] .detail__main p,
+:root[data-theme="broadsheet"] .pagehead p {
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  font-size: calc(var(--t-3) + 0.5px);
+  line-height: 1.55;
+}
 :root[data-theme="broadsheet"] .plate { border-radius: 3px; border-color: var(--rule); }
 
 
@@ -1524,11 +1577,23 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
 :root[data-theme="fjord"] .plate { border-radius: 6px; border-color: var(--rule); }
-/* Serif for what is read, the UI sans for everything that is a control. */
+/* Serif for what is read, the UI sans for everything that is a control.
+   Spectral rather than Newsreader: it is the cooler and more upright of the
+   two, which is the whole of this theme's argument, and its 600 holds a
+   headline at small sizes without going black. */
 :root[data-theme="fjord"] .card h2,
 :root[data-theme="fjord"] .pagehead h1 {
-  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-family: Spectral, Georgia, 'Times New Roman', serif;
   font-weight: 600; letter-spacing: -0.008em;
+}
+/* Public Sans for what is read below the headline. A serif body would make
+   this the same theme as Broadsheet in a different colour; the flat surfaces
+   want a face with no warmth in it either. */
+:root[data-theme="fjord"] .card p,
+:root[data-theme="fjord"] .detail__main p,
+:root[data-theme="fjord"] .pagehead p {
+  font-family: 'Public Sans', -apple-system, system-ui, sans-serif;
+  line-height: 1.55;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -1879,6 +1944,14 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   display: grid; gap: 7px;
   grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
 }
+/* A place is "Bengaluru, Karnataka, India", not "Business": three times the
+   width of the category chips this grid was drawn for, which left every one of
+   them wrapping to three lines inside a 136px column. Wider columns, and the
+   label truncates rather than wrapping - the whole of it is in the title. */
+.setchips--wide { grid-template-columns: repeat(auto-fill, minmax(216px, 1fr)); }
+.setchips--wide .chip { white-space: nowrap; }
+.setchips--wide .chip span { overflow: hidden; text-overflow: ellipsis; }
+
 .setchips .chip { justify-content: flex-start; }
 .setchips .chip { cursor: pointer; font: inherit; font-size: var(--t-2); font-weight: 600; }
 .setchips .chip input { margin: 0; accent-color: var(--accent); }

@@ -2,12 +2,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { CATEGORIES } from '../../shared/categories'
 import type { ProfilePayload } from '../../shared/types'
 import { PageSkeleton } from '../components/PageSkeleton'
+import { PlaceChoice, type PickedPlace } from '../components/PlaceChoice'
 import { CountryPicker, type CountryOption } from '../components/CountryPicker'
 import { GeoConsent } from '../components/GeoConsent'
 import { ModeControl } from '../components/Mode'
 import { PrefChips } from '../components/PrefChips'
 import { NavPlacementControl } from '../components/NavPlacement'
-import { PlacePicker, type PickedPlace } from '../components/PlacePicker'
 import { TabBar } from '../components/TabBar'
 import { ThemeControl } from '../components/Theme'
 import { load } from '../lib/load'
@@ -29,10 +29,10 @@ const nameOf = (c: string) => {
 }
 
 function Profile() {
-  const { prefs, countries, resolved, geo } = Route.useLoaderData()
+  const { prefs, countries, resolved, places, geo } = Route.useLoaderData()
 
-  // Anything typed before the gazetteer existed - or typed as plain text since -
-  // stays on show as a chip of its own rather than disappearing from the form.
+  // Anything chosen before this list existed - or typed as plain text back when
+  // the control was a search box - stays on show so it can still be unticked.
   const named = new Set(resolved.map((p) => p.name.toLowerCase()))
   const picked: PickedPlace[] = [
     ...resolved.map((p) => ({ id: p.id, name: p.name, label: p.label })),
@@ -60,38 +60,30 @@ function Profile() {
           <div className="setgroup">
             <PrefChips categories={CATEGORIES} initialPicked={[...prefs.categories]}
                        initialHidden={[...prefs.hidden]} />
+            {/* Country and places are the same kind of answer as Interests -
+                they order what is already in the feed rather than fetching
+                anything - so they are the same control in the same group.
+                Under a Location heading they read as a profile field and as a
+                request for coverage, which neither of them is. */}
+            <CountryPicker country={prefs.country} options={options} />
+            <PlaceChoice initial={picked} options={places} />
           </div>
 
           <p className="setnote">
             Everything saves as you tap it. Interests weight the feed rather than
             filter it — hiding is what removes a subject, from the feed and from
-            the strip alike.
+            the strip alike. National and International are your country and
+            everything else.
           </p>
         </section>
 
-        {/* One section, because they are one question: where you are reading
-            from. The country is not a profile field — National is the stories
-            filed to it and International is everything else — so it belongs
-            beside the places rather than above the interests. */}
+        {/* What is left under Location is the one thing that really is about
+            where the device is, rather than what the feed is tuned to. */}
         <section className="setsection">
           <h2 className="sethead">Location</h2>
-
           <div className="setgroup">
-            <CountryPicker country={prefs.country} options={options} />
-
-            {/* The picker heads itself; a second title above it said the same
-                words twice. */}
-            <div className="setrow setrow--stack">
-              <PlacePicker initial={picked} />
-            </div>
-
             <GeoConsent initialConsent={prefs.geoConsent} initialLabel={geo[0]?.label ?? null} />
           </div>
-
-          <p className="setnote">
-            National and International are this country and everything else. The
-            list holds only countries we currently carry stories for.
-          </p>
         </section>
 
         <section className="setsection">

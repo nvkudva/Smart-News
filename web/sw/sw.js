@@ -164,8 +164,11 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Content-hashed, so a hit can never be the wrong bytes.
-  if (url.pathname.startsWith('/assets/')) {
+  // Content-hashed, so a hit can never be the wrong bytes. /fonts is here too:
+  // the names are not hashed, but a face only ever changes by being replaced
+  // with a differently named file, and cache-first is what keeps Broadsheet and
+  // Northlight in their own type offline rather than falling back to Georgia.
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/fonts/')) {
     e.respondWith(caches.open(SHELL).then(async (c) => {
       const hit = await c.match(request);
       if (hit) return hit;

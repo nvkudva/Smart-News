@@ -181,15 +181,17 @@ export async function explore(request: Request, url: URL): Promise<Response> {
 }
 
 export async function profile(_request: Request, userId: string): Promise<Response> {
-  const [prefs, stats, countries] = await Promise.all([
-    getPrefs(userId), getStats(), countriesWithNews(),
+  // 60 rather than explore's 18: this is a list to choose from, not a row of
+  // tiles, and a reader looking for their own city should find it.
+  const [prefs, stats, countries, places] = await Promise.all([
+    getPrefs(userId), getStats(), countriesWithNews(), getPlaceFacets(60),
   ]);
   const [resolved, geo] = await Promise.all([
     getPlaces(prefs.placeIds),
     prefs.geoConsent && prefs.geoPlaceId ? getPlaces([prefs.geoPlaceId]) : Promise.resolve([]),
   ]);
 
-  const payload: ProfilePayload = { prefs, stats, countries, resolved, geo };
+  const payload: ProfilePayload = { prefs, stats, countries, resolved, places, geo };
   return Response.json(payload, { headers: PRIVATE });
 }
 

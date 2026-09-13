@@ -83,10 +83,10 @@ export async function getCategoryFacets(): Promise<CategoryFacet[]> {
 export async function getPlaceFacets(limit = 18): Promise<PlaceFacet[]> {
   if (!(await placesReady())) return [];   // no gazetteer, no place facets — the category ones still stand
   return d1().all<PlaceFacet>(
-    `SELECT p.id AS place_id, p.label, p.kind, p.country, COUNT(*) AS stories
+    `SELECT p.id AS place_id, p.name, p.label, p.kind, p.country, COUNT(*) AS stories
        FROM clusters c JOIN places p ON p.id = c.place_id
       WHERE c.headline IS NOT NULL AND c.last_seen >= ?
-      GROUP BY p.id, p.label, p.kind, p.country
+      GROUP BY p.id, p.name, p.label, p.kind, p.country
       ORDER BY stories DESC LIMIT ?`, [Date.now() - 48 * 3_600_000, limit]);
 }
 

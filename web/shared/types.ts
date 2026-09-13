@@ -71,7 +71,7 @@ export type CategoryFacet = {
 };
 
 export type PlaceFacet = {
-  place_id: string; label: string; kind: PlaceKind; country: string; stories: number;
+  place_id: string; name: string; label: string; kind: PlaceKind; country: string; stories: number;
 };
 
 export type Stats = {
@@ -122,6 +122,10 @@ export type ProfilePayload = {
   countries: string[];
   /** The reader's placeIds, resolved through the gazetteer. */
   resolved: Place[];
+  /** The places we actually hold stories for, commonest first. The picker
+   *  offers these and nothing else: a place no source covers can only ever
+   *  produce an empty local feed. */
+  places: PlaceFacet[];
   /** The consented geo place, if there is one. */
   geo: Place[];
 };
