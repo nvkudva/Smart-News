@@ -1576,8 +1576,13 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* The masthead is not in this list. The wordmark is the app's name and it is
    the same app under every theme, so it keeps Frosted's sans throughout - a
    logo that changes typeface with a setting stops being a logo. */
+/* .story__title belongs in this list: it is the biggest headline in the app
+   and it was the one heading still set in the UI sans, so the story a reader
+   opened from a serif feed arrived in a different typeface than the card that
+   sent them. */
 :root[data-theme="broadsheet"] .card h2,
 :root[data-theme="broadsheet"] .catlink,
+:root[data-theme="broadsheet"] .story__title,
 :root[data-theme="broadsheet"] .pagehead h1 {
   font-family: Newsreader, Georgia, 'Times New Roman', serif;
   font-weight: 600; letter-spacing: -0.008em;
@@ -1637,6 +1642,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    two, which is the whole of this theme's argument, and its 600 holds a
    headline at small sizes without going black. */
 :root[data-theme="fjord"] .card h2,
+:root[data-theme="fjord"] .story__title,
 :root[data-theme="fjord"] .pagehead h1 {
   font-family: Spectral, Georgia, 'Times New Roman', serif;
   font-weight: 600; letter-spacing: -0.008em;
