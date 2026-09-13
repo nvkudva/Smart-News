@@ -1,11 +1,11 @@
 import type {
-  ExplorePayload, LocalPayload, ProfilePayload, ReelsPayload, SavedPayload, StoryPayload,
+  ExplorePayload, LocalPayload, ProfilePayload, ReelsPayload, SavedPayload, Story, StoryPayload,
 } from '../shared/types';
 import { slug } from '../shared/taxonomy';
 import { cacheHeaders, conditional, notModified } from './lib/cycle';
 import { effectivePlaceIds, getLocalFeed, getPrefs, getStory, prefsFingerprint } from './lib/feed';
 import {
-  getByCategory, getByCountry, getByPlace, getCategoryFacets, getPlaceFacets,
+  getByColumn, getByPlace, getCategoryFacets, getPlaceFacets,
   getReels, getSaved, getStats, isSaved, savedAmong,
 } from './lib/library';
 import { getPlaces } from './lib/places';
@@ -51,10 +51,7 @@ const PRIVATE = { 'cache-control': 'no-store' } as const;
  */
 export async function stamp(request: Request): Promise<Response> {
   const version = await conditional(request, 'stamp');
-  const headers = {
-    ...cacheHeaders(version, 15, 300),
-    'cache-control': 'public, max-age=15, stale-while-revalidate=300',
-  };
+  const headers = cacheHeaders(version, 15, 300, 'public');
   if (version.fresh) return notModified(headers);
   return Response.json({ stamp: version.stamp }, { headers });
 }
@@ -150,20 +147,24 @@ export async function explore(request: Request, url: URL): Promise<Response> {
   const version = await conditional(request, scope);
   // No reader in any of these answers, so the browser cache may hold them as
   // public - the only one of the read routes that can.
-  const headers = {
-    ...cacheHeaders(version, 60, 600),
-    'cache-control': 'public, max-age=60, stale-while-revalidate=600',
-  };
+  const headers = cacheHeaders(version, 60, 600, 'public');
   if (version.fresh) return notModified(headers);
 
   if (category || country || place) {
     // Place ids are opaque, so the heading comes from the gazetteer's own
     // label rather than from anything read out of the id.
-    const [stories, title] = category
-      ? [await getByCategory(category), category]
-      : place
-        ? [await getByPlace(place), (await getPlaces([place]))[0]?.label ?? 'Place']
-        : [await getByCountry(country!), countryName(country!)];
+    let stories: Story[];
+    let title: string;
+    if (category) {
+      stories = await getByColumn('category', category);
+      title = category;
+    } else if (place) {
+      stories = await getByPlace(place);
+      title = (await getPlaces([place]))[0]?.label ?? 'Place';
+    } else {
+      stories = await getByColumn('country', country!);
+      title = countryName(country!);
+    }
 
     const payload: ExplorePayload = {
       stamp: version.stamp,

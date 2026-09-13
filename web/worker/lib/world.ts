@@ -56,13 +56,12 @@ export async function getWorld(userId: string, since: number): Promise<World> {
   // getSection, so on a warm isolate this is fourteen map lookups; on a cold
   // one the queries at least overlap rather than queue.
   const got = await Promise.all(
-    TAXONOMY.map(async (c) => [c, await getSection(c.slug, undefined, userId)] as const));
+    TAXONOMY.map(async (c) => [c, await getSection(c.slug, userId)] as const));
 
   const sections: Record<string, WorldSection> = {};
   const bodies = new Map<string, Story>();
 
-  for (const [c, section] of got) {
-    const rows = section?.stories ?? [];
+  for (const [c, rows] of got) {
     const page = rows.slice(0, SECTION_PAGE);
     sections[c.slug] = {
       name: c.name,

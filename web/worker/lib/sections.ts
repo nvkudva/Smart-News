@@ -1,11 +1,11 @@
 import { d1 } from './d1';
 import {
-  getFeed, getLocalFeed, getPrefs, idList, prefsFingerprint, storyCols, storyFrom,
+  getFeed, getLocalFeed, getPrefs, idList, prefsFingerprint, storyCols, STORY_FROM,
   withPlaceLabels, withoutHidden, type Outlet, type Story,
 } from './feed';
 import { cycleStamp } from './cycle';
 import { placesReady } from './places';
-import { categoryBySlug, type Section } from '../../shared/taxonomy';
+import { categoryBySlug } from '../../shared/taxonomy';
 import { logError } from './log';
 
 /**
@@ -45,7 +45,7 @@ export const SECTION_PAGE = 48;
 export async function outletsFor(ids: string[]): Promise<Map<string, Outlet[]>> {
   const by = new Map<string, Outlet[]>();
   if (!ids.length) return by;
-  const rows = await (await d1()).all<Outlet & { cluster_id: string }>(
+  const rows = await d1().all<Outlet & { cluster_id: string }>(
     `SELECT a.cluster_id, s.name AS source, s.bias, min(a.url) AS url
        FROM articles a JOIN sources s ON s.id = a.source_id
       WHERE a.cluster_id IN (${idList(ids)})
@@ -63,9 +63,9 @@ const stamp = (rows: Story[]): Story[] =>
 
 async function bySql(where: string, params: unknown[], limit: number): Promise<Story[]> {
   const ready = await placesReady();
-  const rows = withPlaceLabels(await (await d1()).all<Story>(
+  const rows = withPlaceLabels(await d1().all<Story>(
     `SELECT ${storyCols(ready)}
-       ${storyFrom(ready)}
+       ${STORY_FROM}
       WHERE c.headline IS NOT NULL AND c.last_seen >= ? AND ${where}
       ORDER BY c.importance DESC, c.last_seen DESC LIMIT ${limit}`,
     [Date.now() - WINDOW_MS, ...params]));
@@ -81,7 +81,7 @@ async function bySql(where: string, params: unknown[], limit: number): Promise<S
  * a picker listing all 249 would let a reader choose two empty sections.
  */
 export async function countriesWithNews(): Promise<string[]> {
-  const rows = await (await d1()).all<{ country: string }>(
+  const rows = await d1().all<{ country: string }>(
     `SELECT DISTINCT country FROM clusters
       WHERE headline IS NOT NULL AND country IS NOT NULL AND last_seen >= ?
       ORDER BY country`, [Date.now() - WINDOW_MS]);
@@ -151,15 +151,17 @@ function cached(key: string, stamp: string | null, run: () => Promise<Story[]>):
 }
 
 /**
- * One entry point for the strip. Returns null for a slug outside the taxonomy so
- * the caller can 404 rather than render an empty section, which a reader would
- * read as a quiet news day.
+ * One entry point for the strip: the rows for one slug, ranked and memoised.
+ *
+ * It used to take a `limit` in the middle and default it, which made its only
+ * caller pass a literal `undefined` to reach the argument after it, and to
+ * answer `{ category, stories }` or null - but getWorld walks TAXONOMY itself,
+ * so it already holds the category and never asks for a slug outside it.
  */
-export async function getSection(
-  slug: string, limit = SECTION_LIMIT, userId: string,
-): Promise<{ category: Section; stories: Story[] } | null> {
+export async function getSection(slug: string, userId: string): Promise<Story[]> {
   const category = categoryBySlug(slug);
-  if (!category) return null;
+  if (!category) return [];
+  const limit = SECTION_LIMIT;
 
   // A topic section is the same rows for everyone, so it is keyed without a
   // reader at all; the four that rank against preferences carry a fingerprint
@@ -187,5 +189,5 @@ export async function getSection(
     logError('section.failed', err, { section: category.slug });
     stories = [];
   }
-  return { category, stories };
+  return stories;
 }

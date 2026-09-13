@@ -8,8 +8,9 @@
  * with a local D1 behind the same binding. Seed that with `npm run
  * seed:local-d1`.
  *
- * The interface is unchanged, so every `await (await d1()).all(...)` call site
- * in feed.ts, sections.ts, places.ts, library.ts and cycle.ts ports untouched.
+ * The interface is unchanged bar one thing: this used to be async, which meant
+ * every call site read `await d1().all(...)`. It resolves a binding
+ * already in hand and awaits nothing, so it is sync and the outer await is gone.
  */
 
 export type Row = Record<string, unknown>;
@@ -52,7 +53,7 @@ export function setD1(binding: D1Database): void {
   current = fromBinding(binding);
 }
 
-export async function d1(): Promise<D1> {
+export function d1(): D1 {
   if (!current) throw new Error('No D1 binding: call setD1(env.DB) before handling a request.');
   return current;
 }

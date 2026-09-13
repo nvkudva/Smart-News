@@ -21,7 +21,7 @@ let cached: { value: string; at: number } | null = null;
 export async function cycleStamp(): Promise<string | null> {
   if (cached && Date.now() - cached.at < TTL_MS) return cached.value;
   try {
-    const row = await (await d1()).get<{ value: string }>(
+    const row = await d1().get<{ value: string }>(
       'SELECT value FROM sync_meta WHERE key = ?', ['cycle']);
     if (!row?.value) return null;
     cached = { value: row.value, at: Date.now() };
@@ -82,9 +82,13 @@ export async function conditional(request: Request, scope: string) {
 export function cacheHeaders(
   { stamp, etag }: { stamp: string | null; etag: string | null },
   maxAge: number, swr: number,
+  // The two answers with no reader in them are public. They used to say so by
+  // overwriting the whole cache-control string with the same numbers retyped,
+  // which is the numbers stated twice and one place for them to disagree.
+  visibility: 'private' | 'public' = 'private',
 ): Record<string, string> {
   const h: Record<string, string> = {
-    'cache-control': `private, max-age=${maxAge}, stale-while-revalidate=${swr}`,
+    'cache-control': `${visibility}, max-age=${maxAge}, stale-while-revalidate=${swr}`,
   };
   if (etag) h.etag = etag;
   if (stamp) h[STAMP_HEADER] = stamp;

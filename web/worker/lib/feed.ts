@@ -31,7 +31,7 @@ export const storyCols = (ready: boolean) => `c.id, c.headline, c.crux, c.catego
        ${ready ? 'c.place_id' : 'NULL AS place_id'}, NULL AS place_label,
        c.importance, c.image_url, c.image_source,
        c.article_count, c.source_count, c.first_seen, c.last_seen`;
-export const storyFrom = (_ready: boolean) => `FROM clusters c`;
+export const STORY_FROM = 'FROM clusters c';
 
 /**
  * The label the LEFT JOIN used to supply. It was one indexed lookup per
@@ -88,7 +88,7 @@ export const getPrefs = cache(uncachedGetPrefs);
 
 async function uncachedGetPrefs(userId: string): Promise<Prefs> {
   const ready = await placesReady();
-  const row = await (await d1()).get<{
+  const row = await d1().get<{
     country: string; categories: string; places: string;
     place_ids?: string | null; geo_consent?: number | null; geo_place_id?: string | null;
     hidden?: string | null;
@@ -111,14 +111,14 @@ export async function savePrefs(p: Prefs, userId: string) {
   // set them either — the picker's lookups are all no-ops then — so writing the
   // pre-v1.5 row loses nothing the reader chose.
   if (!(await placesReady())) {
-    await (await d1()).run(
+    await d1().run(
       `INSERT INTO prefs (user_id, country, categories, places) VALUES (?, ?, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET country=excluded.country,
          categories=excluded.categories, places=excluded.places`,
       [userId, p.country, JSON.stringify(p.categories), JSON.stringify(p.places)]);
     return;
   }
-  await (await d1()).run(
+  await d1().run(
     `INSERT INTO prefs (user_id, country, categories, places, place_ids, geo_consent, geo_place_id, hidden)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id) DO UPDATE SET country=excluded.country,
@@ -250,9 +250,9 @@ export async function getFeed(limit: number, userId: string): Promise<Story[]> {
   const adjacent = effective.length ? new Set(await geoAdjacentPlaceIds(effective)) : null;
 
   const ready = await placesReady();
-  const rows = withPlaceLabels(await (await d1()).all<Story>(
+  const rows = withPlaceLabels(await d1().all<Story>(
     `SELECT ${storyCols(ready)}
-       ${storyFrom(ready)}
+       ${STORY_FROM}
       WHERE c.headline IS NOT NULL AND c.last_seen >= ?
       ORDER BY c.last_seen DESC LIMIT 150`,
     [Date.now() - CANDIDATE_WINDOW_H * 3_600_000]));
@@ -326,7 +326,7 @@ export async function getLocalFeed(limit: number, userId: string): Promise<Story
     const prefs = await getPrefs(userId);
     const effective = effectivePlaceIds(prefs);
     const since = Date.now() - 7 * 24 * 3_600_000;
-    const d = await d1();
+    const d = d1();
     const ready = await placesReady();
 
     let rows: Story[] = [];
@@ -336,7 +336,7 @@ export async function getLocalFeed(limit: number, userId: string): Promise<Story
       inside = new Set(ids);
       rows = await d.all<Story>(
         `SELECT ${storyCols(ready)}
-           ${storyFrom(ready)}
+           ${STORY_FROM}
           WHERE c.headline IS NOT NULL AND c.last_seen >= ?
             AND c.place_id IN (${idList(ids)})
           ORDER BY c.last_seen DESC LIMIT 200`, [since]);
@@ -344,7 +344,7 @@ export async function getLocalFeed(limit: number, userId: string): Promise<Story
       const where = prefs.places.map(() => `LOWER(c.place) LIKE '%' || LOWER(?) || '%'`).join(' OR ');
       rows = await d.all<Story>(
         `SELECT ${storyCols(ready)}
-           ${storyFrom(ready)}
+           ${STORY_FROM}
           WHERE c.headline IS NOT NULL AND c.last_seen >= ? AND c.place IS NOT NULL AND (${where})
           ORDER BY c.last_seen DESC LIMIT 200`, [since, ...prefs.places]);
     } else {
@@ -364,7 +364,7 @@ export async function getLocalFeed(limit: number, userId: string): Promise<Story
 }
 
 export async function getStory(id: string) {
-  const d = await d1();
+  const d = d1();
   const cluster = withPlaceLabels(await d.all<Story>('SELECT * FROM clusters WHERE id = ?', [id]))[0];
   if (!cluster) return null;
 

@@ -116,7 +116,7 @@ export async function placesReady(): Promise<boolean> {
   if (Date.now() < negativeUntil) return false;
 
   try {
-    const row = await (await d1()).get<{ places: number; cluster: number; prefs: number }>(
+    const row = await d1().get<{ places: number; cluster: number; prefs: number }>(
       `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='places') AS places,
               (SELECT COUNT(*) FROM pragma_table_info('clusters') WHERE name='place_id') AS cluster,
               (SELECT COUNT(*) FROM pragma_table_info('prefs') WHERE name='place_ids') AS prefs`);
