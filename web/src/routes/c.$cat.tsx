@@ -2,7 +2,9 @@ import { createFileRoute, notFound } from '@tanstack/react-router'
 import { TAXONOMY, categoryBySlug } from '../../shared/taxonomy'
 import { CategoryPager } from '../components/CategoryPager'
 import { CategoryStrip } from '../components/CategoryStrip'
+import { FeedError, FeedPending } from '../components/FeedBoundary'
 import { TabBar } from '../components/TabBar'
+import { loadWorld } from '../lib/world'
 
 /**
  * Everything above the rows is derivable from the hardcoded taxonomy, so a
@@ -29,6 +31,11 @@ export const Route = createFileRoute('/c/$cat')({
   beforeLoad: ({ params }) => {
     if (!categoryBySlug(params.cat)) throw notFound()
   },
+  // One answer for every category, so the loader does not depend on the param:
+  // the world is already in hand when the section is picked out of it.
+  loader: () => loadWorld(),
+  pendingComponent: () => <FeedPending active="top" />,
+  errorComponent: () => <FeedError active="top" />,
   component: SectionPage,
 })
 

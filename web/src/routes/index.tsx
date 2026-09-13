@@ -1,8 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { TAXONOMY } from '../../shared/taxonomy'
 import { CategoryPager } from '../components/CategoryPager'
+import { FeedError, FeedPending } from '../components/FeedBoundary'
 import { CategoryStrip } from '../components/CategoryStrip'
 import { TabBar } from '../components/TabBar'
+import { loadWorld } from '../lib/world'
 
 /**
  * The same shell every category page is, for the section that gets the traffic.
@@ -23,6 +25,15 @@ export const Route = createFileRoute('/')({
   validateSearch: (search: Record<string, unknown>): { sub?: string } => ({
     sub: typeof search.sub === 'string' ? search.sub : undefined,
   }),
+  /**
+   * The loader awaits the world rather than fetching it. loadWorld checks the
+   * cycle stamp against IndexedDB first, so a reload still costs one small
+   * answer and not the whole feed - the router gets its pending and error
+   * states, and the persistence underneath is untouched.
+   */
+  loader: () => loadWorld(),
+  pendingComponent: () => <FeedPending active="top" />,
+  errorComponent: () => <FeedError active="top" />,
   component: Home,
 })
 
