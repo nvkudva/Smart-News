@@ -27,14 +27,16 @@ export function PrefChips(
   { categories, initialPicked, initialHidden }:
   { categories: readonly string[]; initialPicked: string[]; initialHidden: string[] },
 ) {
-  const [picked, setPicked] = useState(initialPicked);
-  const [hidden, setHidden] = useState(initialHidden);
+  // One state, because there is one answer: both lists arrive together from
+  // every toggle, and a category cannot be in both, so holding them apart let
+  // two setters describe one server response.
+  const [lists, setLists] = useState({ categories: initialPicked, hidden: initialHidden });
+  const { categories: picked, hidden } = lists;
   const [pending, start] = useTransition();
 
   /** The strip is prerendered, so it reads this rather than the prefs row. */
   const apply = (next: { hidden: string[]; categories: string[] }) => {
-    setPicked(next.categories);
-    setHidden(next.hidden);
+    setLists(next);
     // Comma-delimited on both sides so "India" cannot match "Indian"; empty
     // rather than a bare pair of commas when nothing is hidden.
     const list = next.hidden.length ? `,${next.hidden.join(',')},` : '';

@@ -85,11 +85,14 @@ function Moon() {
  */
 export function ModeToggle() {
   const { stored, choose } = useMode();
-  const [dark, setDark] = useState(false);
 
-  // Reads the resolved attribute rather than the stored preference: under
-  // 'auto' the stored value says nothing about which way it actually resolved.
-  useEffect(() => { setDark(document.documentElement.dataset.mode === 'dark'); }, [stored]);
+  // Derived, not stored. This was a piece of state, an effect reading
+  // document.documentElement.dataset.mode to fill it, and a second setter in
+  // the click handler to keep it honest before the effect caught up - three
+  // ways to say what resolveMode already answers, and the reason the icon was
+  // briefly wrong on first paint. 'auto' has to go through resolveMode because
+  // the stored value alone does not say which way it resolved.
+  const dark = resolveMode(stored === 'auto' ? null : stored) === 'dark';
 
   return (
     <button
@@ -97,7 +100,7 @@ export function ModeToggle() {
       className="modetoggle"
       aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
       aria-pressed={dark}
-      onClick={() => { const next = dark ? 'light' : 'dark'; choose(next); setDark(next === 'dark'); }}
+      onClick={() => choose(dark ? 'light' : 'dark')}
     >
       {dark ? <Moon /> : <Sun />}
     </button>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SKIP_WAITING, UPDATE_READY } from './ServiceWorker';
 
 /**
@@ -20,6 +20,8 @@ import { SKIP_WAITING, UPDATE_READY } from './ServiceWorker';
  */
 export function UpdateBanner() {
   const [ready, setReady] = useState(false);
+  // Never cleared, and it does not need to be: every path out of `refresh`
+  // ends in a reload, so this page is on its way out from the moment it is set.
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -28,30 +30,28 @@ export function UpdateBanner() {
     return () => window.removeEventListener(UPDATE_READY, onReady);
   }, []);
 
-  const refresh = useCallback(async () => {
+  async function refresh() {
     setBusy(true);
+    // A waiting worker is asked to take over and the reload happens when it
+    // does - activating is what swaps the shell, and reloading first would
+    // serve the old one again. `once` because a worker calling clients.claim()
+    // can fire controllerchange more than once.
+    //
+    // Everything else - no waiting worker, no service worker at all, a
+    // registration lookup that threw - is the same answer: reload onto the
+    // network. So it is the fallthrough rather than a branch and a catch
+    // holding the same line twice.
     try {
-      const reg = await navigator.serviceWorker?.getRegistration();
-      const waiting = reg?.waiting;
-
+      const waiting = (await navigator.serviceWorker?.getRegistration())?.waiting;
       if (waiting) {
-        // Reload when the new worker takes control, not on a timer: activating
-        // is what swaps the shell, and reloading before it lands would serve
-        // the old one again. `once` because a worker that calls clients.claim()
-        // can fire this more than once.
         navigator.serviceWorker.addEventListener(
           'controllerchange', () => location.reload(), { once: true });
         waiting.postMessage(SKIP_WAITING);
         return;
       }
-
-      // No waiting worker - the announcement is stale, or there is no worker at
-      // all. A plain reload onto the network is the honest answer.
-      location.reload();
-    } catch {
-      location.reload();
-    }
-  }, []);
+    } catch { /* falls through to the reload below */ }
+    location.reload();
+  }
 
   if (!ready) return null;
 

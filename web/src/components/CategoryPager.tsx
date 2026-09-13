@@ -56,9 +56,15 @@ export function CategoryPager({
   // Which slug the window is built around. It runs ahead of `active` for the
   // length of a commit — that gap is the whole point.
   const [centre, setCentre] = useState(active);
+  const [seen, setSeen] = useState(active);
   const [neighbours, setNeighbours] = useState(false);
 
-  useEffect(() => { setCentre(active); }, [active]);
+  // A navigation from outside the gesture - the strip, a link, the back button -
+  // has to move the window. Adjusted during the render that brings the new prop
+  // in rather than in an effect afterwards: the effect painted one frame of the
+  // outgoing category first. It cannot be derived away, because after a swipe
+  // `centre` leads `active` for the length of the commit, which is the point.
+  if (seen !== active) { setSeen(active); setCentre(active); }
 
   // Nothing off-screen competes with the first paint; after it, both sides are
   // mounted for good, because a neighbour that unmounts is a neighbour that has
@@ -193,11 +199,12 @@ export function CategoryPager({
     };
   }, [centre, key, navigate]);
 
+  // Out of range reads as an absent neighbour on its own: the guards spelled
+  // out what `?? null` already says, for a `centre` that is always a slug from
+  // this list.
   const at = sections.findIndex((s) => s.slug === centre);
   const panes: (PagerSection | null)[] = [
-    at > 0 ? sections[at - 1] : null,
-    sections[at] ?? null,
-    at >= 0 && at < sections.length - 1 ? sections[at + 1] : null,
+    sections[at - 1] ?? null, sections[at] ?? null, sections[at + 1] ?? null,
   ];
 
   return (
