@@ -8,7 +8,6 @@ import { ModeControl } from '../components/Mode'
 import { PrefChips } from '../components/PrefChips'
 import { NavPlacementControl } from '../components/NavPlacement'
 import { PlacePicker, type PickedPlace } from '../components/PlacePicker'
-import { ago } from '../lib/format'
 import { TabBar } from '../components/TabBar'
 import { ThemeControl } from '../components/Theme'
 import { load } from '../lib/load'
@@ -30,7 +29,7 @@ const nameOf = (c: string) => {
 }
 
 function Profile() {
-  const { prefs, stats, countries, resolved, geo } = Route.useLoaderData()
+  const { prefs, countries, resolved, geo } = Route.useLoaderData()
 
   // Anything typed before the gazetteer existed - or typed as plain text since -
   // stays on show as a chip of its own rather than disappearing from the form.
@@ -46,14 +45,6 @@ function Profile() {
   const options: CountryOption[] = [...new Set([prefs.country, ...countries])]
     .map((code) => ({ code, name: nameOf(code) }))
     .sort((a, b) => a.name.localeCompare(b.name))
-
-  const counts = [
-    ['Articles', stats.articles],
-    ['Clusters', stats.clusters],
-    ['Summarised', stats.summarised],
-    ['Sources', stats.sources],
-    ['Saved', stats.saved],
-  ] as const
 
   return (
     <>
@@ -113,24 +104,6 @@ function Profile() {
             <ModeControl />
             <NavPlacementControl />
           </div>
-        </section>
-
-        <section className="setsection">
-          <h2 className="sethead">Library</h2>
-          <div className="setgroup">
-            <div className="setstats">
-              {counts.map(([label, n]) => (
-                <div key={label} className="setstat">
-                  <b>{n.toLocaleString()}</b>
-                  <span>{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <p className="setnote">
-            Newest story {stats.newest ? ago(stats.newest) : '—'}.
-            Run <code>npm run cycle</code> to pull the latest.
-          </p>
         </section>
       </main>
       <TabBar active="profile" />
