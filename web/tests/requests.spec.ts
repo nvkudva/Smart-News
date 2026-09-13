@@ -129,6 +129,23 @@ test('a page left open asks for nothing', async ({ page }) => {
   expect(t.api, `api: ${t.api.join(' ')}`).toEqual([]);
 });
 
+test('a reload costs a stamp, not a feed', async ({ page }) => {
+  const t = await watch(page);
+  await page.goto('/');
+  await settle(page);
+
+  clear(t);
+  await page.reload();
+  await settle(page);
+
+  // The property the whole design is for, and the one a loader alone would
+  // lose: lib/load.ts checks the cycle stamp against IndexedDB before asking
+  // for anything, so coming back costs one small answer rather than the world.
+  // Measured at 29 bytes; asserted as "the stamp and nothing else" because the
+  // byte count is the Worker's business and this is the client's.
+  expect(t.api, `reload: ${t.api.join(' ')}`).toEqual(['/api/stamp']);
+});
+
 test('a second visit does not re-ask where the reader is', async ({ page }) => {
   const t = await watch(page);
   await page.goto('/');

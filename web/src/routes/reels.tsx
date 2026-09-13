@@ -5,13 +5,13 @@ import { SaveButton } from '../components/SaveButton'
 import { storyWhen } from '../lib/format'
 import { TabBar } from '../components/TabBar'
 import { Back, Photo } from '../components/icons'
-import { fetchJson } from '../lib/api'
+import { load } from '../lib/load'
 
 /** Full-screen vertical stack. Scroll-snap pages it for a thumb; ReelKeys does
  *  the same for a keyboard, which snap alone leaves with nothing but Tab. */
 export const Route = createFileRoute('/reels')({
   loader: ({ abortController }) =>
-    fetchJson<ReelsPayload>('/api/reels', abortController.signal),
+    load<ReelsPayload>('/api/reels', { signal: abortController.signal }),
   pendingComponent: LoadingReels,
   component: Reels,
 })

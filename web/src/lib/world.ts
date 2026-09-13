@@ -1,6 +1,7 @@
 import type { SubCount } from '../../shared/taxonomy';
 import type { Outlet, Story } from '../../shared/types';
-import { deleteEntry, forgetStamp, readEntry, sessionStamp, writeEntry } from './store';
+import { fetchJson, keep, readFresh } from './load';
+import { deleteEntry, forgetStamp, readEntry } from './store';
 
 /**
  * The world this tab is holding, and everything that loads or drops it.
@@ -64,15 +65,20 @@ export function loadWorld(): Promise<World> {
  * then only the handful of stories the last pipeline run produced.
  */
 async function resolve(): Promise<World> {
-  const [stamp, stored] = await Promise.all([sessionStamp(), readEntry<World>(WORLD)]);
-  const have = stored?.data;
-  if (have && stamp && stored.stamp === stamp) return have;
+  // readFresh is load.ts's persist check. What it cannot do generically is the
+  // rest of this function: when the stamp HAS moved, the stored copy is still
+  // worth something - it holds three hundred bodies that have not changed - so
+  // this asks for what is newer and merges, rather than re-fetching all of it.
+  const { data: current } = await readFresh<World>(WORLD);
+  if (current) return current;
 
+  const stale = await readEntry<World>(WORLD);
+  const have = stale?.data;
   const since = have?.stories.length
     ? Math.max(...have.stories.map((s) => s.last_seen))
     : 0;
   const fresh = await ask(since);
-  if (!since) { writeEntry(WORLD, fresh.stamp, fresh); return fresh; }
+  if (!since) { keep(WORLD, fresh.stamp, fresh); return fresh; }
 
   const merged = merge(have!, fresh);
   // A delta naming a body we no longer hold means storage was evicted under
@@ -80,17 +86,15 @@ async function resolve(): Promise<World> {
   const wanted = new Set(Object.values(merged.sections).flatMap((x) => x.ids));
   if (merged.stories.length < wanted.size) {
     const whole = await ask(0);
-    writeEntry(WORLD, whole.stamp, whole);
+    keep(WORLD, whole.stamp, whole);
     return whole;
   }
-  writeEntry(WORLD, merged.stamp, merged);
+  keep(WORLD, merged.stamp, merged);
   return merged;
 }
 
-async function ask(since: number): Promise<World> {
-  const res = await fetch(since ? `${WORLD}?since=${since}` : WORLD);
-  if (!res.ok) throw new Error(String(res.status));
-  return await res.json() as World;
+function ask(since: number): Promise<World> {
+  return fetchJson<World>(since ? `${WORLD}?since=${since}` : WORLD);
 }
 
 /**

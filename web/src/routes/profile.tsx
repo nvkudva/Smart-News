@@ -10,11 +10,11 @@ import { PlacePicker, type PickedPlace } from '../components/PlacePicker'
 import { ago } from '../lib/format'
 import { TabBar } from '../components/TabBar'
 import { ThemeControl } from '../components/Theme'
-import { fetchJson } from '../lib/api'
+import { load } from '../lib/load'
 
 export const Route = createFileRoute('/profile')({
   loader: ({ abortController }) =>
-    fetchJson<ProfilePayload>('/api/profile', abortController.signal),
+    load<ProfilePayload>('/api/profile', { signal: abortController.signal }),
   pendingComponent: LoadingProfile,
   component: Profile,
 })

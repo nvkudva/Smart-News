@@ -2,11 +2,11 @@ import { createFileRoute } from '@tanstack/react-router'
 import type { SavedPayload } from '../../shared/types'
 import { StoryCard, variantFor } from '../components/StoryCard'
 import { TabBar } from '../components/TabBar'
-import { fetchJson } from '../lib/api'
+import { load } from '../lib/load'
 
 export const Route = createFileRoute('/saved')({
   loader: ({ abortController }) =>
-    fetchJson<SavedPayload>('/api/saved', abortController.signal),
+    load<SavedPayload>('/api/saved', { signal: abortController.signal }),
   pendingComponent: LoadingSaved,
   component: Saved,
 })

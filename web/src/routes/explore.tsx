@@ -3,7 +3,7 @@ import type { ExplorePayload } from '../../shared/types'
 import { CategoryTile, PlaceTile } from '../components/ExploreTiles'
 import { StoryCard, variantFor } from '../components/StoryCard'
 import { TabBar } from '../components/TabBar'
-import { fetchJson } from '../lib/api'
+import { load } from '../lib/load'
 
 /**
  * Two pages behind one path, as the Next version had it: the facet index when
@@ -28,8 +28,9 @@ export const Route = createFileRoute('/explore')({
     if (deps.country) q.set('country', deps.country)
     if (deps.place) q.set('place', deps.place)
     const qs = q.toString()
-    return fetchJson<ExplorePayload>(
-      qs ? `/api/explore?${qs}` : '/api/explore', abortController.signal)
+    return load<ExplorePayload>(qs ? `/api/explore?${qs}` : '/api/explore', {
+      persist: true, signal: abortController.signal,
+    })
   },
   pendingComponent: LoadingExplore,
   component: Explore,

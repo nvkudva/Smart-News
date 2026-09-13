@@ -3,11 +3,11 @@ import type { LocalPayload } from '../../shared/types'
 import { StoryCard, variantFor } from '../components/StoryCard'
 import { TabBar } from '../components/TabBar'
 import { Pin } from '../components/icons'
-import { fetchJson } from '../lib/api'
+import { load } from '../lib/load'
 
 export const Route = createFileRoute('/local')({
   loader: ({ abortController }) =>
-    fetchJson<LocalPayload>('/api/local', abortController.signal),
+    load<LocalPayload>('/api/local', { persist: true, signal: abortController.signal }),
   pendingComponent: LoadingLocal,
   component: Local,
 })

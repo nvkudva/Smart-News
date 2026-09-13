@@ -7,7 +7,7 @@ import { ago } from '../lib/format'
 import { StoryFraming } from '../components/StoryFraming'
 import { TabBar } from '../components/TabBar'
 import { Back, Photo } from '../components/icons'
-import { fetchJson } from '../lib/api'
+import { load } from '../lib/load'
 
 /**
  * The one place the port improves on the original.
@@ -20,8 +20,9 @@ import { fetchJson } from '../lib/api'
  */
 export const Route = createFileRoute('/story/$id')({
   loader: ({ params, abortController }) =>
-    fetchJson<StoryPayload>(
-      `/api/story/${encodeURIComponent(params.id)}`, abortController.signal),
+    load<StoryPayload>(`/api/story/${encodeURIComponent(params.id)}`, {
+      signal: abortController.signal,
+    }),
   pendingComponent: LoadingStory,
   notFoundComponent: StoryNotFound,
   component: StoryPage,
