@@ -11,7 +11,7 @@ import { matchesSub } from '../../shared/taxonomy';
 
 export const DEFAULT_PREFS: Prefs = {
   country: 'IN',
-  categories: ['Technology', 'Business', 'World', 'Science'],
+  categories: ['Technology', 'Business', 'Politics', 'Science'],
   places: ['Bengaluru'],
   placeIds: [],
   geoConsent: false,

@@ -1,6 +1,6 @@
 import { d1 } from './d1';
 import {
-  getFeed, getLocalFeed, getPrefs, idList, prefsFingerprint, storyCols, STORY_FROM,
+  getFeed, getPrefs, idList, prefsFingerprint, storyCols, STORY_FROM,
   withPlaceLabels, withoutHidden, type Outlet, type Story,
 } from './feed';
 import { cycleStamp } from './cycle';
@@ -13,9 +13,10 @@ import { logError } from './log';
  * section's rows ONCE: the page renders them and derives its sub-category
  * counts from the same array, so a strip of eight pills still costs one query.
  *
- * Nothing new is stored. Local reads place_id through the gazetteer, National
- * and International read the country the cluster already carries. A cluster
- * with a NULL country belongs to neither, which is correct — it is unplaced.
+ * Nothing new is stored. National and International read the country the
+ * cluster already carries. A cluster with a NULL country belongs to neither,
+ * which is correct — it is unplaced, and reaches a reader under the Others
+ * scope pill instead.
  */
 
 const WINDOW_MS = 48 * 3_600_000;
@@ -88,13 +89,6 @@ export async function countriesWithNews(): Promise<string[]> {
   // The column is whatever the summariser wrote, and it has written junk — a
   // bare comma among them. A picker is the wrong place to find that out.
   return rows.map((r) => r.country.trim().toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c));
-}
-
-/** The reader's own places. Delegates so /local and the Local tab can never
- *  disagree about what "local" means, including the pre-v1.5 free-text
- *  fallback and the empty-on-unmigrated-D1 degradation. */
-export function getLocalSection(limit: number, userId: string): Promise<Story[]> {
-  return getLocalFeed(limit, userId);
 }
 
 export async function getNationalSection(limit: number, userId: string): Promise<Story[]> {
@@ -177,7 +171,6 @@ export async function getSection(slug: string, userId: string): Promise<Story[]>
     stories = await cached(key, stamp, () => {
       if (category.kind === 'topic') return getTopicSection(category.name, limit);
       if (category.slug === 'top') return getFeed(limit, userId);
-      if (category.slug === 'local') return getLocalSection(limit, userId);
       if (category.slug === 'national') return getNationalSection(limit, userId);
       return getInternationalSection(limit, userId);
     });

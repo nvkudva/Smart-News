@@ -17,14 +17,53 @@ export function slug(name: string): string {
 
 export type SubCategory = { name: string; slug: string; keywords: readonly string[] };
 
-export type ScopeSlug = 'top' | 'local' | 'national' | 'international';
+export type ScopeSlug = 'top' | 'national' | 'international';
+
+/**
+ * The subjects that get a top-level pill, in strip order.
+ *
+ * Four of the stored categories are missing on purpose: Governance,
+ * Crime & Courts, Disasters & Accidents and Conflict & Diplomacy classify
+ * sharply - without them 269 of the old India/World rows would fall back to
+ * Others - but a reader meets them as subject pills under Trending, National
+ * and International rather than as fourteen entries in one strip.
+ */
+export const STRIP_SUBJECTS = [
+  'Technology', 'Politics', 'Business', 'Science', 'Health',
+  'Education', 'Sports', 'Entertainment', 'Climate', 'Others',
+] as const satisfies readonly Category[];
+
+export type StripSubject = (typeof STRIP_SUBJECTS)[number];
 
 export type Section =
   | { kind: 'scope'; name: string; slug: ScopeSlug; subs: null }
   | { kind: 'topic'; name: Category; slug: string; subs: SubCategory[] };
 
 /** The only shape the matchers need. Story satisfies it structurally. */
-export type Matchable = { headline: string; crux: string | null; category: string };
+export type Matchable = {
+  headline: string; crux: string | null; category: string;
+  /** Which scope lenses this story falls under, resolved against the reader's
+   *  country and places by the Worker - see scopesFor in worker/lib/world.ts.
+   *  Absent on rows that were never scoped, which simply show no scope pill. */
+  scopes?: readonly string[];
+};
+
+/**
+ * Offered under every subject section: the other axis, as the sub-row rule has
+ * it. Empty keyword lists because these are not matched against text - the
+ * Worker resolves them from c.country and c.place_id, which every row carries.
+ *
+ * Slug 'unplaced' rather than 'others' so a ?sub= value can never be confused
+ * with the Others *subject*.
+ */
+export const SCOPE_SUBS: readonly SubCategory[] = [
+  { name: 'Local', slug: 'local', keywords: [] },
+  { name: 'National', slug: 'national', keywords: [] },
+  { name: 'International', slug: 'international', keywords: [] },
+  { name: 'Others', slug: 'unplaced', keywords: [] },
+];
+
+const SCOPE_SUB_SLUGS = new Set(SCOPE_SUBS.map((s) => s.slug));
 
 export type SubCount = { name: string; slug: string; count: number };
 
@@ -41,21 +80,7 @@ const sub = (name: string, keywords: readonly string[]): SubCategory =>
  * single digits against a large parent, or whose keywords described a writing
  * style rather than a subject, was cut rather than shipped thin.
  */
-const TOPIC_SUBS: Record<Category, SubCategory[]> = {
-  India: [
-    sub('Governance', ['minister', 'chief minister', 'cm', 'centre', 'ministry', 'scheme', 'cabinet', 'govt', 'government', 'policy', 'panchayat', 'municipal', 'mcd', 'commission', 'board']),
-    sub('Crime & Policing', ['arrested', 'arrest', 'police', 'murder', 'killed', 'kills', 'assault', 'rape', 'fraud', 'scam', 'gang', 'gangster', 'booked', 'fir', 'cbi', 'accused', 'probe', 'crime']),
-    sub('Accidents & Safety', ['collapse', 'fire', 'crash', 'drowned', 'died', 'die', 'dead', 'injured', 'blast', 'explosion', 'rescued', 'stampede', 'accident', 'safety']),
-    sub('Courts & Law', ['supreme court', 'high court', 'hc', 'sc', 'bench', 'plea', 'petition', 'verdict', 'bail', 'judge', 'judicial', 'tribunal', 'court', 'custody', 'remand']),
-    sub('Transport', ['flight', 'flights', 'airport', 'indigo', 'air india', 'rail', 'railway', 'train', 'metro', 'highway', 'bus', 'road', 'traffic', 'vehicle', 'airline', 'expressway']),
-    sub('Weather & Floods', ['flood', 'floods', 'rain', 'rains', 'monsoon', 'cyclone', 'heatwave', 'waterlogging', 'landslide', 'imd', 'weather']),
-  ],
-  World: [
-    sub('Conflict', ['israel', 'gaza', 'lebanon', 'hezbollah', 'hamas', 'ukraine', 'russia', 'russian', 'putin', 'yemen', 'houthi', 'iran', 'airstrike', 'strikes', 'military', 'troops', 'war', 'ceasefire', 'missile', 'drone', 'nato', 'soldiers', 'rebels', 'militant']),
-    sub('Crime & Courts', ['trial', 'court', 'sentenced', 'murder', 'murdering', 'police', 'arrested', 'charged', 'jail', 'prison', 'fraud', 'smuggling', 'cocaine', 'extortion', 'convicted', 'inquest', 'verdict', 'pirate', 'attacks']),
-    sub('Disasters', ['crash', 'crashes', 'flood', 'floods', 'earthquake', 'eruption', 'volcano', 'wildfire', 'fire', 'cyclone', 'typhoon', 'landslide', 'storm', 'rescued', 'rescuers', 'killed', 'dead', 'death toll', 'collapse', 'evacuated', 'missing']),
-    sub('Diplomacy', ['un', 'united nations', 'eu', 'european union', 'summit', 'envoy', 'talks', 'treaty', 'ambassador', 'sanctions', 'diplomatic', 'foreign minister', 'embassy', 'visit', 'pact', 'accord']),
-  ],
+const TOPIC_SUBS: Record<StripSubject, SubCategory[]> = {
   Sports: [
     sub('Football', ['football', 'premier league', 'chelsea', 'arsenal', 'united', 'liverpool', 'uefa', 'fifa', 'la liga', 'serie a', 'psg', 'goal', 'goals', 'striker', 'midfielder', 'isl', 'derby', 'fc', 'wsl', 'draw', 'marseille', 'monaco', 'keeper', 'bagan']),
     sub('American Sports', ['nfl', 'quarterback', 'touchdown', 'college football', 'cfp', 'big ten', 'ncaa', 'rams', 'braves', 'giants', 'notre dame', 'mlb', 'nba', 'homer', 'fantasy football', 'yards']),
@@ -115,27 +140,47 @@ const TOPIC_SUBS: Record<Category, SubCategory[]> = {
     sub('Hospitals & Care', ['hospital', 'hospitals', 'nhs', 'doctors', 'nurse', 'clinic', 'maternity', 'ambulance', 'care', 'guidelines', 'fda']),
     sub('Mental Health', ['mental', 'anxiety', 'depression', 'adhd', 'burnout', 'stress', 'cognition', 'sleep']),
   ],
+  Education: [
+    sub('Schools', ['school', 'schools', 'pupil', 'pupils', 'classroom', 'teacher', 'teachers', 'headteacher', 'syllabus', 'textbook', 'midday meal', 'rte', 'cbse', 'icse', 'board exam']),
+    sub('Higher Education', ['university', 'universities', 'college', 'colleges', 'iit', 'iim', 'nit', 'campus', 'undergraduate', 'postgraduate', 'phd', 'faculty', 'ugc', 'vtu', 'convocation', 'degree']),
+    sub('Exams & Admissions', ['exam', 'exams', 'upsc', 'neet', 'jee', 'cat', 'gate', 'admission', 'admissions', 'entrance', 'counselling', 'cut-off', 'merit list', 'result', 'results', 'rank']),
+    sub('Policy & Funding', ['education policy', 'nep', 'scholarship', 'scholarships', 'fee', 'fees', 'grant', 'grants', 'literacy', 'enrolment', 'dropout', 'reservation', 'quota']),
+    sub('Research & Faculty', ['research', 'researchers', 'study', 'paper', 'journal', 'professor', 'lecturer', 'academic', 'thesis', 'laboratory', 'fellowship']),
+  ],
   Climate: [
     sub('Warming & Emissions', ['warming', 'emissions', 'carbon', '1.5c', 'fossil', 'net zero', 'cop', 'greenhouse', 'temperature', 'air quality', 'sea-level']),
     sub('Extreme Weather', ['heat', 'heatwaves', 'wildfires', 'fire', 'fires', 'flood', 'flooding', 'storm', 'drought', 'el nino', 'haze', 'cyclone', 'hurricane']),
     sub('Nature & Adaptation', ['forest', 'forests', 'rewilding', 'habitat', 'conservation', 'biodiversity', 'tree', 'trees', 'wildlife', 'adaptation', 'risk assessment']),
   ],
+  Others: [],
 };
 
-/** Scope first, then the ten topics in their stored order. */
+/**
+ * Trending keeps the slug 'top': it is the section at `/`, and every stored
+ * link and prerendered path says so. Only the label changed.
+ *
+ * Local is no longer one of these. It is a scope sub-pill under every subject
+ * now, which is a lens over rows the section already holds rather than a
+ * fourteenth query; /local remains its own route against /api/local.
+ */
 export const SCOPE_CATEGORIES: Section[] = [
-  { kind: 'scope', name: 'Top', slug: 'top', subs: null },
-  { kind: 'scope', name: 'Local', slug: 'local', subs: null },
+  { kind: 'scope', name: 'Trending', slug: 'top', subs: null },
   { kind: 'scope', name: 'National', slug: 'national', subs: null },
   { kind: 'scope', name: 'International', slug: 'international', subs: null },
 ];
 
-export const TOPIC_CATEGORIES: Section[] = CATEGORIES.map((name) => ({
+export const TOPIC_CATEGORIES: Section[] = STRIP_SUBJECTS.map((name) => ({
   kind: 'topic' as const, name, slug: slug(name), subs: TOPIC_SUBS[name],
 }));
 
-/** Declared order is render order: scope first, then the ten topics. */
-export const TAXONOMY: Section[] = [...SCOPE_CATEGORIES, ...TOPIC_CATEGORIES];
+// STRIP_SUBJECTS leads with Technology because it renders second, ahead of the
+// two scope tabs; the rest follow in declared order.
+const [TECHNOLOGY, ...REST_OF_SUBJECTS] = TOPIC_CATEGORIES;
+
+/** Declared order is render order. */
+export const TAXONOMY: Section[] = [
+  SCOPE_CATEGORIES[0], TECHNOLOGY, ...SCOPE_CATEGORIES.slice(1), ...REST_OF_SUBJECTS,
+];
 
 export function categoryBySlug(s: string): Section | null {
   return TAXONOMY.find((c) => c.slug === s) ?? null;
@@ -202,6 +247,12 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
 
   const texts = stories.map(searchText);
   const out: SubCount[] = [];
+  // The other axis first: where these happened, before what they are about.
+  for (const sc of SCOPE_SUBS) {
+    let count = 0;
+    for (const s of stories) if (s.scopes?.includes(sc.slug)) count++;
+    if (count > 0) out.push({ name: sc.name, slug: sc.slug, count });
+  }
   for (const s of cat.subs) {
     const re = MATCHERS.get(`${cat.slug}/${s.slug}`);
     if (!re) continue;
@@ -225,9 +276,12 @@ export function subSlugsFor(categorySlug: string, story: Matchable): string[] {
   if (!cat) return [];
   if (cat.kind === 'scope') return [slug(story.category)];
   const text = searchText(story);
-  return (cat.subs ?? [])
-    .filter((sub) => MATCHERS.get(`${cat.slug}/${sub.slug}`)?.test(text))
-    .map((sub) => sub.slug);
+  return [
+    ...(story.scopes ?? []),
+    ...(cat.subs ?? [])
+      .filter((sub) => MATCHERS.get(`${cat.slug}/${sub.slug}`)?.test(text))
+      .map((sub) => sub.slug),
+  ];
 }
 
 export function filterBySub<T extends Matchable>(
@@ -239,6 +293,7 @@ export function filterBySub<T extends Matchable>(
     const name = CATEGORIES.find((c) => slug(c) === subSlug);
     return name ? stories.filter((s) => s.category === name) : [...stories];
   }
+  if (SCOPE_SUB_SLUGS.has(subSlug)) return stories.filter((s) => s.scopes?.includes(subSlug));
   const re = MATCHERS.get(`${cat.slug}/${subSlug}`);
   return re ? stories.filter((s) => re.test(searchText(s))) : [...stories];
 }

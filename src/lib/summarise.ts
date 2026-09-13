@@ -43,6 +43,13 @@ never introduce a fact no source states. Where sources disagree, say so plainly.
 headline:   under 70 characters, sentence case, no outlet name, no clickbait.
 crux:       4 to 6 sentences of plain declarative prose. What happened, who says
             so, and what follows from it. No bullets, no preamble, no hedging filler.
+category:   the subject the story is about, never where it happened - scope is
+            derived from country. Governance is the business of governing
+            (schemes, ministries, civic bodies, appointments); Politics is the
+            contest for power (parties, elections, resignations, campaigns). A
+            court ruling is Crime & Courts even when the defendant is a
+            minister. Conflict & Diplomacy covers war, strikes, sanctions and
+            talks between states. Others only when nothing else fits.
 place:      the city or region the event happened in, else null.
 country:    ISO 3166-1 alpha-2 code for that place, else null.
 importance: 5 for a story a world newspaper leads its front page with, 1 for routine.
@@ -147,7 +154,7 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
     value: {
       headline: best.title.replace(/\s*[|–-]\s*[^|–-]{0,24}$/, '').slice(0, 90),
       crux,
-      category: 'World',
+      category: 'Others',
       place: null,
       country: null,
       importance: Math.min(5, 1 + Math.round(Math.log2(members.length + 1))),
@@ -224,7 +231,7 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
       return;
     }
     const s = r.value;
-    const category = (CATEGORIES as readonly string[]).includes(s.category) ? s.category : 'World';
+    const category = (CATEGORIES as readonly string[]).includes(s.category) ? s.category : 'Others';
     // Models hand back "USA" or "United States" as often as "US"; the feed
     // compares this against the reader's two-letter home country. isoCountry
     // also folds UK onto GB, which is the same country under two codes.

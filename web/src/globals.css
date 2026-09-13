@@ -398,6 +398,12 @@ body {
    feed, never .shell — an ancestor's pan-y would intersect away the category
    strip's pan-x and kill its scrolling. */
 .feed { display: flex; flex-direction: column; gap: 11px; touch-action: pan-y pinch-zoom; }
+.feed__divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 9px 0 2px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--muted);
+}
+.feed__divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
 .shell > .panel { touch-action: pan-y pinch-zoom; }
 
 /* Variants. `row` is the mobile default declared above; these add to it. */
