@@ -1488,27 +1488,39 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    colour and type; where a design collides with A, A's geometry wins, which
    is why neither redefines the grid, the card sizes or the bar.
    ───────────────────────────────────────────────────────────────────────── */
+/* Aged paper rather than white paper with a warm accent.
+   The palette was drawn at chroma 0.008-0.016 on a 0.972 ground, which is
+   white by any honest reading, and then asked one brick-red accent at hue 32
+   to carry the whole idea. Red on white is a masthead, not newsprint. The
+   ground comes down and the tint comes up so the paper itself is the warmth,
+   and every hue moves off copper towards the yellow-browns: ink is a brown
+   dark rather than a black, and the accent is tobacco rather than ember. */
 :root[data-theme="broadsheet"] {
-  --ground:        oklch(0.972 0.008 82);
-  --ink:           oklch(0.21 0.014 62);
-  --ink-2:         oklch(0.47 0.014 62);
-  --ink-3:         oklch(0.56 0.014 62);
-  --kicker:        oklch(0.52 0.08 62);
-  --kicker-near:   oklch(0.44 0.09 158);
-  --kicker-new:    oklch(0.48 0.11 32);
-  --accent:        oklch(0.48 0.11 32);
-  --reels-accent:  oklch(0.48 0.11 32);
+  --ground:        oklch(0.951 0.024 86);
+  --ink:           oklch(0.248 0.030 60);
+  --ink-2:         oklch(0.468 0.030 60);
+  --ink-3:         oklch(0.578 0.026 62);
+  /* The category label is the quietest of the three warms; "new" is the
+     loudest, and the gap between them is lightness and chroma, not hue. */
+  --kicker:        oklch(0.512 0.048 70);
+  /* Near you stays green because it means a place and not a subject, but a
+     saturated green on paper is a highlighter. Olive, at the same lightness. */
+  --kicker-near:   oklch(0.455 0.052 132);
+  --kicker-new:    oklch(0.505 0.098 62);
+  --accent:        oklch(0.452 0.086 62);
+  --reels-accent:  oklch(0.452 0.086 62);
   --glass:         transparent;
-  --glass-edge:    oklch(0.89 0.010 72);
+  --glass-edge:    oklch(0.862 0.024 80);
   --glass-warm:    none;
-  --plate:         linear-gradient(150deg, oklch(0.905 0.016 78), oklch(0.935 0.012 78));
+  --plate:         linear-gradient(150deg, oklch(0.878 0.032 84), oklch(0.918 0.024 84));
   --shadow:        none;
-  --rule:          oklch(0.89 0.010 72);
-  --ring:          oklch(0.48 0.11 32);
-  /* Newsprint keeps its restraint: a deeper shade of the same paper, and the
-     ember rule the rest of the theme uses for its one accent. */
-  --bar:           oklch(0.935 0.016 76 / 0.94);
-  --bar-edge:      oklch(0.84 0.024 72);
+  /* Hairlines are the whole structure of this theme, so they have to be a
+     tone of the paper and not a grey laid over it. */
+  --rule:          oklch(0.862 0.024 80);
+  --ring:          oklch(0.452 0.086 62);
+  /* Newsprint keeps its restraint: a deeper shade of the same paper. */
+  --bar:           oklch(0.918 0.030 82 / 0.94);
+  --bar-edge:      oklch(0.818 0.034 78);
 }
 /* Paper, not glass: the ambient wash is what makes A translucent, so it goes. */
 :root[data-theme="broadsheet"] .wash { display: none; }
@@ -1644,21 +1656,24 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   --bar-edge:      oklch(0.42 0.048 274 / 0.70);
 }
 
+/* The same paper after dark: a brown-black ground rather than a neutral one,
+   and the accent re-lit into amber. Held to the same hues as the light half,
+   so switching mode is not switching theme. */
 :root[data-theme="broadsheet"][data-mode="dark"] {
-  --ground:        oklch(0.155 0.008 76);
-  --ink:           oklch(0.94 0.006 76);
-  --ink-2:         oklch(0.72 0.008 76);
-  --ink-3:         oklch(0.63 0.008 76);
-  --kicker:        oklch(0.76 0.07 62);
-  --accent:        oklch(0.78 0.12 36);
-  --ring:          oklch(0.78 0.12 36);
+  --ground:        oklch(0.162 0.016 68);
+  --ink:           oklch(0.935 0.012 78);
+  --ink-2:         oklch(0.718 0.016 74);
+  --ink-3:         oklch(0.628 0.016 72);
+  --kicker:        oklch(0.752 0.060 70);
+  --accent:        oklch(0.790 0.105 66);
+  --ring:          oklch(0.790 0.105 66);
   --glass:         transparent;
   --glass-edge:    rgba(255, 255, 255, 0.14);
   --glass-warm:    none;
-  --plate:         linear-gradient(150deg, oklch(0.32 0.020 78), oklch(0.26 0.016 78));
+  --plate:         linear-gradient(150deg, oklch(0.325 0.026 80), oklch(0.265 0.022 80));
   --shadow:        none;
   --rule:          rgba(255, 255, 255, 0.13);
-  --bar:           oklch(0.215 0.012 76 / 0.90);
+  --bar:           oklch(0.222 0.020 74 / 0.90);
   --bar-edge:      rgba(255, 255, 255, 0.16);
 }
 
