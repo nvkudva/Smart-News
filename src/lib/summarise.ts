@@ -2,7 +2,7 @@ import pLimit from 'p-limit';
 import { CATEGORIES, db } from './db';
 import type { Bias } from './sources';
 import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } from './llm';
-import { resolvePlaceLocal } from './places-local';
+import { isoCountry, resolvePlaceLocal } from './places-local';
 import { distinctByText } from './text';
 
 const MAX_ARTICLES = 6;
@@ -226,9 +226,9 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
     const s = r.value;
     const category = (CATEGORIES as readonly string[]).includes(s.category) ? s.category : 'World';
     // Models hand back "USA" or "United States" as often as "US"; the feed
-    // compares this against the reader's two-letter home country.
-    const cc = typeof s.country === 'string' && /^[A-Za-z]{2}$/.test(s.country.trim())
-      ? s.country.trim().toUpperCase() : null;
+    // compares this against the reader's two-letter home country. isoCountry
+    // also folds UK onto GB, which is the same country under two codes.
+    const cc = isoCountry(s.country);
     // A model writing JSON as text hands back the word "null" as readily as the
     // value, and `?? null` cannot see the difference: the story bar then prints
     // `null · 3d ago · 2 outlets`, and the place resolver goes looking for a

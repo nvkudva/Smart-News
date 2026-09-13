@@ -14,12 +14,29 @@ import { normaliseAlias } from './places';
 
 type Hit = { alias: string; acc: string; place_id: string; place_country: string };
 
+/**
+ * ISO 3166-1 alpha-2, or nothing.
+ *
+ * Models write UK for the United Kingdom about as often as GB, and both were
+ * stored: National is `c.country = <the reader's code>` and the home-country
+ * list is the distinct codes we hold stories for, so one country appeared in
+ * the picker twice and each half of it answered for its own stories. GB is the
+ * ISO code and the one sources.ts already uses, so UK folds into it.
+ */
+const ALIASES: Record<string, string> = { UK: 'GB' };
+
+export function isoCountry(v: unknown): string | null {
+  const code = typeof v === 'string' ? v.trim().toUpperCase() : '';
+  if (!/^[A-Z]{2}$/.test(code)) return null;
+  return ALIASES[code] ?? code;
+}
+
 export function resolvePlaceLocal(
   d: DatabaseSync,
   raw: string | null,
   country: string | null,
 ): { place_id: string | null; country: string | null } {
-  const cc = country && /^[A-Za-z]{2}$/.test(country.trim()) ? country.trim().toUpperCase() : null;
+  const cc = isoCountry(country);
   const text = (raw ?? '').trim();
   if (!text) return { place_id: null, country: cc };
 
