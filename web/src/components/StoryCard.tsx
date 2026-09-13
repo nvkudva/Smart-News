@@ -18,10 +18,17 @@ export function variantFor(story: Story, index: number): Variant {
   // rates almost everything 4-5, so importance alone makes every card full size
   // — hence the corroboration floor beside it. But importance is also one guess
   // from a dozen article bodies, and it reads a scheduled product launch as
-  // routine: the second clause is the crowd overruling it, because sixty
-  // outlets independently running a story is the stronger claim that it matters.
-  if (story.importance >= 4 && story.source_count >= 3) return 'stack';
-  if (story.source_count >= 12) return 'stack';
+  // routine: the last clause is the crowd overruling it, because a story many
+  // outlets independently run is the stronger claim that it matters.
+  //
+  // The floor used to sit at three sources, and measured against a live window
+  // that left 78% of the feed compact — 57% of clusters carry exactly two
+  // sources, so the commonest story in the store could never be full size. At
+  // two it is 30%, and what stays compact is what the floor was always meant to
+  // catch: routine news one or two outlets bothered with.
+  if (story.importance >= 4 && story.source_count >= 2) return 'stack';
+  if (story.importance >= 3 && story.source_count >= 3) return 'stack';
+  if (story.source_count >= 8) return 'stack';
   return 'compact';
 }
 
