@@ -1640,7 +1640,11 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   font-size: calc(var(--t-3) + 0.5px);
   line-height: 1.55;
 }
-:root[data-theme="broadsheet"] .plate { border-radius: 3px; border-color: var(--rule); }
+/* 3px reads as an accident of anti-aliasing rather than as a choice; 7px is
+   visibly rounded and still nowhere near the glass themes' 14. A photograph is
+   the one thing on this page that was never set in metal, so it is allowed a
+   corner the hairlines around it do not have. */
+:root[data-theme="broadsheet"] .plate { border-radius: 7px; border-color: var(--rule); }
 
 
 
@@ -2237,6 +2241,16 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   border: 1px solid var(--rule);
   box-shadow: none;
   -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+
+/* Broadsheet gave up the card everywhere else - fill, corners and shadow, for
+   a hairline - and this was the one box left with a border and a 20px radius
+   in it. It keeps the tint, which is doing the work of separating it from the
+   page, and gives up the outline that was drawing a box around the tint.
+   Both modes named, to clear the dark-mode rule above. */
+:root[data-theme="broadsheet"] .story__coverage > .panel,
+:root[data-theme="broadsheet"][data-mode="dark"] .story__coverage > .panel {
+  border: 0; border-radius: 0;
 }
 
 /* The framing, inside the coverage card and made to take less room: a step
