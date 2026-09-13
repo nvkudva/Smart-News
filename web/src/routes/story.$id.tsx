@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { slug } from '../../shared/taxonomy'
 import type { StoryPayload } from '../../shared/types'
 import { CategoryStrip } from '../components/CategoryStrip'
@@ -9,6 +9,34 @@ import { ago } from '../lib/format'
 import { TabBar } from '../components/TabBar'
 import { Back, Photo } from '../components/icons'
 import { load } from '../lib/load'
+
+/**
+ * Back goes back, not home.
+ *
+ * It was a Link to "/", so a reader who reached a story from Sports or from a
+ * ?sub= filter was returned to the top of the feed instead of the place they
+ * had been reading - and on a second story the browser's own back button and
+ * this one disagreed about where "back" was.
+ *
+ * Still an anchor with a real href: that is what a reader who landed on the
+ * story directly - a shared link, a cold tab - needs, and it keeps middle-click
+ * and cmd-click opening the feed in a new tab. The href is the fallback, the
+ * handler is the behaviour.
+ */
+function BackLink() {
+  const router = useRouter()
+  return (
+    <a href="/" className="story__back" aria-label="Back"
+       onClick={(e) => {
+         if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+         if (!router.history.canGoBack()) return
+         e.preventDefault()
+         router.history.back()
+       }}>
+      <Back />
+    </a>
+  )
+}
 
 /**
  * The one place the port improves on the original.
@@ -56,7 +84,7 @@ function StoryPage() {
         {/* Back, dateline and the save control read as one line: the story's
             own metadata sits in the bar rather than repeating under the title. */}
         <header className="story__topbar">
-          <Link to="/" className="story__back" aria-label="Back"><Back /></Link>
+          <BackLink />
           <div className="story__meta">
             {cluster.place && <><span>{cluster.place}</span><span className="sep">·</span></>}
             <span>{ago(cluster.first_seen)}</span>
@@ -133,7 +161,7 @@ function LoadingStory() {
       <main className="shell shell--story" aria-busy="true" aria-label="Loading">
         <CategoryStrip active="" />
         <header className="story__topbar">
-          <Link to="/" className="story__back" aria-label="Back"><Back /></Link>
+          <BackLink />
         </header>
         <div className="detail">
           <div className="detail__main"><div className="skel" /></div>
