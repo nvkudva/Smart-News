@@ -77,10 +77,7 @@ function Profile() {
           <h2 className="sethead">Location</h2>
 
           <div className="setgroup">
-            <div className="setrow">
-              <span className="setrow__title">Home country</span>
-              <CountryPicker country={prefs.country} options={options} />
-            </div>
+            <CountryPicker country={prefs.country} options={options} />
 
             {/* The picker heads itself; a second title above it said the same
                 words twice. */}
