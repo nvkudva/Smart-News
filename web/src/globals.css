@@ -202,9 +202,9 @@ html { background: var(--ground); }
   font-weight: 200 900; font-style: normal; font-display: swap;
 }
 @font-face {
-  font-family: 'Public Sans';
-  src: url('/fonts/public-sans-var.woff2') format('woff2-variations');
-  font-weight: 100 900; font-style: normal; font-display: swap;
+  font-family: 'Literata';
+  src: url('/fonts/literata-var.woff2') format('woff2-variations');
+  font-weight: 200 900; font-style: normal; font-display: swap;
 }
 @font-face {
   font-family: 'Spectral';
@@ -773,7 +773,7 @@ body {
 @media (min-width: 700px) {
   .detail__main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
   .detail__side { display: flex; flex-direction: column; gap: 14px; }
-  .detail h1 { font-size: var(--t-9); max-width: 18em; }
+  .detail h1 { font-size: var(--t-9); }
   .detail .panel p { font-size: var(--t-5); line-height: 1.62; max-width: 78ch; }
 }
 
@@ -790,7 +790,7 @@ body {
   /* The outlet list stops being a sticky rail beside the summary and becomes a
      band under it: it is a credit, read once, not a companion to the reading. */
   .detail__side { grid-area: side; position: static; top: auto; }
-  .detail h1 { font-size: var(--t-10); max-width: none; }
+  .detail h1 { font-size: var(--t-10); }
 }
 
 /* ── Exploration marker ────────────────────────────────────────────────────
@@ -1588,13 +1588,16 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   font-family: Spectral, Georgia, 'Times New Roman', serif;
   font-weight: 600; letter-spacing: -0.008em;
 }
-/* Public Sans for what is read below the headline. A serif body would make
-   this the same theme as Broadsheet in a different colour; the flat surfaces
-   want a face with no warmth in it either. */
+/* Literata below the headline. A sans was tried first, on the argument that a
+   serif body would make this Broadsheet in another colour - but the two do not
+   read alike: Literata is the squarer and more even-coloured of the pair, which
+   suits flat surfaces, where Source Serif is the warmer one. The themes are
+   told apart by the ground and the type together rather than by serif or not. */
 :root[data-theme="fjord"] .card p,
 :root[data-theme="fjord"] .detail__main p,
 :root[data-theme="fjord"] .pagehead p {
-  font-family: 'Public Sans', -apple-system, system-ui, sans-serif;
+  font-family: Literata, Georgia, 'Times New Roman', serif;
+  font-size: calc(var(--t-3) + 0.5px);
   line-height: 1.55;
 }
 
@@ -2124,7 +2127,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
     grid-area: head; display: grid; align-items: center; gap: 32px;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
   }
-  .story__title { max-width: none; }
   .story__head .plate--detail { max-height: 288px; }
   .story__meta { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
 
