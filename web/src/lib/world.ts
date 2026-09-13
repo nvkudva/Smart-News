@@ -7,10 +7,14 @@ import { deleteEntry, forgetStamp, readEntry } from './store';
  * The world this tab is holding, and everything that loads or drops it.
  *
  * This lived inside SectionFeed.tsx, which made a component the owner of the
- * app's feed data: a scroll container imported warmSection from it, a
- * preferences utility imported clearSections from it, and importing the
- * component armed a fifteen-minute timer. None of that was about rendering a
- * section. The component renders; this decides what there is to render.
+ * app's feed data: a scroll container imported its warm helper, a preferences
+ * utility imported clearSections, and importing the component armed a
+ * fifteen-minute timer. None of that was about rendering a section. The
+ * component renders; this decides what there is to render.
+ *
+ * Warming is the router's now. The strip calls preloadRoute on intent, which
+ * runs the feed routes' loader, which is loadWorld - so there is no separate
+ * warm helper to keep in step with it.
  */
 /** What one category answers with. Derived from the world now rather than
  *  fetched, but the same shape this component has always rendered. */
@@ -162,10 +166,6 @@ export function clearSections() {
   // old ranking straight back off disk.
   deleteEntry(WORLD);
 }
-
-/** Warm without rendering — the strip calls this on hover and on touch-down.
- *  There is one answer for every section now, so the category is immaterial. */
-export function warmSection(_cat?: string) { void loadWorld().catch(() => {}); }
 
 /**
  * The pipeline moves every fifteen minutes, so this asks on the same clock.

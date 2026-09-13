@@ -1,7 +1,6 @@
 
 import { useRouter } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
-import { warmSection } from '../lib/world';
 
 /**
  * Module scope on purpose: it survives a client navigation and resets on a hard
@@ -106,8 +105,12 @@ export function StripScroller(
       if (!cat) return;
       // Typed per route rather than from the raw href: the strip only ever
       // links to the index or to /c/$cat, so both targets can be named.
+      //
+      // One call, not two. This used to preload the route and then warm the
+      // data separately, because the feed's loader did not exist and
+      // preloadRoute could only fetch the chunk. Now the route has a loader
+      // that awaits loadWorld, so preloading it is warming the data.
       void router.preloadRoute(cat === 'top' ? { to: '/' } : { to: '/c/$cat', params: { cat } });
-      warmSection(cat);
     };
     el.addEventListener('pointerover', warm, { passive: true });
     el.addEventListener('touchstart', warm, { passive: true });
