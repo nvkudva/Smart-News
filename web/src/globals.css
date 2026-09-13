@@ -240,7 +240,7 @@ body {
 
 .card {
   display: flex; flex-direction: column; gap: 7px;
-  border-radius: var(--r-lg); padding: 15px 16px 14px;
+  border-radius: var(--r-lg); padding: 15px var(--card-pad-x) 14px;
   background: var(--glass); border: 1px solid var(--glass-edge);
   -webkit-backdrop-filter: blur(30px) saturate(185%); backdrop-filter: blur(30px) saturate(185%);
   box-shadow: var(--shadow);
@@ -799,11 +799,22 @@ body {
 .cardwrap { position: relative; display: flex; }
 .cardwrap > .card { flex: 1 1 auto; min-width: 0; }
 
+/* What the marker is indented into, and what it is centred in. */
 .card--explore .foot .kicker { padding-left: 16px; }
 
+/* The marker is a sibling of the card, not a child of it, because a button
+   inside an anchor is invalid markup - so it has to be told where the card's
+   text starts. It was placed against the wrapper's own corner instead, which
+   was close enough while every theme inset its cards by 16px; Broadsheet insets
+   by 2, and the dot landed on top of the kicker's first letter.
+   Horizontally it now centres in the 16px the kicker is indented by, and
+   vertically on the kicker's line rather than on the card's corner: that line's
+   middle measures 23.25px above the card's bottom edge, so a 44px hit box has
+   to start 1.25px above it to put its own centre there. At -1px the dot sat two
+   pixels below the text beside it. */
 .expdot { position: absolute; left: 0; bottom: 0; z-index: 2; }
 .expdot__hit {
-  position: absolute; left: -1px; bottom: -1px;
+  position: absolute; left: calc(var(--card-pad-x) - 14px); bottom: 1.25px;
   width: 44px; height: 44px; padding: 0; border: none; background: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;   /* 44px hit area, 8px ink */
 }
@@ -872,7 +883,10 @@ body {
   .foot { margin-top: auto; }
 }
 
-:root { --card-h: 400px; --gap: 14px; }
+/* How far a card holds its content off its own edge. A token because the
+   exploration marker sits outside the card and has to line up with the text
+   inside it; Broadsheet, which has no card edge to speak of, sets its own. */
+:root { --card-h: 400px; --gap: 14px; --card-pad-x: 16px; }
 @media (min-width: 1024px) { :root { --card-h: 396px; --gap: 16px; } }
 @media (min-width: 1440px) { :root { --card-h: 372px; --gap: 18px; } }
 
@@ -1496,6 +1510,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    and every hue moves off copper towards the yellow-browns: ink is a brown
    dark rather than a black, and the accent is tobacco rather than ember. */
 :root[data-theme="broadsheet"] {
+  --card-pad-x:    2px;
   --ground:        oklch(0.951 0.024 86);
   --ink:           oklch(0.248 0.030 60);
   --ink-2:         oklch(0.468 0.030 60);
@@ -1529,7 +1544,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 :root[data-theme="broadsheet"] .card {
   background: none; border: none; border-radius: 0; box-shadow: none;
   border-bottom: 1px solid var(--rule);
-  padding: 12px 2px 14px;
+  padding: 12px var(--card-pad-x) 14px;
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
 /* The masthead is not in this list. The wordmark is the app's name and it is
