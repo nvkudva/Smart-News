@@ -1,5 +1,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { slug } from '../../shared/taxonomy'
 import type { StoryPayload } from '../../shared/types'
+import { CategoryStrip } from '../components/CategoryStrip'
 import { CoverageSplit } from '../components/CoverageSplit'
 import { SaveButton } from '../components/SaveButton'
 import { StoryCard } from '../components/StoryCard'
@@ -43,7 +45,15 @@ function StoryPage() {
 
   return (
     <>
-      <main className="shell">
+      <main className="shell shell--story">
+        {/* The column the feed pages carry, on the page a reader lands on from
+            a link: without it a shared story is a dead end on a desktop, with
+            fourteen sections one click away and none of them on screen. It
+            marks the story's own category rather than nothing, so the page
+            says where this sits. Below 1024 it is hidden, where it would be
+            the phone's sweep strip above a story that already has a back
+            button and a headline. */}
+        <CategoryStrip active={slug(cluster.category)} />
         {/* Back, dateline and the save control read as one line: the story's
             own metadata sits in the bar rather than repeating under the title. */}
         <header className="story__topbar">
@@ -120,7 +130,8 @@ function StoryPage() {
 function LoadingStory() {
   return (
     <>
-      <main className="shell" aria-busy="true" aria-label="Loading">
+      <main className="shell shell--story" aria-busy="true" aria-label="Loading">
+        <CategoryStrip active="" />
         <header className="story__topbar">
           <Link to="/" className="story__back" aria-label="Back"><Back /></Link>
         </header>

@@ -466,6 +466,13 @@ body {
   .substrip__row { flex-wrap: wrap; width: auto; row-gap: 4px; }
 }
 
+/* On a story, the column is the desktop's only way back to the fourteen
+   sections - a link shared into a phone browser has a back button and a
+   headline instead, and a sweep strip above them is one navigation too many. */
+@media (max-width: 1023.98px) {
+  .shell--story > .catstrip { display: none; }
+}
+
 /* ── The category strip as a column ───────────────────────────────────────
    A horizontal strip is right on a phone, where a thumb sweeps it and the
    masked edge says there is more. On a desktop it is the wrong shape: fourteen
@@ -485,6 +492,16 @@ body {
     column-gap: var(--gap); align-items: start;
   }
   :root { --catcol: 190px; }
+
+  /* The feed puts one block beside the column; the story page puts three. Auto
+     placement would send the third back under the column, so the column takes
+     the first track and everything else takes the second - and the column
+     spans every row, or its own height would set the height of the first one
+     and drop the story's body six hundred pixels down the page. `span 20`
+     rather than `1 / -1`: these rows are implicit, and -1 counts only the
+     explicit grid, so it resolves back to row 1 and does nothing at all. */
+  .shell:has(> .catstrip) > .catstrip { grid-column: 1; grid-row: 1 / span 20; }
+  .shell:has(> .catstrip) > :not(.catstrip) { grid-column: 2; }
 
 
   .shell > .catstrip {
