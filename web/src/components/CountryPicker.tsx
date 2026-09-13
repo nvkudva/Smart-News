@@ -47,6 +47,10 @@ export function CountryPicker({ country, options }: { country: string; options: 
         <span className="setdrop__value">{name}</span>
       </summary>
       <div className="setdrop__body">
+        <p>
+          National is this country and International is everything else. The
+          list holds only countries we are carrying stories for.
+        </p>
         <div className="setchips" role="radiogroup" aria-label="Home country">
           {options.map((c) => (
             <button

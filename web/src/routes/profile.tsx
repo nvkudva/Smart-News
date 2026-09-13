@@ -69,12 +69,11 @@ function Profile() {
             <PlaceChoice initial={picked} options={places} />
           </div>
 
-          <p className="setnote">
-            Everything saves as you tap it. Interests weight the feed rather than
-            filter it — hiding is what removes a subject, from the feed and from
-            the strip alike. National and International are your country and
-            everything else.
-          </p>
+          {/* Each row says what it does inside itself, where the reader is
+              deciding. A note under the group repeated three of those four
+              sentences from a distance and made the section look longer than
+              the four lines it actually is. */}
+          <p className="setnote">Everything saves as you tap it.</p>
         </section>
 
         {/* What is left under Location is the one thing that really is about
