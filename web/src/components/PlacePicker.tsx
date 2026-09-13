@@ -27,7 +27,6 @@ export function PlacePicker({ initial }: { initial: PickedPlace[] }) {
       list.map((p) => p.name),
       list.filter((p) => p.id).map((p) => p.id as string),
     ).then(prefsChanged).catch(() => {});
-    return list;
   };
   const [q, setQ] = useState('');
   const [results, setResults] = useState<Place[]>([]);
@@ -58,15 +57,26 @@ export function PlacePicker({ initial }: { initial: PickedPlace[] }) {
     return () => document.removeEventListener('pointerdown', away);
   }, [open]);
 
+  // The list is worked out here rather than inside a setPicked updater, because
+  // `store` writes the preference to the Worker: React may call an updater more
+  // than once for a single change - StrictMode always does - and a save is not
+  // something to run twice. An updater has to be a pure function of `cur`.
   function add(next: PickedPlace) {
-    setPicked((cur) => {
-      if (cur.length >= MAX) return cur;
-      const dup = next.id
-        ? cur.some((p) => p.id === next.id)
-        : cur.some((p) => p.name.toLowerCase() === next.name.toLowerCase());
-      return dup ? cur : store([...cur, next]);
-    });
+    const dup = next.id
+      ? picked.some((p) => p.id === next.id)
+      : picked.some((p) => p.name.toLowerCase() === next.name.toLowerCase());
+    if (!dup && picked.length < MAX) {
+      const list = [...picked, next];
+      setPicked(list);
+      store(list);
+    }
     setQ(''); setResults([]); setOpen(false);
+  }
+
+  function remove(p: PickedPlace) {
+    const list = picked.filter((c) => c !== p);
+    setPicked(list);
+    store(list);
   }
 
   const full = picked.length >= MAX;
@@ -87,7 +97,7 @@ export function PlacePicker({ initial }: { initial: PickedPlace[] }) {
               {p.label}
               {p.id === null && <span className="chip__note">text</span>}
               <button type="button" className="chip__x" aria-label={`Remove ${p.label}`}
-                      onClick={() => setPicked((cur) => store(cur.filter((c) => c !== p)))}>×</button>
+                      onClick={() => remove(p)}>×</button>
             </span>
           ))}
         </div>
