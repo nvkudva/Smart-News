@@ -1336,9 +1336,12 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .split__seg[data-side="right"],  .split__dot[data-side="right"]  { background: var(--side-right); }
 
 .split__keys { display: flex; flex-wrap: wrap; gap: 12px; }
+/* The same size, weight and colour as the count at the end of the row: they
+   are four readings of one measurement, and the legend being a step darker
+   made it read as the heading of the thing rather than as part of it. */
 .split__key {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: var(--t-2); font-weight: 600; color: var(--ink-2);
+  font-size: var(--t-2); font-weight: 600; color: var(--ink-3);
 }
 /* A side that ran nothing still gets a row — its absence is the information. */
 .split__key[data-on="false"] { opacity: .45; }
@@ -1346,6 +1349,20 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* Both were inline styles carrying literal colours, which is how this panel
    ended up the one object on the page that ignored the theme. */
 .split__count { font-size: var(--t-2); font-weight: 600; color: var(--ink-3); white-space: nowrap; }
+
+/* The heading, the bar, the legend and the counts on one line. Only the bar
+   has no natural width, so it is the only thing that flexes: everything else
+   holds its size and the bar takes the gap between them. `1 1 80px` rather
+   than `1 1 0` because a bar squeezed to a sliver stops being a measurement
+   at all - below that the row wraps instead, in source order, which is the
+   phone's layout and needs no second rule. */
+.split__head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; }
+.split__head > .label { flex: 0 0 auto; }
+.split__head > .split { flex: 1 1 80px; min-width: 80px; }
+.split__head > .split__keys { flex: 0 0 auto; gap: 10px; }
+/* No margin-left:auto - the bar's growth is what pushes this to the right
+   edge, and the auto margin only cost the phone a row of its own for it. */
+.split__head > .split__count { flex: 0 0 auto; }
 .split__note { font-size: var(--t-2); line-height: 1.5; color: var(--ink-2); }
 
 .blindspot {
@@ -2204,11 +2221,28 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 .story__coverage { display: flex; flex-direction: column; gap: 18px; }
 
+/* Recessed, not raised. The panel is white at 60% over a cream ground, which
+   makes the apparatus the brightest object on the page - brighter than the
+   story it is annotating. A tint of the ink instead: it darkens a light theme
+   and lightens a dark one by the same small amount, because --ink is the
+   opposite of --ground in both, so one rule is right in all eight
+   combinations. The glass blur and the shadow go with it - they were the rest
+   of why it sat forward.
+
+   Said twice for the same reason the summary is: the dark-mode rule that lights
+   every panel outranks a plain descendant selector. */
+.story__coverage > .panel,
+:root[data-mode="dark"] .story__coverage > .panel {
+  background: color-mix(in oklab, var(--ink) 4%, transparent);
+  border: 1px solid var(--rule);
+  box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+
 /* The framing, inside the coverage card and made to take less room: a step
    down in type, tighter rules, and the side named in its own colour rather
    than in a filled pill - the coloured rule already identifies the column, so
    the pill was saying it twice and costing a whole row of height to do it. */
-.story__sides { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .story__framings { display: flex; flex-direction: column; gap: 12px; }
 .story__framings .framing {
   gap: 3px; padding: 0 0 0 11px; min-width: 0;

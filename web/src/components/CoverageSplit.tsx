@@ -28,11 +28,35 @@ export function CoverageSplit({
 
   return (
     <div className="panel">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* One line: the heading, the bar, the legend and the counts. The bar is
+          the only part with no natural width, so it takes whatever the other
+          three leave and the row reads as a single measurement rather than as
+          four stacked pieces of one. It wraps in order when there is not
+          enough width for that, which is what the phone gets. */}
+      <div className="split__head">
         <div className="label">How it&rsquo;s covered</div>
-        {/* The rated count belongs here beside the article count, not in a
-            sentence of its own underneath: it is the same kind of fact, and
-            said in prose it took a line to repeat what the legend adds up to. */}
+
+        {rated > 0 && (
+          <>
+            <div className="split" role="img"
+                 aria-label={SIDES.map((s) => `${counts[s.key]} ${s.label.toLowerCase()}`).join(', ')}>
+              {SIDES.map((s) => counts[s.key] > 0 && (
+                <span key={s.key} className="split__seg" data-side={s.key}
+                      style={{ flexGrow: counts[s.key] }} />
+              ))}
+            </div>
+
+            <div className="split__keys">
+              {SIDES.map((s) => (
+                <span key={s.key} className="split__key" data-on={counts[s.key] > 0}>
+                  <i className="split__dot" data-side={s.key} />
+                  {s.label} {counts[s.key]}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+
         <div className="split__count">
           {articleCount} article{articleCount === 1 ? '' : 's'}
           {rated > 0 && <> &middot; {rated} rated</>}
@@ -44,23 +68,6 @@ export function CoverageSplit({
         <p className="split__note">None of the outlets on this story carry a lean rating yet.</p>
       ) : (
         <>
-          <div className="split" role="img"
-               aria-label={SIDES.map((s) => `${counts[s.key]} ${s.label.toLowerCase()}`).join(', ')}>
-            {SIDES.map((s) => counts[s.key] > 0 && (
-              <span key={s.key} className="split__seg" data-side={s.key}
-                    style={{ flexGrow: counts[s.key] }} />
-            ))}
-          </div>
-
-          <div className="split__keys">
-            {SIDES.map((s) => (
-              <span key={s.key} className="split__key" data-on={counts[s.key] > 0}>
-                <i className="split__dot" data-side={s.key} />
-                {s.label} {counts[s.key]}
-              </span>
-            ))}
-          </div>
-
           {dominant && (
             <p className="split__note">
               {dominant === 'centre'
@@ -82,17 +89,18 @@ export function CoverageSplit({
           abreast, which a 320px rail beside the meter could not do - but the
           two are one thought: how a story was covered, and what each side made
           of it. The card is full width now and the columns fit inside it. */}
+      {/* No heading over the columns either. Inside this card three coloured
+          columns headed LEFT, CENTRE and RIGHT are self-evidently the three
+          sides, and a title for them was a second title inside a panel that
+          already has one. */}
       {said.length > 0 && (
-        <div className="story__sides">
-          <div className="label">How each side told it</div>
-          <div className="story__framings">
-            {said.map((s) => (
-              <div key={s.key} className="framing">
-                <span className="framing__side" data-side={s.key}>{s.label}</span>
-                <p>{framing[s.key]}</p>
-              </div>
-            ))}
-          </div>
+        <div className="story__framings">
+          {said.map((s) => (
+            <div key={s.key} className="framing">
+              <span className="framing__side" data-side={s.key}>{s.label}</span>
+              <p>{framing[s.key]}</p>
+            </div>
+          ))}
         </div>
       )}
     </div>
