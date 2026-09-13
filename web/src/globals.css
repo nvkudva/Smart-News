@@ -2031,7 +2031,20 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
      The margin/padding pair widens the clip box by the amount a card's shadow
      spills, so the gutters keep their soft edge and the neighbour's matching
      padding is all that ever shows through. */
+  /* --peek is how much of the next section is left showing. Nothing in the
+     app says a feed can be swiped sideways, and a reader who does not try it
+     never finds thirteen of the fourteen sections; an edge of the next card,
+     permanently visible, says it without a word or a timer. */
+  --peek: 14px;
+  /* The peek is padding on the clip box, not a wider clip margin. A pane is a
+     third of the track and the track is 300% of THIS element's content box, so
+     padding here makes every pane narrower by 2×--peek and leaves the two
+     neighbours showing in the padding on either side - which overflow:clip
+     keeps, because it clips at the padding edge. Widening the clip margin
+     instead only ever revealed the neighbour's own padding, which is empty.
+     It costs the feed 28px of width, and that is what a peek costs. */
   margin-inline: -10px;
+  padding-inline: var(--peek);
   overflow: clip;
   overflow-clip-margin: 10px;
   touch-action: pan-y pinch-zoom;

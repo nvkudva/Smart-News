@@ -15,6 +15,8 @@ const RUBBER = 3;
 /** Long enough to read as travel, short enough that the URL is not late. */
 const SETTLE_MS = 280;
 const EASE = 'cubic-bezier(.22,.7,.25,1)';
+/** Set the first time the hint plays, so it is a hint and not a habit. */
+const NUDGED = 'sn_swipe_hint';
 
 /**
  * Three panes on one track: the previous category, the current one, the next.
@@ -65,6 +67,29 @@ export function CategoryPager({
   // outgoing category first. It cannot be derived away, because after a swipe
   // `centre` leads `active` for the length of the commit, which is the point.
   if (seen !== active) { setSeen(active); setCentre(active); }
+
+  // Shown once ever, and never to a reader who already knows: the peek says
+  // the sections continue sideways, and this says the page will follow a
+  // finger. A demonstration rather than a sentence - there is nowhere on this
+  // page to put a sentence, and it would need translating.
+  useEffect(() => {
+    if (!neighbours) return;                 // wait until there is a neighbour to show
+    try { if (localStorage.getItem(NUDGED)) return; } catch { return; }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Touch only, for the same reason the gesture is: a pointer cannot do it.
+    if (!window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+
+    const el = track.current;
+    if (!el) return;
+    const t = window.setTimeout(() => {
+      el.style.transition = `transform 420ms ${EASE}`;
+      el.style.transform = 'translate3d(calc(-33.3333% - 26px), 0, 0)';
+      window.setTimeout(() => { el.style.transform = ''; }, 430);
+      window.setTimeout(() => { el.style.transition = ''; }, 900);
+      try { localStorage.setItem(NUDGED, '1'); } catch { /* it will nudge once more */ }
+    }, 900);                                  // after the rows have settled
+    return () => window.clearTimeout(t);
+  }, [neighbours]);
 
   // Nothing off-screen competes with the first paint; after it, both sides are
   // mounted for good, because a neighbour that unmounts is a neighbour that has
