@@ -1,9 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { TAXONOMY } from '../../shared/taxonomy'
-import { CategoryPager } from '../components/CategoryPager'
 import { FeedError, FeedPending } from '../components/FeedBoundary'
-import { CategoryStrip } from '../components/CategoryStrip'
-import { TabBar } from '../components/TabBar'
+import { FeedPage } from '../components/FeedPage'
 import { loadWorld } from '../lib/world'
 
 /**
@@ -34,19 +31,5 @@ export const Route = createFileRoute('/')({
   loader: () => loadWorld(),
   pendingComponent: () => <FeedPending active="top" />,
   errorComponent: () => <FeedError active="top" />,
-  component: Home,
+  component: () => <FeedPage active="top" />,
 })
-
-const SECTIONS = TAXONOMY.map((c) => ({ slug: c.slug, name: c.name }))
-
-function Home() {
-  return (
-    <>
-      <main className="shell">
-        <CategoryStrip active="top" />
-        <CategoryPager active="top" sections={SECTIONS} />
-      </main>
-      <TabBar active="home" />
-    </>
-  )
-}

@@ -1,9 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
-import { TAXONOMY, categoryBySlug } from '../../shared/taxonomy'
-import { CategoryPager } from '../components/CategoryPager'
-import { CategoryStrip } from '../components/CategoryStrip'
+import { categoryBySlug } from '../../shared/taxonomy'
 import { FeedError, FeedPending } from '../components/FeedBoundary'
-import { TabBar } from '../components/TabBar'
+import { FeedPage } from '../components/FeedPage'
 import { loadWorld } from '../lib/world'
 
 /**
@@ -34,25 +32,24 @@ export const Route = createFileRoute('/c/$cat')({
   // One answer for every category, so the loader does not depend on the param:
   // the world is already in hand when the section is picked out of it.
   loader: () => loadWorld(),
-  pendingComponent: () => <FeedPending active="top" />,
-  errorComponent: () => <FeedError active="top" />,
+  // Both faces read the param rather than hardcoding 'top': the strip is
+  // derivable from the taxonomy and needs nothing loaded, so while India is
+  // arriving it should say India. It highlighted Top and then jumped.
+  pendingComponent: Pending,
+  errorComponent: Failed,
   component: SectionPage,
 })
 
-const SECTIONS = TAXONOMY.map((c) => ({ slug: c.slug, name: c.name }))
+function Pending() {
+  return <FeedPending active={Route.useParams().cat} />
+}
+
+function Failed() {
+  return <FeedError active={Route.useParams().cat} />
+}
 
 function SectionPage() {
-  const { cat } = Route.useParams()
   // beforeLoad has already rejected anything categoryBySlug cannot resolve.
-  const category = categoryBySlug(cat)!
-
-  return (
-    <>
-      <main className="shell">
-        <CategoryStrip active={category.slug} />
-        <CategoryPager active={category.slug} sections={SECTIONS} />
-      </main>
-      <TabBar active="home" />
-    </>
-  )
+  const category = categoryBySlug(Route.useParams().cat)!
+  return <FeedPage active={category.slug} />
 }
