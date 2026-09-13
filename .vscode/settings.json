@@ -1,0 +1,9 @@
+{
+  "files.exclude": {
+    "**/dist": true,
+    "**/dist.*": true,
+    "web/.wrangler": true,
+    "web/.tanstack/tmp": true,
+    "web/.tanstack": true
+  }
+}
