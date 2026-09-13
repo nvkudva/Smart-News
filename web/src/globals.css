@@ -352,7 +352,10 @@ body {
   box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 14px;
 }
-.label { font-size: var(--t-1); letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: oklch(0.55 0.02 258); }
+/* var(--kicker), not a literal: this was Frost's own blue-grey, and it stayed
+   blue-grey on Broadsheet's paper and in Northlight's dark - one wrong colour
+   on every panel of two themes, in both modes. */
+.label { font-size: var(--t-1); letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: var(--kicker); }
 .panel p { margin: 0; font-size: var(--t-4); line-height: 1.58; color: var(--ink-2); text-wrap: pretty; }
 
 /* A section heading in the detail's side column, where .label — a 10.5px
@@ -782,13 +785,19 @@ body {
 
 /* ── Story detail ──────────────────────────────────────────────────────── */
 .detail { display: flex; flex-direction: column; gap: 22px; }
+/* The picture is written after the summary, because that is where it belongs
+   on a desktop - the second column beside it. On a phone there is no second
+   column and it leads the text instead, which is an order, not a move: a
+   flex container at every width is what lets it be one. */
+.detail__main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.detail__main > .plate--detail { order: -1; }
 .plate--detail { height: 208px; border-radius: var(--r-md); }
 @media (min-width: 560px) { .plate--detail { aspect-ratio: 16 / 9; height: auto; max-height: 380px; } }
 
 /* Detail layout lives at the end of the file on purpose: the base `.detail`
    rule above is equal specificity, so these must come after it to win. */
 @media (min-width: 700px) {
-  .detail__main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .detail__main { gap: 22px; }
   .detail__side { display: flex; flex-direction: column; gap: 14px; }
   .detail h1 { font-size: var(--t-9); }
   .detail .panel p { font-size: var(--t-5); line-height: 1.62; max-width: 78ch; }
@@ -2186,11 +2195,14 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 
 @media (min-width: 1024px) {
-  .story__head {
-    grid-area: head; display: grid; align-items: center; gap: 32px;
+  /* The headline is on its own now, so it takes the full width rather than
+     two thirds of it. */
+  .story__head { grid-area: head; }
+  .detail__main {
+    display: grid; align-items: start; gap: 32px;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
   }
-  .story__head .plate--detail { max-height: 288px; }
+  .detail__main > .plate--detail { order: 0; max-height: 288px; }
   .story__meta { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
 
   /* The meter and its blindspot note are a fixed-width object; the framing is

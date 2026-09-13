@@ -74,17 +74,22 @@ function StoryPage() {
             <div className="story__headtext">
               <h1 className="story__title">{cluster.headline}</h1>
             </div>
-
-            <div className="plate plate--detail">
-              {cluster.image_url ? <img src={cluster.image_url} alt="" /> : <Photo size={30} />}
-              {cluster.image_url && cluster.image_source && <span className="credit">Source : {cluster.image_source}</span>}
-            </div>
           </div>
 
+          {/* The photograph sits beside the summary rather than beside the
+              headline: the headline gets the width it wants, and the picture
+              is next to the prose it illustrates. Below 1024 it goes back to
+              being a full-width lead above the text - which is why it is
+              ordered ahead of the panel there rather than after it. */}
           <div className="detail__main">
             <div className="panel">
               <div className="label">What happened</div>
               {paragraphs.map((group, i) => <p key={i}>{group.join(' ')}</p>)}
+            </div>
+
+            <div className="plate plate--detail">
+              {cluster.image_url ? <img src={cluster.image_url} alt="" /> : <Photo size={30} />}
+              {cluster.image_url && cluster.image_source && <span className="credit">Source : {cluster.image_source}</span>}
             </div>
           </div>
 
