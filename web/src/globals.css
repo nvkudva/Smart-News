@@ -1984,11 +1984,10 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .setgroup > .panel > .chips {
   gap: 3px; padding: 3px;
   border-radius: var(--r-md); background: var(--track); border: 1px solid var(--glass-edge);
-  /* Sized by its options, not by the page — and all three the same, because
-     three tracks stacked in one group at three widths read as a ragged edge
-     rather than as three settings. The widest set decides it; the others have
-     fewer segments, which simply makes each segment roomier. */
-  max-width: 480px;
+  /* The full width of the row it sits in. It was capped at 480px so the three
+     tracks in this group would match each other, which they still do - they
+     are all in the same panel and all fill it - and the cap only left a ragged
+     edge against everything else on the page instead. */
 }
 /* Below that, two rows of the full width: a segmented control that has wrapped
    one option onto a second line is no longer a segmented control. */
