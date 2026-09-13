@@ -30,15 +30,18 @@ export function CoverageSplit({
     <div className="panel">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="label">How it&rsquo;s covered</div>
-        <div style={{ fontSize: 11.5, fontWeight: 600, color: 'oklch(0.60 0.014 258)' }}>
+        {/* The rated count belongs here beside the article count, not in a
+            sentence of its own underneath: it is the same kind of fact, and
+            said in prose it took a line to repeat what the legend adds up to. */}
+        <div className="split__count">
           {articleCount} article{articleCount === 1 ? '' : 's'}
+          {rated > 0 && <> &middot; {rated} rated</>}
+          {unrated > 0 && <> &middot; {unrated} unrated</>}
         </div>
       </div>
 
       {rated === 0 ? (
-        <p style={{ fontSize: 13, lineHeight: 1.5, color: 'oklch(0.42 0.014 258)' }}>
-          None of the outlets on this story carry a lean rating yet.
-        </p>
+        <p className="split__note">None of the outlets on this story carry a lean rating yet.</p>
       ) : (
         <>
           <div className="split" role="img"
@@ -58,12 +61,13 @@ export function CoverageSplit({
             ))}
           </div>
 
-          <p style={{ fontSize: 13, lineHeight: 1.5, color: 'oklch(0.42 0.014 258)' }}>
-            {rated} rated outlet{rated === 1 ? '' : 's'} ran this
-            {unrated > 0 && `, and ${unrated} we have not rated`}.
-            {dominant && dominant !== 'centre' && ` Coverage sits almost entirely on the ${dominant}.`}
-            {dominant === 'centre' && ' Coverage is almost entirely centre outlets.'}
-          </p>
+          {dominant && (
+            <p className="split__note">
+              {dominant === 'centre'
+                ? 'Coverage is almost entirely centre outlets.'
+                : `Coverage sits almost entirely on the ${dominant}.`}
+            </p>
+          )}
 
           {missing.length > 0 && missing.length < 3 && (
             <p className="blindspot">
@@ -74,14 +78,21 @@ export function CoverageSplit({
         </>
       )}
 
+      {/* One card, not two. The framing was lifted out so it could sit three
+          abreast, which a 320px rail beside the meter could not do - but the
+          two are one thought: how a story was covered, and what each side made
+          of it. The card is full width now and the columns fit inside it. */}
       {said.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {said.map((s) => (
-            <div key={s.key} className="framing">
-              <span className="framing__side" data-side={s.key}>{s.label}</span>
-              <p>{framing[s.key]}</p>
-            </div>
-          ))}
+        <div className="story__sides">
+          <div className="label">How each side told it</div>
+          <div className="story__framings">
+            {said.map((s) => (
+              <div key={s.key} className="framing">
+                <span className="framing__side" data-side={s.key}>{s.label}</span>
+                <p>{framing[s.key]}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -1343,6 +1343,10 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* A side that ran nothing still gets a row — its absence is the information. */
 .split__key[data-on="false"] { opacity: .45; }
 .split__dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+/* Both were inline styles carrying literal colours, which is how this panel
+   ended up the one object on the page that ignored the theme. */
+.split__count { font-size: var(--t-2); font-weight: 600; color: var(--ink-3); white-space: nowrap; }
+.split__note { font-size: var(--t-2); line-height: 1.5; color: var(--ink-2); }
 
 .blindspot {
   font-size: var(--t-2); line-height: 1.5; color: var(--ink-2);
@@ -2199,16 +2203,27 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   letter-spacing: -0.026em; text-wrap: pretty;
 }
 .story__coverage { display: flex; flex-direction: column; gap: 18px; }
-.story__framings { display: flex; flex-direction: column; gap: 14px; }
-/* A rule in the side's own colour, so a column is identifiable before its badge
-   is read — the badge alone made three columns look like one block of prose. */
+
+/* The framing, inside the coverage card and made to take less room: a step
+   down in type, tighter rules, and the side named in its own colour rather
+   than in a filled pill - the coloured rule already identifies the column, so
+   the pill was saying it twice and costing a whole row of height to do it. */
+.story__sides { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.story__framings { display: flex; flex-direction: column; gap: 12px; }
 .story__framings .framing {
-  gap: 7px; padding: 2px 0 2px 13px; min-width: 0;
-  border-left: 3px solid var(--side-centre);
+  gap: 3px; padding: 0 0 0 11px; min-width: 0;
+  border-left: 2px solid var(--side-centre);
 }
 .story__framings .framing:has(.framing__side[data-side="left"])  { border-left-color: var(--side-left); }
 .story__framings .framing:has(.framing__side[data-side="right"]) { border-left-color: var(--side-right); }
-.story__framings .framing p { font-size: var(--t-3); }
+.story__framings .framing p { font-size: var(--t-2); line-height: 1.5; }
+.story__framings .framing__side {
+  padding: 0; background: none; border-radius: 0;
+  font-size: var(--t-1); letter-spacing: .08em;
+  color: color-mix(in oklab, var(--side-centre) 62%, var(--ink));
+}
+.story__framings .framing__side[data-side="left"]  { color: color-mix(in oklab, var(--side-left) 62%, var(--ink)); }
+.story__framings .framing__side[data-side="right"] { color: color-mix(in oklab, var(--side-right) 62%, var(--ink)); }
 
 .story__related { display: flex; flex-direction: column; gap: 12px; }
 .story__relgrid { display: flex; flex-direction: column; gap: 10px; }
@@ -2217,7 +2232,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   .story__relgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   /* auto-fit, not three fixed tracks: most stories carry one or two sides,
      and fixed tracks left the band two-thirds empty on those. */
-  .story__framings { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 360px)); gap: 22px; }
+  .story__framings { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 20px; }
 }
 
 @media (min-width: 1024px) {
@@ -2231,19 +2246,14 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   .detail__main > .plate--detail { order: 0; max-height: 288px; }
   .story__meta { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
 
-  /* The meter and its blindspot note are a fixed-width object; the framing is
-     prose and takes everything left over. */
-  .story__coverage {
-    grid-area: cover; display: grid; align-items: start;
-    grid-template-columns: 320px minmax(0, 1fr); gap: 32px;
-  }
-  .story__framings { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 26px; }
+  /* One card across the full width, with the three columns inside it. */
+  .story__coverage { grid-area: cover; }
+  .story__framings { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; }
   .story__related { grid-area: rel; }
   /* Six cards, two rows of three. A compact card is a row with its own thumbnail,
      so three across is already half the width each card wants. */
   .story__relgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 }
-.story__sides { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .story__rail { display: flex; flex-direction: column; gap: 12px; }
 @media (min-width: 1024px) {
   .story__rail { flex-direction: row; align-items: baseline; gap: 18px; flex-wrap: wrap; }

@@ -6,7 +6,6 @@ import { CoverageSplit } from '../components/CoverageSplit'
 import { SaveButton } from '../components/SaveButton'
 import { StoryCard } from '../components/StoryCard'
 import { ago } from '../lib/format'
-import { StoryFraming } from '../components/StoryFraming'
 import { TabBar } from '../components/TabBar'
 import { Back, Photo } from '../components/icons'
 import { load } from '../lib/load'
@@ -105,14 +104,7 @@ function StoryPage() {
           </div>
 
           <section className="story__coverage">
-            {/* The panel keeps the meter and the blindspot note; the framing is
-                nulled out of it and rendered beside it at full width instead. */}
-            <CoverageSplit
-              coverage={coverage}
-              articleCount={articles.length}
-              framing={{ left: null, centre: null, right: null }}
-            />
-            <StoryFraming framing={framing} />
+            <CoverageSplit coverage={coverage} articleCount={articles.length} framing={framing} />
           </section>
 
           {related.length > 0 && (
