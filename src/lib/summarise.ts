@@ -163,20 +163,26 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
   };
 }
 
-/** Summarise clusters that are new, or that have grown 40%+ since last time. */
+/**
+ * Summarise clusters that have never been summarised. A headline is written
+ * once and kept: a story that gains a seventh article, or a fifth outlet, is
+ * the same story, and paying the model again to say so is the single largest
+ * avoidable cost in a cycle that runs every 15 minutes.
+ */
 export async function summarisePending(limit = 30): Promise<{ done: number; skipped: number; using: string }> {
   const d = db();
   const config = llmConfig();
   // A story only one outlet ran is exactly what a corroboration-ranked feed
   // should be sceptical of, so it is also the cheapest thing to not summarise.
   const minSources = Number(process.env.SUMMARISE_MIN_SOURCES ?? 2);
-  // New articles are new input, so the old verdict no longer applies: a cluster
-  // that has grown since the attempt that used up its budget gets a fresh one,
-  // otherwise a run of bad luck excludes it from the feed permanently.
+  // New articles are new input, so a verdict that was never reached still can
+  // be: a cluster that has grown since the attempt that used up its budget gets
+  // a fresh one, otherwise a run of bad luck excludes it from the feed
+  // permanently. Only clusters that have never been summarised are eligible —
+  // one that already has a headline is finished, however much it grows.
   d.prepare(
     `UPDATE clusters SET attempts = 0
-      WHERE attempts > 0 AND article_count > summarised_n
-        AND (summarised_at IS NULL OR article_count >= summarised_n * 1.4)`,
+      WHERE attempts > 0 AND summarised_at IS NULL AND article_count > summarised_n`,
   ).run();
   // Give up after MAX_ATTEMPTS: without this a cluster the model always chokes
   // on gets retried on every scheduled cycle, forever, at cost.
@@ -184,7 +190,7 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
     `SELECT id, article_count FROM clusters
       WHERE source_count >= ?
         AND attempts < ?
-        AND (summarised_at IS NULL OR article_count >= summarised_n * 1.4)
+        AND summarised_at IS NULL
       ORDER BY source_count DESC, article_count DESC
       LIMIT ?`,
   ).all(minSources, MAX_ATTEMPTS, limit) as unknown as { id: string; article_count: number }[];

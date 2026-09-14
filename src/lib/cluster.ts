@@ -78,7 +78,13 @@ function independentSources(members: Row[]): number {
 }
 
 export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assigned: number } {
-  const THRESHOLD = opts.threshold ?? 0.19;
+  // 0.16, down from 0.19: swept over a 48-hour window of ~2900 articles, the
+  // looser setting turns 1760 single-source clusters into 1696 and lifts the
+  // clusters two or more newsrooms cover from 146 to 162 — a sixth of the feed
+  // again, at no model cost. Below 0.12 the merges stop being the same story
+  // (a Swiss AI paper joined West Bengal madrassa closures on "education"),
+  // so the entity floor below is what keeps this honest, not the threshold.
+  const THRESHOLD = opts.threshold ?? 0.16;
   const ENTITY_FLOOR = opts.entityFloor ?? 0.52;
   const d = db();
   const since = Date.now() - WINDOW_MS;
