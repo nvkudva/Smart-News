@@ -116,4 +116,36 @@ export const SOURCES: SourceSeed[] = [
   { id: 'espn',         name: 'ESPN',          feed_url: 'https://www.espn.com/espn/rss/news',                    homepage: 'https://espn.com',            country: 'US', category: 'Sports', bias: 'centre' },
   { id: 'variety',      name: 'Variety',       feed_url: 'https://variety.com/feed/',                             homepage: 'https://variety.com',         country: 'US', category: 'Entertainment', bias: 'centre' },
   { id: 'bbc-arts',     name: 'BBC Arts',      feed_url: 'https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml', homepage: 'https://bbc.co.uk/news', country: 'GB', category: 'Entertainment', bias: 'centre' },
+
+  // --- technology: consumer launches and hardware. The desk had thirteen
+  // outlets and still supplied 5.9% of everything ingested, and what it did
+  // supply barely corroborated: a trade show is covered by every outlet writing
+  // about a DIFFERENT product, so each write-up clustered alone and the
+  // two-source gate dropped it. These three are the mainstream launch beat, so
+  // they overlap each other and the incumbents on the same announcements —
+  // which is what actually gets a launch onto the feed.
+  //
+  // CNET and PCWorld were dropped at the robots.txt step. Ziff Davis prohibits
+  // automated retrieval for AI use in prose at the top of CNET's file, and
+  // PCWorld disallows anthropic-ai outright. Same reason The Register is absent.
+  { id: 'techradar',   name: 'TechRadar',     feed_url: 'https://www.techradar.com/feeds.xml',                    homepage: 'https://techradar.com',       country: 'GB', category: 'Technology', bias: 'centre' },
+  { id: 'tomsguide',   name: "Tom's Guide",   feed_url: 'https://www.tomsguide.com/feeds/all',                    homepage: 'https://tomsguide.com',       country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'tomshardware',name: "Tom's Hardware",feed_url: 'https://www.tomshardware.com/feeds/all',                 homepage: 'https://tomshardware.com',     country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'livemint-tech', name: 'Mint Technology', feed_url: 'https://www.livemint.com/rss/technology',            homepage: 'https://livemint.com',        country: 'IN', category: 'Technology', bias: 'centre' },
+
+  // --- education. There was no education source at all, which is why the
+  // category it now has read zero over a 48-hour window.
+  { id: 'bbc-education', name: 'BBC Education', feed_url: 'https://feeds.bbci.co.uk/news/education/rss.xml',      homepage: 'https://bbc.co.uk/news',      country: 'GB', category: 'Education', bias: 'centre' },
+  { id: 'ie-education',  name: 'The Indian Express Education', feed_url: 'https://indianexpress.com/section/education/feed/', homepage: 'https://indianexpress.com', country: 'IN', category: 'Education', bias: 'centre' },
+  { id: 'guardian-education', name: 'Guardian Education', feed_url: 'https://www.theguardian.com/education/rss',  homepage: 'https://theguardian.com',     country: 'GB', category: 'Education', bias: 'left' },
+  { id: 'edsurge',       name: 'EdSurge',       feed_url: 'https://www.edsurge.com/articles_rss',                 homepage: 'https://edsurge.com',         country: 'US', category: 'Education', bias: 'centre' },
+
+  // --- climate. One outlet, one story in 48 hours.
+  { id: 'climatehome',  name: 'Climate Home News', feed_url: 'https://www.climatechangenews.com/feed/',           homepage: 'https://climatechangenews.com', country: 'GB', category: 'Climate', bias: 'centre' },
+  { id: 'grist',        name: 'Grist',         feed_url: 'https://grist.org/feed/',                               homepage: 'https://grist.org',           country: 'US', category: 'Climate', bias: 'left' },
+  { id: 'insideclimate',name: 'Inside Climate News', feed_url: 'https://insideclimatenews.org/feed/',             homepage: 'https://insideclimatenews.org', country: 'US', category: 'Climate', bias: 'left' },
+
+  // --- health. STAT News and Medical Xpress are the obvious two and both
+  // disallow ClaudeBot on their articles, so this desk stays thin on purpose.
+  { id: 'healthpolicywatch', name: 'Health Policy Watch', feed_url: 'https://healthpolicy-watch.news/feed/',      homepage: 'https://healthpolicy-watch.news', country: 'CH', category: 'Health', bias: 'centre' },
 ];
