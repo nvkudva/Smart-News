@@ -93,9 +93,76 @@ function insertAll(local: ReturnType<typeof db>, table: string, cols: string[], 
   for (const r of rows) stmt.run(...cols.map((c) => (r[c] ?? null) as never));
 }
 
+/**
+ * Is the file on disk already this pipeline's own working set?
+ *
+ * The runner used to have no disk that survived, so every cycle rebuilt the
+ * store from D1 — ~14k rows a run, and the pipeline's entire read cost, to
+ * re-download five days of rows of which about fifty had changed.
+ *
+ * With the file cached between runs there is nothing to rebuild: this pipeline
+ * is the only writer of articles and clusters on D1, so a file it wrote last
+ * cycle already holds what D1 holds. The site writes only prefs, saved and
+ * events, and prefs are deliberately never pushed, so they are pulled fresh
+ * below either way.
+ *
+ * The check is deliberately shallow — the schema exists and there are recent
+ * articles. Anything else and we pay for the full rebuild, which is the old
+ * behaviour and always correct.
+ */
+function usableLocalStore(path: string, since: number): boolean {
+  if (process.env.HYDRATE_FRESH === '1') return false;
+  if (!existsSync(path)) return false;
+  try {
+    const old = new DatabaseSync(path, { readOnly: true });
+    const row = old.prepare('SELECT COUNT(*) AS n FROM articles WHERE published_at >= ?').get(since) as
+      { n: number } | undefined;
+    old.close();
+    return (row?.n ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Top up a cached store: the small tables whole, and anything published since
+ * the newest article it already holds. A few hundred rows rather than 14,000.
+ */
+async function topUp(path: string): Promise<void> {
+  const local = new DatabaseSync(path);
+  const newest = (local.prepare('SELECT COALESCE(MAX(fetched_at), 0) AS t FROM articles').get() as
+    { t: number }).t;
+  local.close();
+
+  const sources = await pull<Record<string, unknown>>('sources',
+    'id,name,feed_url,homepage,country,category,bias', '', []);
+  const prefsCols = ['user_id','country','categories','places','place_ids','geo_consent','geo_place_id'];
+  const prefs = await pull<Record<string, unknown>>('prefs',
+    (await columns('prefs', prefsCols)).join(','), '', []);
+  // Anything another runner pushed while this file sat in the cache. Normally
+  // empty: one cycle runs at a time, and it is the one that wrote this file.
+  const articleCols = ['id','source_id','url','title','lead','body','image_url','published_at','fetched_at',
+    'content_hash','cluster_id'];
+  const fresh = await pull<Record<string, unknown>>('articles', articleCols.join(','),
+    'WHERE fetched_at > ?', [newest]);
+
+  const d = db();
+  insertAll(d, 'sources', ['id','name','feed_url','homepage','country','category','bias'], sources);
+  insertAll(d, 'prefs', prefsCols, prefs);
+  if (fresh.length) {
+    // Their parents may not be here; the clusterer will file them either way.
+    for (const a of fresh) a.cluster_id = null;
+    insertAll(d, 'articles', articleCols, fresh);
+  }
+  console.log(`Cached store reused: +${fresh.length} articles, ${sources.length} sources, ${prefs.length} prefs`);
+}
+
 async function main() {
   const path = process.env.SMARTNEWS_DB ?? 'data/smartnews.db';
   const since = Date.now() - WINDOW_MS;
+
+  if (usableLocalStore(path, since)) return topUp(path);
+
   console.log('Pulling from D1…');
 
   const sources = await pull<Record<string, unknown>>('sources',

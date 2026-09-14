@@ -1,9 +1,9 @@
 name: news cycle
 
-# Every 30 minutes: pull the working set out of D1, fetch and summarise what is
-# new, push the results back. The runner has no disk that survives between runs,
-# so D1 is the durable copy and the local SQLite file is scratch — see
-# scripts/hydrate-d1.ts.
+# Every 30 minutes: fetch and summarise what is new, push the results back. D1
+# is the durable copy; the local SQLite file is the working set, carried between
+# runs in the Actions cache and topped up from D1 rather than rebuilt from it —
+# see scripts/hydrate-d1.ts. A cache miss falls back to the full rebuild.
 # GitHub drops most firings of a */30 schedule, so the 30-minute clock lives in
 # a Cloudflare Worker (deploy/cron-worker) that calls workflow_dispatch instead.
 on:
@@ -43,7 +43,22 @@ jobs:
 
       - run: npm ci
 
-      - name: Rebuild the working store from D1
+      # The runner's disk does not survive, so the store used to be rebuilt from
+      # D1 every cycle: ~14,000 rows a run, and the whole of the pipeline's read
+      # cost, to re-download five days of rows of which about fifty had changed.
+      # Restoring the previous run's file makes hydrate a top-up instead.
+      #
+      # The key must be unique per run — a cache entry is immutable, so reusing
+      # a key would save nothing after the first time — and restore-keys then
+      # picks the newest previous entry. A miss simply pays the old price.
+      - name: Restore the working store
+        uses: actions/cache/restore@v4
+        with:
+          path: data/smartnews.db
+          key: smartnews-db-${{ github.run_id }}
+          restore-keys: smartnews-db-
+
+      - name: Top up the working store from D1
         run: npm run hydrate
 
       - name: Fetch, cluster, summarise
@@ -54,6 +69,16 @@ jobs:
       # again from D1's older state. It is the one step worth retrying.
       - name: Push results back to D1
         run: npm run sync || (sleep 20 && npm run sync)
+
+      # Saved after the push, so a run that failed to sync does not hand its
+      # unpushed state to the next one as if it were D1's. The dirty list rides
+      # along in the file, so anything this run could not push goes up next time.
+      - name: Save the working store
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: data/smartnews.db
+          key: smartnews-db-${{ github.run_id }}
 
       # A cycle that dies silently looks exactly like a quiet news day. The
       # stamp sync already writes is the liveness signal; this turns a stall
