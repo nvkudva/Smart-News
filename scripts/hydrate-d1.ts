@@ -16,7 +16,10 @@ import { db } from '../src/lib/db';
  * at the end. D1 is the durable copy; the local file is scratch.
  */
 
-const WINDOW_MS = 5 * 24 * 3_600_000;   // comfortably wider than the 48h clustering window
+// Wider than the 4 days clustering keeps an unwritten article in play: a
+// candidate the runner cannot see is one it cannot match a late second source
+// to, which is the whole point of that window.
+const WINDOW_MS = 5 * 24 * 3_600_000;
 const PAGE = 400;
 
 async function pull<T>(table: string, cols: string, where: string, params: unknown[],

@@ -7,7 +7,7 @@ import type { D1 } from '../src/lib/d1';
  *
  * This lives apart from sync-d1.ts because schema and rows have different
  * lifetimes: a column added in a release has to reach D1 the moment that
- * release deploys, whereas rows only move on the pipeline's 15-minute cycle.
+ * release deploys, whereas rows only move on the pipeline's half-hourly cycle.
  * Keeping the DDL here lets `npm run migrate:d1` apply it on its own, without
  * a local SQLite file and without pushing a single row.
  *

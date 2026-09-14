@@ -2,7 +2,7 @@ import Parser from 'rss-parser';
 import pLimit from 'p-limit';
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
-import { db } from './db';
+import { db, markDirty } from './db';
 import { SOURCES } from './sources';
 import { normaliseUrl, titleFingerprint } from './text';
 import { robotsVerdict } from './robots';
@@ -123,6 +123,7 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
       insert.run(id, s.id, url, item.title.trim(), lead, null, imageOf(item), published, now,
                  titleFingerprint(item.title));
       pending.push({ id, url });
+      markDirty('article', [id]);
       added++;
     }
     console.log(`  ${s.id.padEnd(20)} ${String(added).padStart(3)} new / ${feed.items?.length ?? 0}`);

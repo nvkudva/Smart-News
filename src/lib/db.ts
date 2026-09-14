@@ -100,6 +100,19 @@ function migrate(d: DatabaseSync) {
     CREATE INDEX IF NOT EXISTS clusters_live_category  ON clusters(category, last_seen DESC) WHERE headline IS NOT NULL;
     CREATE INDEX IF NOT EXISTS clusters_live_country   ON clusters(country, last_seen DESC) WHERE headline IS NOT NULL;
 
+    -- Rows this machine has changed since the last successful push. The sync
+    -- used to infer that from timestamps, which meant an article was uploaded
+    -- whenever anything in its cluster moved: one active 389-article story
+    -- re-sent all 389 rows on every cycle, and D1 bills writes. It also
+    -- missed the opposite case — a cluster whose count changed but whose
+    -- last_seen did not was never pushed at all. Local only; a hydrated runner
+    -- starts empty, which is correct, because it has just copied D1 verbatim.
+    CREATE TABLE IF NOT EXISTS dirty (
+      kind TEXT NOT NULL,
+      id   TEXT NOT NULL,
+      PRIMARY KEY (kind, id)
+    );
+
     CREATE TABLE IF NOT EXISTS prefs (
       user_id      TEXT PRIMARY KEY,
       country      TEXT,
@@ -173,3 +186,9 @@ export type Category = (typeof CATEGORIES)[number];
  * value until the backfill reaches them; nothing may write one.
  */
 export const RETIRED_CATEGORIES = ['World', 'India'] as const;
+
+/** Record that a row differs from what D1 holds, so `sync` can push just it. */
+export function markDirty(kind: 'cluster' | 'article', ids: Iterable<string>): void {
+  const stmt = db().prepare('INSERT OR IGNORE INTO dirty (kind, id) VALUES (?, ?)');
+  for (const id of ids) stmt.run(kind, id);
+}

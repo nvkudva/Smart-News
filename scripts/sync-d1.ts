@@ -28,11 +28,16 @@ const WINDOW_MS = 5 * 24 * 3_600_000;
  * this run joined it. The third clause is what keeps a merge consistent — the
  * losing cluster's articles move without their own timestamps changing.
  */
-const TOUCHED = `(summarised_at >= ? OR last_seen >= ?
-                  OR id IN (SELECT cluster_id FROM articles WHERE fetched_at >= ?))`;
 
 // D1 caps bound parameters per statement, so rows go up in small batches.
 const MAX_PARAMS = 90;
+
+/** SQLite caps bound parameters, so read a long id list in slices. */
+function inChunks<T>(ids: string[], read: (slice: string[]) => T[]): T[] {
+  const out: T[] = [];
+  for (let i = 0; i < ids.length; i += MAX_PARAMS - 1) out.push(...read(ids.slice(i, i + MAX_PARAMS - 1)));
+  return out;
+}
 
 async function push(table: string, cols: string[], rows: Record<string, unknown>[]) {
   const d = await d1();
@@ -178,7 +183,8 @@ async function remoteClusterIds(d: D1, since: number): Promise<string[]> {
 
 async function main() {
   const dbPath = process.env.SMARTNEWS_DB ?? 'data/smartnews.db';
-  const local = new DatabaseSync(dbPath, { readOnly: true });
+  // Writable: the dirty list is cleared here, once a push has actually landed.
+  const local = new DatabaseSync(dbPath);
   const d = await d1();
 
   console.log('Schema…');
@@ -187,12 +193,21 @@ async function main() {
   const since = Date.now() - WINDOW_MS;
   const all = <T,>(sql: string, ...p: unknown[]) => local.prepare(sql).all(...(p as never[])) as unknown as T[];
 
-  // `cycle` stamps its start time on the way out. Pushing only what it touched
-  // turns ~2,800 rows every quarter hour into a few dozen; with no stamp (a
-  // cycle that died, or SYNC_FULL=1 for a repair run) fall back to the window.
+  // The pipeline records every row it changes as it changes it, so the sync
+  // uploads exactly that and nothing else. Inferring the set from timestamps
+  // sent an article up whenever anything in its cluster moved — one busy
+  // 389-article story re-sent all 389 rows on every cycle — and still
+  // missed a cluster whose count changed without its last_seen moving.
+  //
+  // The stamp survives as the fallback: a cycle that died before recording
+  // anything, or SYNC_FULL=1 for a repair run, pushes the whole window.
   const t0 = cycleStart(dbPath);
+  const full = !t0 || process.env.SYNC_FULL === '1';
+  const dirtyIds = (kind: string) =>
+    (local.prepare('SELECT id FROM dirty WHERE kind = ?').all(kind) as unknown as { id: string }[])
+      .map((r) => r.id);
 
-  console.log(t0 ? `Pushing what changed since ${new Date(t0).toISOString().slice(11, 19)}…` : 'Pushing the full window…');
+  console.log(full ? 'Pushing the full window…' : 'Pushing what the cycle recorded as changed…');
   await pushSeed(d, 'sources', ['id', 'name', 'feed_url', 'homepage', 'country', 'category', 'bias'],
     all('SELECT id,name,feed_url,homepage,country,category,bias FROM sources'));
 
@@ -207,10 +222,12 @@ async function main() {
   const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,image_source,
             framing_left,framing_centre,framing_right,
             article_count,source_count,first_seen,last_seen,summarised_at,summarised_n,attempts`;
-  const clusters = t0
-    ? all<Record<string, unknown>>(
-        `SELECT ${clusterCols} FROM clusters WHERE last_seen >= ? AND ${TOUCHED}`, since, t0, t0, t0)
-    : all<Record<string, unknown>>(`SELECT ${clusterCols} FROM clusters WHERE last_seen >= ?`, since);
+  const dirtyClusters = full ? [] : dirtyIds('cluster');
+  const clusters = full
+    ? all<Record<string, unknown>>(`SELECT ${clusterCols} FROM clusters WHERE last_seen >= ?`, since)
+    : inChunks(dirtyClusters, (ids) => all<Record<string, unknown>>(
+        `SELECT ${clusterCols} FROM clusters
+          WHERE last_seen >= ? AND id IN (${ids.map(() => '?').join(',')})`, since, ...ids));
   await push('clusters',
     ['id','headline','crux','category','place','country','place_id','importance','image_url','image_source',
      'framing_left','framing_centre','framing_right',
@@ -221,16 +238,24 @@ async function main() {
 
   const articleCols = `id,source_id,url,title,lead,body,image_url,published_at,fetched_at,
             content_hash,cluster_id`;
-  const articles = t0
-    ? all<Record<string, unknown>>(
+  const dirtyArticles = full ? [] : dirtyIds('article');
+  const articles = full
+    ? all<Record<string, unknown>>(`SELECT ${articleCols} FROM articles WHERE published_at >= ?`, since)
+    : inChunks(dirtyArticles, (ids) => all<Record<string, unknown>>(
         `SELECT ${articleCols} FROM articles
-          WHERE published_at >= ?
-            AND (fetched_at >= ? OR cluster_id IN (SELECT id FROM clusters WHERE ${TOUCHED}))`,
-        since, t0, t0, t0, t0)
-    : all<Record<string, unknown>>(`SELECT ${articleCols} FROM articles WHERE published_at >= ?`, since);
+          WHERE published_at >= ? AND id IN (${ids.map(() => '?').join(',')})`, since, ...ids));
   await push('articles',
     ['id','source_id','url','title','lead','body','image_url','published_at',
      'fetched_at','content_hash','cluster_id'], articles);
+
+  // Cleared only once both pushes have landed: anything that threw above stays
+  // on the list and goes up next cycle. Ids the window no longer covers are
+  // cleared too — D1 has pruned them, and they would otherwise retry forever.
+  if (!full) {
+    const forget = local.prepare('DELETE FROM dirty WHERE kind = ? AND id = ?');
+    for (const id of dirtyClusters) forget.run('cluster', id);
+    for (const id of dirtyArticles) forget.run('article', id);
+  }
 
   await prune(d, since);
 

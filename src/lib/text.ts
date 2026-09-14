@@ -39,13 +39,31 @@ export function vector(tf: Map<string, number>, idfs: Map<string, number>): Map<
 }
 
 export function cosine(a: Map<string, number>, b: Map<string, number>): number {
+  return overlap(a, b).sim;
+}
+
+/**
+ * Cosine, and what is left of it once the single largest shared term is taken
+ * away.
+ *
+ * A headline is eight words long, so one rare word both documents happen to use
+ * can supply the whole score: an Australian review of Medicare rebates and a US
+ * Medicare fraud indictment matched on "medicare" and nothing else, and were
+ * filed as one story. Two articles about the same event never rest on one word
+ * — they share the who, the where and the what — so the residual separates a
+ * real match from a coincidence at no extra cost, in the same pass.
+ */
+export function overlap(a: Map<string, number>, b: Map<string, number>): { sim: number; residual: number } {
   const [small, large] = a.size <= b.size ? [a, b] : [b, a];
-  let dot = 0;
+  let dot = 0, top = 0;
   for (const [t, w] of small) {
     const o = large.get(t);
-    if (o) dot += w * o;
+    if (!o) continue;
+    const c = w * o;
+    dot += c;
+    if (c > top) top = c;
   }
-  return dot;
+  return { sim: dot, residual: dot - top };
 }
 
 /** Rare, capitalised-in-source words carry most of a news story's identity. */

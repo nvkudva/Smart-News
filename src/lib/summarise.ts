@@ -1,5 +1,5 @@
 import pLimit from 'p-limit';
-import { CATEGORIES, db } from './db';
+import { CATEGORIES, db, markDirty } from './db';
 import type { Bias } from './sources';
 import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } from './llm';
 import { isoCountry, resolvePlaceLocal } from './places-local';
@@ -167,7 +167,7 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
  * Summarise clusters that have never been summarised. A headline is written
  * once and kept: a story that gains a seventh article, or a fifth outlet, is
  * the same story, and paying the model again to say so is the single largest
- * avoidable cost in a cycle that runs every 15 minutes.
+ * avoidable cost in a cycle that runs every half hour.
  */
 export async function summarisePending(limit = 30): Promise<{ done: number; skipped: number; using: string }> {
   const d = db();
@@ -262,6 +262,7 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
              framing(s.framing_left), framing(s.framing_centre), framing(s.framing_right),
              Date.now(), t.article_count, t.id);
     resetAttempts.run(t.id);
+    markDirty('cluster', [t.id]);
     done++;
     process.stdout.write(`  ✓ ${String(members.length).padStart(2)} src  ${s.headline.slice(0, 66)}\n`);
   })));
