@@ -80,6 +80,14 @@ function main() {
     const missing = wanted.get(table)!.filter((c) => !have.has(c));
     const list = use.map((c) => `"${c}"`).join(',');
 
+    // Nothing to copy: sync_meta is derived below rather than read, and a local
+    // file older than a table simply does not have it. An empty column list
+    // would otherwise build `SELECT  FROM t` and abort the whole seed.
+    if (!use.length) {
+      console.log(`  ${table.padEnd(14)}     - skipped, not in ${SRC}`);
+      continue;
+    }
+
     const rows = src.prepare(`SELECT ${list} FROM ${table}`).all() as Record<string, unknown>[];
     for (const row of rows) {
       sql.push(`INSERT INTO ${table} (${list}) VALUES (${use.map((c) => literal(row[c])).join(',')});`);
