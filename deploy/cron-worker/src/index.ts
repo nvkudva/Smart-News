@@ -1,5 +1,5 @@
 /**
- * Fires workflow_dispatch on .github/workflows/cycle.yml every 15 minutes.
+ * Fires workflow_dispatch on .github/workflows/cycle.yml every 30 minutes.
  * GITHUB_TOKEN is a fine-grained PAT on nvkudva/Smart-News with Actions: write,
  * set with `wrangler secret put GITHUB_TOKEN` — never in this file.
  */

@@ -5,6 +5,10 @@
   "compatibility_date": "2026-09-07",
   // GitHub drops most firings of a */15 schedule on its own shared runner pool,
   // so the cron lives here and only asks GitHub to dispatch the run.
-  "triggers": { "crons": ["*/15 * * * *"] },
+  //
+  // Half-hourly, not quarter-hourly: every dispatch costs a hydrate of the
+  // whole working set, and 96 of those a day was most of the D1 read budget
+  // for a feed whose stories are ranked on a nine-hour half-life.
+  "triggers": { "crons": ["*/30 * * * *"] },
   "observability": { "enabled": true }
 }

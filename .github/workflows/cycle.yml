@@ -1,10 +1,10 @@
 name: news cycle
 
-# Every 15 minutes: pull the working set out of D1, fetch and summarise what is
+# Every 30 minutes: pull the working set out of D1, fetch and summarise what is
 # new, push the results back. The runner has no disk that survives between runs,
 # so D1 is the durable copy and the local SQLite file is scratch — see
 # scripts/hydrate-d1.ts.
-# GitHub drops most firings of a */15 schedule, so the 15-minute clock lives in
+# GitHub drops most firings of a */30 schedule, so the 30-minute clock lives in
 # a Cloudflare Worker (deploy/cron-worker) that calls workflow_dispatch instead.
 on:
   workflow_dispatch:          # the Worker's trigger, and the Actions tab button
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   cycle:
     runs-on: ubuntu-latest
-    # Below the 15-minute cron period, not equal to it: at 15 a slow run is
+    # Below the 30-minute cron period, not equal to it: at the period itself a slow run is
     # still alive when the Worker dispatches its successor, and the queue that
     # concurrency builds never drains.
     timeout-minutes: 12
