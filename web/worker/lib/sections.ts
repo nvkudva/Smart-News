@@ -3,6 +3,7 @@ import {
   getFeed, getPrefs, idList, prefsFingerprint, storyCols, STORY_FROM,
   withPlaceLabels, withoutHidden, type Outlet, type Story,
 } from './feed';
+import { warm } from './cache';
 import { cycleStamp } from './cycle';
 import { placesReady } from './places';
 import { categoryBySlug } from '../../shared/taxonomy';
@@ -82,6 +83,10 @@ async function bySql(where: string, params: unknown[], limit: number): Promise<S
  * a picker listing all 249 would let a reader choose two empty sections.
  */
 export async function countriesWithNews(): Promise<string[]> {
+  return warm('countries', await cycleStamp(), uncachedCountriesWithNews);
+}
+
+async function uncachedCountriesWithNews(): Promise<string[]> {
   const rows = await d1().all<{ country: string }>(
     `SELECT DISTINCT country FROM clusters
       WHERE headline IS NOT NULL AND country IS NOT NULL AND last_seen >= ?
@@ -107,44 +112,6 @@ export function getTopicSection(category: string, limit = SECTION_LIMIT): Promis
 }
 
 /**
- * A section costs two D1 round trips and up to 200 rows, and the pipeline only
- * moves every fifteen minutes, so re-running it for each tap on the strip is
- * pure latency. The map lives in module scope: on Workers that is the isolate,
- * which serves many requests, and on a cold isolate it is simply empty.
- *
- * Keyed on the cycle stamp rather than expired by a clock. The stamp is derived
- * from the data and moves only when the readable feed could have changed, so an
- * entry is good until it is actually wrong — a section is queried once per
- * cycle instead of once a minute, and the fifty-nine other minutes' worth of
- * round trips never happen. A stamp of null (no sync_meta yet) falls back to a
- * short TTL, which is the old behaviour and the only honest answer when there
- * is nothing to version against.
- *
- * Promises, not results, are cached — two readers landing on the same section
- * at once then share one query instead of racing.
- */
-const NO_STAMP_TTL_MS = 60_000;
-const warm = new Map<string, { stamp: string; at: number; rows: Promise<Story[]> }>();
-
-function cached(key: string, stamp: string | null, run: () => Promise<Story[]>): Promise<Story[]> {
-  const version = stamp ?? 'none';
-  const hit = warm.get(key);
-  const fresh = hit && hit.stamp === version
-    && (stamp !== null || Date.now() - hit.at < NO_STAMP_TTL_MS);
-  if (fresh) return hit.rows;
-
-  const rows = run();
-  warm.set(key, { stamp: version, at: Date.now(), rows });
-  // A failed query must not be remembered as this section's answer for a cycle.
-  rows.catch(() => { if (warm.get(key)?.rows === rows) warm.delete(key); });
-
-  // Everything from an older cycle is dead the moment the stamp moves, so the
-  // map never carries more than the sections this isolate served this cycle.
-  for (const [k, v] of warm) if (v.stamp !== version) warm.delete(k);
-  return rows;
-}
-
-/**
  * One entry point for the strip: the rows for one slug, ranked and memoised.
  *
  * It used to take a `limit` in the middle and default it, which made its only
@@ -161,6 +128,8 @@ export async function getSection(slug: string, userId: string): Promise<Story[]>
   // reader at all; the four that rank against preferences carry a fingerprint
   // of the prefs they were ranked with. getPrefs is request-scoped, so naming
   // it here costs nothing the ranking below was not already going to pay.
+  // Keyed without a reader when the rows are the same for everyone; the four
+  // that rank against preferences carry a fingerprint of what they ranked with.
   const key = category.kind === 'topic'
     ? `${slug}:${limit}`
     : `${slug}:${limit}:${userId}:${prefsFingerprint(await getPrefs(userId))}`;
@@ -168,7 +137,7 @@ export async function getSection(slug: string, userId: string): Promise<Story[]>
 
   let stories: Story[] = [];
   try {
-    stories = await cached(key, stamp, () => {
+    stories = await warm(key, stamp, () => {
       if (category.kind === 'topic') return getTopicSection(category.name, limit);
       if (category.slug === 'top') return getFeed(limit, userId);
       if (category.slug === 'national') return getNationalSection(limit, userId);

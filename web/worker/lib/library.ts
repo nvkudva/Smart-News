@@ -1,3 +1,5 @@
+import { warm } from './cache';
+import { cycleStamp } from './cycle';
 import { d1 } from './d1';
 import type { CategoryFacet, PlaceFacet } from '../../shared/types';
 export type { CategoryFacet, PlaceFacet };
@@ -58,6 +60,10 @@ export async function getSaved(userId: string): Promise<(Story & { saved_at: num
 // -------------------------------------------------------------- explore ---
 
 export async function getCategoryFacets(): Promise<CategoryFacet[]> {
+  return warm('facets:category', await cycleStamp(), uncachedCategoryFacets);
+}
+
+async function uncachedCategoryFacets(): Promise<CategoryFacet[]> {
   const d = d1();
   const since = Date.now() - 48 * 3_600_000;
   const rows = await d.all<{ category: string; stories: number; sources: number }>(
@@ -82,12 +88,12 @@ export async function getCategoryFacets(): Promise<CategoryFacet[]> {
  *  A cluster the gazetteer could not resolve simply does not appear. */
 export async function getPlaceFacets(limit = 18): Promise<PlaceFacet[]> {
   if (!(await placesReady())) return [];   // no gazetteer, no place facets — the category ones still stand
-  return d1().all<PlaceFacet>(
+  return warm(`facets:place:${limit}`, await cycleStamp(), () => d1().all<PlaceFacet>(
     `SELECT p.id AS place_id, p.name, p.label, p.kind, p.country, COUNT(*) AS stories
        FROM clusters c JOIN places p ON p.id = c.place_id
       WHERE c.headline IS NOT NULL AND c.last_seen >= ?
       GROUP BY p.id, p.name, p.label, p.kind, p.country
-      ORDER BY stories DESC LIMIT ?`, [Date.now() - 48 * 3_600_000, limit]);
+      ORDER BY stories DESC LIMIT ?`, [Date.now() - 48 * 3_600_000, limit]));
 }
 
 /** A place and everything under it: asking for Karnataka gets Bengaluru too.
@@ -123,10 +129,10 @@ export async function getByColumn(
 /** Reels wants the biggest stories, image-first, newest — not the ranked feed. */
 export async function getReels(limit = 20): Promise<Story[]> {
   const ready = await placesReady();
-  return withPlaceLabels(await d1().all<Story>(
+  return warm(`reels:${limit}`, await cycleStamp(), async () => withPlaceLabels(await d1().all<Story>(
     `${select(ready)} WHERE c.headline IS NOT NULL AND c.last_seen >= ?
        ORDER BY (c.image_url IS NOT NULL) DESC, c.importance DESC, c.source_count DESC, c.last_seen DESC
-       LIMIT ?`, [Date.now() - 48 * 3_600_000, limit]));
+       LIMIT ?`, [Date.now() - 48 * 3_600_000, limit])));
 }
 
 // ----------------------------------------------------------------- stats ---
