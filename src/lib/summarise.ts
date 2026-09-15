@@ -183,7 +183,7 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
  * else will corroborate, and none of it is worth a model call: a guide to
  * making a bootable USB, a pricing note, a team of the week.
  */
-const CHORE = /^(how to|q&a|best |watch:|explained:|live updates|what to know|\d+ things)|\b(team of the week|deals?|discount|coupon|how to watch|step by step)\b/i;
+const CHORE = /^(how to|q&a|best |watch:|explained:|live updates|what to know|\d+ things|can you use)|\b(team of the week|deals?|discount|coupon|how to watch|step by step|hints and answers|wordle|quordle|connections|crossword|sudoku|horoscope|daily quiz|answers for)\b/i;
 
 /**
  * How much of the rest of the window is about the same thing.
@@ -226,27 +226,38 @@ function worthWriting(d: DatabaseSync, limit: number): { id: string; article_cou
   const fresh = Date.now() - 6 * 3_600_000;
   const heat = heatIndex(d, since);
   const rows = d.prepare(
-    `SELECT c.id, c.article_count, a.source_id, a.title, a.published_at
-       FROM clusters c JOIN articles a ON a.cluster_id = c.id
+    `SELECT c.id, c.article_count, a.source_id, a.title, a.published_at, s.category
+       FROM clusters c JOIN articles a ON a.cluster_id = c.id JOIN sources s ON s.id = a.source_id
       WHERE c.headline IS NULL AND c.source_count = 1 AND c.attempts < ?
         AND a.published_at >= ? AND LENGTH(COALESCE(a.body, '')) > 800`,
   ).all(MAX_ATTEMPTS, fresh) as unknown as
-    { id: string; article_count: number; source_id: string; title: string; published_at: number }[];
+    { id: string; article_count: number; source_id: string; title: string;
+      published_at: number; category: string }[];
 
-  const scored: { id: string; article_count: number; heat: number; at: number }[] = [];
+  const scored: { id: string; article_count: number; category: string; heat: number; at: number }[] = [];
   for (const r of rows) {
     if (CHORE.test(r.title)) continue;
     const others = new Set<string>();
     for (const e of entities(r.title)) {
       for (const src of heat.get(e) ?? []) if (src !== r.source_id) others.add(src);
     }
-    // Two other newsrooms writing about the same names is the same evidence
-    // corroboration asks for, one step weaker.
-    if (others.size < 2) continue;
-    scored.push({ id: r.id, article_count: r.article_count, heat: others.size, at: r.published_at });
+    // Heat orders the queue; it does not guard it. Requiring other newsrooms to
+    // be writing about the same names is corroboration wearing a different
+    // hat, and it shuts out exactly the desks this exists for: nobody else is
+    // writing about Kioxia, or about whatever The Verge noticed this morning,
+    // and that is the normal condition of a technology desk rather than a
+    // reason to publish nothing.
+    scored.push({ id: r.id, category: r.category, heat: others.size, at: r.published_at,
+                  article_count: r.article_count });
   }
   scored.sort((a, b) => b.heat - a.heat || b.at - a.at);
-  return scored.slice(0, limit).map(({ id, article_count }) => ({ id, article_count }));
+
+  // One per desk. Three slots taken by three Politics stories leaves Technology
+  // with nothing again, which is the shape of the problem, not a fix for it.
+  const seen = new Set<string>();
+  const picked = scored.filter((r) => !seen.has(r.category) && seen.add(r.category));
+  return [...picked, ...scored.filter((r) => !picked.includes(r))]
+    .slice(0, limit).map(({ id, article_count }) => ({ id, article_count }));
 }
 
 /**
