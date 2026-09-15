@@ -291,6 +291,23 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
       LIMIT ?`,
   ).all(minSources, MAX_ATTEMPTS, limit) as unknown as { id: string; article_count: number }[];
 
+  // Corroboration is not the same as newsworthiness. Several outlets publish
+  // the day's Wordle hints, and they corroborate each other perfectly, so
+  // "Quordle hints and answers for September 13" arrived on the feed with six
+  // sources behind it. The same test that keeps chores out of the single-source
+  // queue applies here; it is announced rather than silent, because a headline
+  // that merely reads like a chore is a story this drops.
+  const titleOf = d.prepare(
+    'SELECT title FROM articles WHERE cluster_id = ? ORDER BY published_at LIMIT 1');
+  const newsworthy = targets.filter((t) => {
+    const row = titleOf.get(t.id) as unknown as { title: string } | undefined;
+    if (!row || !CHORE.test(row.title)) return true;
+    console.log(`  skipped as routine: ${row.title.slice(0, 60)}`);
+    return false;
+  });
+  targets.length = 0;
+  targets.push(...newsworthy);
+
   // Corroborated stories first, always; single-source ones fill whatever the
   // run has left.
   if (targets.length < limit) targets.push(...worthWriting(d).slice(0, limit - targets.length));
