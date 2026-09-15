@@ -1,19 +1,12 @@
 name: deploy
 
 # The site does not deploy itself on a merge to main by any Cloudflare-side
-# integration — there is none — so this is it. Two ways in: a push to main, and
-# the Actions tab button, which is what makes a deploy possible from a phone.
+# integration — there is none — and it deliberately does not deploy on a push
+# here either. Releasing is a decision, so it is a button: Actions → deploy →
+# Run workflow, which the GitHub mobile app has too. The branch picker in that
+# dialog is what ref is deployed, so a branch can be put on the site without
+# merging it first.
 on:
-  push:
-    branches: [main]
-    # A commit that touches only the pipeline or a README cannot change what the
-    # Worker serves. Skipping those keeps the deploy history honest about what
-    # was actually released.
-    paths:
-      - 'web/**'
-      - 'scripts/d1-schema.ts'
-      - 'scripts/migrate-d1.ts'
-      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 # One deploy at a time, and the newest wins: an older build finishing after a
