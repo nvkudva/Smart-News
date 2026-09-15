@@ -55,12 +55,12 @@ jobs:
         with:
           bun-version: latest
 
-      # Not --frozen-lockfile: web/bun.lock is currently out of step with the
-      # ranges in web/package.json, and a deploy is the wrong place to discover
-      # that. Re-freeze it here once `bun install` leaves the lockfile untouched.
+      # Frozen: a deploy installs what the lockfile says and nothing else. The
+      # lockfile is v2, so it needs the bun that wrote it — an older bun rewrites
+      # it to v1 and fails here, which is a stale toolchain and not a stale lock.
       - name: Install the web app's dependencies
         working-directory: web
-        run: bun install
+        run: bun install --frozen-lockfile
 
       # Through the package's own build script, so tsc -b runs first: a type
       # error should fail the job rather than ship.
