@@ -65,8 +65,31 @@ async function pace(origin: string, delayMs: number): Promise<void> {
   if (at > now) await new Promise((r) => setTimeout(r, at - now));
 }
 
+/**
+ * The picture a page offers a social card, when the feed offered none.
+ *
+ * Nine per cent of written stories had no image, and almost all of them were
+ * single-source: a cluster with four articles has four chances at a picture, a
+ * lone one has a single chance and ABC, ESPN, Al Jazeera and CNBC all publish
+ * feeds without a media tag. Their pages carry og:image all the same, and the
+ * page is already downloaded and parsed for the body — this costs one lookup
+ * against a document that is open anyway.
+ */
+function socialImage(doc: Document, url: string): string | null {
+  for (const sel of ['meta[property="og:image"]', 'meta[name="twitter:image"]',
+                     'meta[name="twitter:image:src"]', 'meta[itemprop="image"]']) {
+    const raw = doc.querySelector(sel)?.getAttribute('content')?.trim();
+    if (!raw) continue;
+    try {
+      const abs = new URL(raw, url);
+      if (abs.protocol === 'http:' || abs.protocol === 'https:') return abs.href;
+    } catch { /* a relative path that is not one */ }
+  }
+  return null;
+}
+
 /** null means no body; `blocked` distinguishes "told not to" from "could not". */
-async function extractBody(url: string): Promise<string | null | 'blocked'> {
+async function extractBody(url: string): Promise<{ text: string | null; image: string | null } | null | 'blocked'> {
   try {
     const verdict = await robotsVerdict(url, UA);
     if (!verdict.allowed) return 'blocked';
@@ -77,10 +100,11 @@ async function extractBody(url: string): Promise<string | null | 'blocked'> {
     if (!ct.includes('html')) return null;
     const html = await res.text();
     const dom = new JSDOM(html, { url });
+    const image = socialImage(dom.window.document, url);
     const article = new Readability(dom.window.document).parse();
     dom.window.close();
     const text = article?.textContent?.replace(/\s+/g, ' ').trim();
-    return text && text.length > 240 ? text.slice(0, 8000) : null;
+    return { text: text && text.length > 240 ? text.slice(0, 8000) : null, image };
   } catch {
     return null;
   }
@@ -145,12 +169,17 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
 
   const bodyLimit = pLimit(6);
   const setBody = d.prepare('UPDATE articles SET body = ? WHERE id = ?');
+  // Only when the feed gave nothing: a feed's own media tag is the outlet's
+  // choice of picture for the story, and og:image is what it shows strangers.
+  const setImage = d.prepare('UPDATE articles SET image_url = ? WHERE id = ? AND image_url IS NULL');
   let got = 0;
   let blocked = 0;
   await Promise.all(work.map((a) => bodyLimit(async () => {
-    const body = await extractBody(a.url);
-    if (body === 'blocked') { blocked++; if (process.env.LOG_BLOCKED) console.log(`  BLOCKED ${a.url.slice(0, 110)}`); return; }
-    if (body) { setBody.run(body, a.id); got++; }
+    const page = await extractBody(a.url);
+    if (page === 'blocked') { blocked++; if (process.env.LOG_BLOCKED) console.log(`  BLOCKED ${a.url.slice(0, 110)}`); return; }
+    if (!page) return;
+    if (page.image) setImage.run(page.image, a.id);
+    if (page.text) { setBody.run(page.text, a.id); got++; }
   })));
 
   // Worth its own number rather than folding into the misses: a rising count
