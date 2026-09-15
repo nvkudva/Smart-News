@@ -450,6 +450,10 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
 
   let assigned = 0;
   const touched = new Set<string>();
+  // Written-up stories that gained an outlet. Their counts move; nothing else
+  // does. The reader sees the extra source in the outlet list — that is read
+  // live off the articles — and the corroboration number catches up with it.
+  const grown = new Set<string>();
   const movedArticles: string[] = [];
   for (const { g, members, want, votes } of claims) {
     const held = want ? winner.get(want) : undefined;
@@ -471,9 +475,8 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
       assign.run(id, m.id);
       movedArticles.push(m.id);
       assigned++;
-      // The cluster it came from does need recounting; the one it joined does
-      // not, when that one is already written up.
       if (m.cluster_id) touched.add(m.cluster_id);
+      if (g.frozen) grown.add(id);
     }
     if (!g.frozen) touched.add(id);
   }
@@ -493,6 +496,24 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
     'UPDATE clusters SET article_count = ?, source_count = ?, first_seen = ?, last_seen = ? WHERE id = ?',
   );
   const changed: string[] = [];
+
+  // A written-up story keeps the timestamps it was written with: it must not
+  // climb back up a feed ranked on recency for having gained a seventh article
+  // saying what the first six said. Only the counts move.
+  const recountFrozen = d.prepare(
+    'UPDATE clusters SET article_count = ?, source_count = ? WHERE id = ?',
+  );
+  for (const id of grown) {
+    const members = allOf.all(id) as unknown as Counted[];
+    if (!members.length) continue;
+    const articles = new Set(members.map((m) => m.content_hash ?? m.id)).size;
+    const sources = independentSources(members);
+    const was = stored.get(id) as unknown as { article_count: number; source_count: number } | undefined;
+    if (was && was.article_count === articles && was.source_count === sources) continue;
+    recountFrozen.run(articles, sources, id);
+    changed.push(id);
+  }
+
   for (const id of touched) {
     const members = allOf.all(id) as unknown as Counted[];
     if (!members.length) continue;
