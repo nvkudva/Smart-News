@@ -1,6 +1,8 @@
 import { config } from 'dotenv';
 config({ path: '.env.local', quiet: true });
 
+import { appendFileSync } from 'node:fs';
+
 import { d1 } from '../src/lib/d1';
 import { applySchema, indexDrift, missingColumns, ADDED_COLUMNS } from './d1-schema';
 
@@ -36,6 +38,13 @@ async function main() {
     console.log(missing.length
       ? `\nMissing columns: ${missing.map(([t, n]) => `${t}.${n}`).join(', ')}`
       : '\nColumns up to date.');
+    // Answered to the workflow as well as to a person: the deploy job runs this
+    // first and applies the DDL only when it says so, so a release that changes
+    // no schema touches the live database not at all. Harmless off a runner,
+    // where GITHUB_OUTPUT is unset.
+    if (process.env.GITHUB_OUTPUT) {
+      appendFileSync(process.env.GITHUB_OUTPUT, `needed=${missing.length > 0}\n`);
+    }
     if (drift.length) process.exitCode = 1;
     return;
   }
