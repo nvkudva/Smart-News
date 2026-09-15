@@ -167,6 +167,37 @@ async function prune(d: D1, since: number) {
   console.log(`  pruned: ${stale.length} articles, ${orphans.length} emptied clusters`);
 }
 
+/**
+ * The same window, applied to the file this runner keeps.
+ *
+ * It used to be rebuilt from D1 on every cycle, so nothing local ever outlived
+ * the window on its own. Now that the file is carried between runs, nothing
+ * deletes from it either: at ~1,500 articles a day with their body text that is
+ * ~7MB a day, a couple of hundred megabytes in a month, and a cache entry that
+ * grows until GitHub starts evicting it.
+ *
+ * VACUUM because SQLite does not return the pages a DELETE frees; without it
+ * the file keeps the high-water mark for ever. It rewrites the file, which is a
+ * second at this size, and only runs when something was actually removed.
+ */
+function pruneLocal(local: DatabaseSync, since: number): void {
+  const before = (local.prepare('SELECT COUNT(*) AS n FROM articles').get() as { n: number }).n;
+  local.exec('BEGIN');
+  local.prepare('DELETE FROM articles WHERE published_at < ?').run(since);
+  // A cluster with nothing left to show is a headline over an empty source list.
+  local.exec(`DELETE FROM clusters
+               WHERE id NOT IN (SELECT DISTINCT cluster_id FROM articles WHERE cluster_id IS NOT NULL)`);
+  // Rows that no longer exist cannot be owed to D1; the prune above told it.
+  local.exec(`DELETE FROM dirty
+               WHERE (kind = 'article' AND id NOT IN (SELECT id FROM articles))
+                  OR (kind = 'cluster' AND id NOT IN (SELECT id FROM clusters))`);
+  local.exec('COMMIT');
+  const after = (local.prepare('SELECT COUNT(*) AS n FROM articles').get() as { n: number }).n;
+  if (before === after) return;
+  local.exec('VACUUM');
+  console.log(`  local: ${before - after} articles dropped, file vacuumed`);
+}
+
 /** Cluster ids D1 holds inside the window, paged because D1 caps a result set. */
 async function remoteClusterIds(d: D1, since: number): Promise<string[]> {
   const out: string[] = [];
@@ -258,6 +289,7 @@ async function main() {
   }
 
   await prune(d, since);
+  pruneLocal(local, since);
 
   // prefs are deliberately not pushed: the web app is the only writer, and a
   // sync that carried the hydrated copy back up would revert whatever the
