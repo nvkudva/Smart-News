@@ -181,7 +181,15 @@ function macroLift(s: Story): number {
   return 1 + 0.25 * Math.min(1, s.source_count / 6);
 }
 
-const HALF_LIFE_H = 9;
+/**
+ * Six hours, not nine. A story that half a dozen outlets ran yesterday was
+ * outscoring one published an hour ago, because at a nine-hour half-life a
+ * seven-hour-old story still keeps 58% of its recency — enough that
+ * corroboration and the category weights decided the page and freshness only
+ * broke ties. At six hours the same story keeps 44%, and the feed leads with
+ * what happened this morning.
+ */
+const HALF_LIFE_H = 6;
 
 /**
  * How far back the ranker is willing to look. Every row in here is a row D1
