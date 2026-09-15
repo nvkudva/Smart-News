@@ -32,6 +32,10 @@ jobs:
       LLM_RPM: '100'
       LLM_CONCURRENCY: '4'
       SUMMARISE_MIN_SOURCES: '2'
+      # A budget, not a threshold: the best few single-source stories per cycle,
+      # chosen without a model call. 3 x 48 cycles is ~150 a day, about 3,000
+      # neurons, which fits beside the corroborated ones inside the free tier.
+      SUMMARISE_SINGLETONS: '3'
 
     steps:
       - uses: actions/checkout@v4

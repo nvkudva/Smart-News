@@ -3,7 +3,8 @@ import { CATEGORIES, db, markDirty } from './db';
 import type { Bias } from './sources';
 import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } from './llm';
 import { isoCountry, resolvePlaceLocal } from './places-local';
-import { distinctByText } from './text';
+import type { DatabaseSync } from 'node:sqlite';
+import { distinctByText, entities } from './text';
 
 const MAX_ARTICLES = 6;
 const MAX_ATTEMPTS = 3;
@@ -176,6 +177,72 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
   };
 }
 
+
+/**
+ * Service journalism, by the shape of its headline. None of it is news anyone
+ * else will corroborate, and none of it is worth a model call: a guide to
+ * making a bootable USB, a pricing note, a team of the week.
+ */
+const CHORE = /^(how to|q&a|best |watch:|explained:|live updates|what to know|\d+ things)|\b(team of the week|deals?|discount|coupon|how to watch|step by step)\b/i;
+
+/**
+ * How much of the rest of the window is about the same thing.
+ *
+ * A story one outlet ran is not automatically obscure — sometimes the clusterer
+ * simply failed to match two ways of saying it. So rather than ask whether the
+ * article clustered, ask whether the names in its headline turn up in other
+ * newsrooms' headlines at all. "Cong rejects TMC proposal for bypoll pact"
+ * scores because TMC and Congress are everywhere this week; "Fitzroy Crossing
+ * calls for stronger FASD support" scores nothing, and should not.
+ */
+function heatIndex(d: DatabaseSync, since: number): Map<string, Set<string>> {
+  const rows = d.prepare('SELECT source_id, title FROM articles WHERE published_at >= ?')
+    .all(since) as unknown as { source_id: string; title: string }[];
+  const heat = new Map<string, Set<string>>();
+  for (const r of rows) {
+    for (const e of entities(r.title)) {
+      const set = heat.get(e) ?? heat.set(e, new Set()).get(e)!;
+      set.add(r.source_id);
+    }
+  }
+  return heat;
+}
+
+/**
+ * The few single-source clusters worth writing up this cycle.
+ *
+ * A budget, not a threshold: whatever the day's volume, the cost is N calls.
+ * Everything here is a string test or a map lookup — the point of choosing
+ * without the model is that choosing must not cost what writing costs.
+ */
+function worthWriting(d: DatabaseSync, limit: number): { id: string; article_count: number }[] {
+  if (limit < 1) return [];
+  const since = Date.now() - 48 * 3_600_000;
+  const heat = heatIndex(d, since);
+  const rows = d.prepare(
+    `SELECT c.id, c.article_count, a.source_id, a.title, LENGTH(COALESCE(a.body, '')) AS body_len
+       FROM clusters c JOIN articles a ON a.cluster_id = c.id
+      WHERE c.headline IS NULL AND c.source_count = 1 AND c.attempts < ?
+        AND c.last_seen >= ? AND LENGTH(COALESCE(a.body, '')) > 800`,
+  ).all(MAX_ATTEMPTS, since) as unknown as
+    { id: string; article_count: number; source_id: string; title: string }[];
+
+  const scored: { id: string; article_count: number; heat: number }[] = [];
+  for (const r of rows) {
+    if (CHORE.test(r.title)) continue;
+    const others = new Set<string>();
+    for (const e of entities(r.title)) {
+      for (const src of heat.get(e) ?? []) if (src !== r.source_id) others.add(src);
+    }
+    // Two other newsrooms writing about the same names is the same evidence
+    // corroboration asks for, one step weaker.
+    if (others.size < 2) continue;
+    scored.push({ id: r.id, article_count: r.article_count, heat: others.size });
+  }
+  scored.sort((a, b) => b.heat - a.heat);
+  return scored.slice(0, limit).map(({ id, article_count }) => ({ id, article_count }));
+}
+
 /**
  * Summarise clusters that have never been summarised. A headline is written
  * once and kept: a story that gains a seventh article, or a fifth outlet, is
@@ -207,6 +274,12 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
       ORDER BY source_count DESC, article_count DESC
       LIMIT ?`,
   ).all(minSources, MAX_ATTEMPTS, limit) as unknown as { id: string; article_count: number }[];
+
+  // Corroborated stories first, always. Whatever the cycle did not spend on
+  // them goes to the best few single-source stories, capped separately so a
+  // quiet news hour cannot turn into hundreds of calls.
+  const singles = Number(process.env.SUMMARISE_SINGLETONS ?? 0);
+  if (singles > 0) targets.push(...worthWriting(d, Math.min(singles, limit - targets.length)));
 
   const membersOf = d.prepare(
     `SELECT a.source_id, s.name, s.bias, a.title, a.lead, a.body
