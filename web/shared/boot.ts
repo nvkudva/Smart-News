@@ -39,17 +39,21 @@ export const MODE_KEY = 'sn_mode';
 export const THEME_CHROME: Record<string, string> = {
   frost: '#f7f7fa',
   pastel: '#f8f8fa',
+  aurora: '#e7e8ff',
+  marigold: '#ffe0a4',
   broadsheet: '#f9f6f0',
   fjord: '#e9efef',
   'frost-dark': '#15171c',
-  'pastel-dark': '#16161f',
+  'pastel-dark': '#08090e',
+  'aurora-dark': '#0c081e',
+  'marigold-dark': '#100921',
   'broadsheet-dark': '#141310',
   'fjord-dark': '#0d1618',
 };
 
 /**
  * The mode is resolved to a literal 'light' or 'dark' here rather than left to
- * a media query in the stylesheet. Four themes times two modes would otherwise
+ * a media query in the stylesheet. Six themes times two modes would otherwise
  * need every dark token set written twice — once under [data-mode="dark"] and
  * again under the auto case's @media — and the two copies would drift.
  */

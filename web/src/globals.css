@@ -145,33 +145,71 @@
               oklch(0.86 0.105 var(--cat-h)), oklch(0.91 0.065 var(--cat-h)));
 }
 
-/* The same hue system, read the other way up: at night the category tint is a
-   lit edge on a dark card rather than a wash on a pale one, and the type over
-   it has to come back light or the whole card inverts except its words. */
+/* The same hue system after dark, and the one place the light half's logic
+   cannot simply be inverted. A tinted fill works by day because a pale hue
+   over white still reads as that hue; the same tint at a tenth the lightness
+   reads as sludge, and fifteen categories of sludge are one colour. The first
+   pass proved it: chroma 0.055 on a 0.30 fill made a yellow card brown, a
+   violet card grey, and every card the same distance from a 0.17 ground.
+
+   So the hue moves out of the fill and into the light. The card is glass over
+   near-black with only enough tint to warm it, and the category is said three
+   times at lightnesses where a hue survives: a lit rim along the top edge, the
+   border, and the glow the card throws onto the page. Yellow at L 0.19 is mud;
+   yellow at L 0.60 is still yellow, which is where those three all sit. */
 :root[data-theme="pastel"][data-mode="dark"] .card {
-  background: linear-gradient(152deg,
-              oklch(0.30 0.055 var(--cat-h) / 0.92),
-              oklch(0.22 0.030 var(--cat-h) / 0.80));
-  border-color: oklch(0.42 0.060 var(--cat-h) / 0.55);
-  box-shadow: 0 18px 44px -22px oklch(0.10 0.04 var(--cat-h) / 0.80);
+  /* Three passes to get here, and each failure is worth keeping.
+
+     Translucent glass first: alpha 0.5 over near-black lands back at
+     near-black, so the card had a hue and no surface. Then an opaque slab at
+     chroma 0.085 ringed in its own hue, which was a column of saturated
+     blocks each wearing the ring this app uses to mean "selected". Then a
+     quiet slab with the hue spent on a bar along the top edge, which put a
+     bright mark in the reader's path on every card in the feed.
+
+     What was actually wrong underneath all three: the ground carried the same
+     violet the cards were tinted with, so a card at low chroma dissolved into
+     the page behind it. The ground goes near-neutral, the card is opaque and
+     two clear steps above it, and the category is said by the edge - a
+     gradient that is the hue at the top-left corner and gone by the
+     bottom-right, so the card is lit from one side rather than outlined.
+
+     Painted as two backgrounds in one property: the fill clipped to the
+     padding box, the gradient to the border box, with a transparent border
+     between them. A border cannot take a gradient directly. */
+  border: 1px solid transparent;
+  background:
+    linear-gradient(158deg,
+      oklch(0.238 0.034 var(--cat-h)), oklch(0.188 0.022 var(--cat-h))) padding-box,
+    linear-gradient(146deg,
+      oklch(0.72 0.170 var(--cat-h)),
+      oklch(0.46 0.080 var(--cat-h)) 45%,
+      oklch(0.34 0.022 var(--cat-h))) border-box;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: 0 14px 36px -22px oklch(0.30 0.060 var(--cat-h) / 0.70);
 }
-:root[data-theme="pastel"][data-mode="dark"] .card .kicker { color: oklch(0.80 0.085 var(--cat-h)); }
-:root[data-theme="pastel"][data-mode="dark"] .card .meta   { color: oklch(0.72 0.040 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .card .kicker { color: oklch(0.84 0.155 var(--cat-h)); }
+/* The crux sits on a coloured surface now, so a neutral grey reads as a patch
+   of another card laid on this one. Same lightness, a trace of the hue. */
+:root[data-theme="pastel"][data-mode="dark"] .card p { color: oklch(0.775 0.028 var(--cat-h)); }
+/* The date and the source count are not the category and must not compete
+   with it, so the meta line keeps the hue and gives up the chroma. */
+:root[data-theme="pastel"][data-mode="dark"] .card .meta   { color: oklch(0.70 0.030 var(--cat-h)); }
 :root[data-theme="pastel"][data-mode="dark"] .card .plate {
   background: linear-gradient(150deg,
-              oklch(0.38 0.070 var(--cat-h)), oklch(0.30 0.045 var(--cat-h)));
+              oklch(0.44 0.150 var(--cat-h)), oklch(0.31 0.105 var(--cat-h)));
 }
-:root[data-theme="pastel"][data-mode="dark"] .catlink { color: oklch(0.60 0.075 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .catlink { color: oklch(0.63 0.105 var(--cat-h)); }
 :root[data-theme="pastel"][data-mode="dark"] .catlink[data-active="true"],
 :root[data-theme="pastel"][data-mode="dark"] .catlink[aria-current="page"] {
-  color: oklch(0.86 0.130 var(--cat-h));
+  color: oklch(0.89 0.175 var(--cat-h));
 }
-:root[data-theme="pastel"][data-mode="dark"] .subpill { color: oklch(0.72 0.070 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .subpill { color: oklch(0.74 0.090 var(--cat-h)); }
 :root[data-theme="pastel"][data-mode="dark"] .subpill[data-active="true"],
 :root[data-theme="pastel"][data-mode="dark"] .subpill[aria-current="page"] {
-  color: oklch(0.90 0.110 var(--cat-h));
-  background: oklch(0.32 0.060 var(--cat-h));
-  border-color: oklch(0.44 0.075 var(--cat-h));
+  color: oklch(0.93 0.145 var(--cat-h));
+  background: oklch(0.29 0.090 var(--cat-h));
+  border-color: oklch(0.50 0.135 var(--cat-h));
 }
 
 html { background: var(--ground); }
@@ -1712,6 +1750,104 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   Themes E–F — the colour set
+
+   Two themes that spend their budget on colour rather than on restraint.
+   Like B, C and D they take A's geometry and A's grid; unlike them, the
+   palette is the point, so each one names a ground with real chroma in it
+   instead of a near-white that could belong to any of the others.
+
+   Each is one token block per mode plus at most four component rules. The
+   rules are there because a colour alone cannot say "printed" or "drawn" —
+   an offset block shadow, a grid, a hard duotone split are geometry, and
+   geometry is the half of a theme's character that tokens cannot carry.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Theme E — Aurora. Frosted Stack with the colour turned up: the same white
+   glass over the same blurred wash, except the wash is now lit rather than
+   suggested. A is a photograph of a cloudy day; this is the same photograph
+   at sunrise. The cards stay translucent, which is the whole reason the
+   colour works — the hue a headline sits on is the sky behind it, not a fill
+   the card was given, so it changes as the reader scrolls past a blob. */
+:root[data-theme="aurora"] {
+  --ground:        oklch(0.942 0.052 285);
+  --ink:           oklch(0.235 0.045 290);
+  --ink-2:         oklch(0.470 0.040 288);
+  --ink-3:         oklch(0.565 0.035 288);
+  --kicker:        oklch(0.520 0.130 300);
+  --kicker-near:   oklch(0.545 0.140 175);
+  --kicker-new:    oklch(0.575 0.180 25);
+  --accent:        oklch(0.550 0.230 300);
+  --reels-accent:  oklch(0.550 0.230 300);
+  --glass:         rgba(255, 255, 255, 0.50);
+  --glass-edge:    rgba(255, 255, 255, 0.82);
+  --glass-warm:    linear-gradient(140deg, rgba(255,255,255,0.74), rgba(252,240,255,0.46));
+  --plate:         linear-gradient(150deg, oklch(0.78 0.160 300), oklch(0.84 0.140 205));
+  /* The lift is tinted, not grey. A neutral shadow under a violet card reads
+     as dirt on the glass; the same shadow in the accent's hue reads as the
+     card floating above something coloured, which is what it is doing. */
+  --shadow:        0 1px 2px oklch(0.45 0.12 300 / 0.10),
+                   0 16px 40px -16px oklch(0.45 0.20 300 / 0.30);
+  --rule:          oklch(0.885 0.030 290);
+  --ring:          oklch(0.550 0.230 300);
+  --bar:           oklch(0.800 0.110 300 / 0.72);
+  --bar-edge:      oklch(0.700 0.150 300 / 0.85);
+  --track:         oklch(0.880 0.040 290);
+}
+/* Bigger, hotter and softer than A's three: at A's 0.06 chroma the wash is a
+   tint you notice only when it is gone, and this theme needs it to be the
+   first thing seen. */
+/* body paints --ground opaquely and .wash sits at z-index -1, so the wash has
+   never actually been on screen. html carries the same ground, so dropping
+   body's fill costs nothing and lets the layer beneath it through. Scoped to
+   the themes that use it rather than fixed globally: the themes above were
+   drawn against a flat ground and are not asking for a sky. */
+:root[data-theme="aurora"] body { background: transparent; }
+:root[data-theme="aurora"] .wash i { width: 560px; height: 560px; filter: blur(96px); }
+:root[data-theme="aurora"] .wash i:nth-child(1) { background: oklch(0.70 0.220 300); opacity: .62; }
+:root[data-theme="aurora"] .wash i:nth-child(2) { background: oklch(0.72 0.215 350); opacity: .58; }
+:root[data-theme="aurora"] .wash i:nth-child(3) { background: oklch(0.76 0.180 200); opacity: .60; }
+
+/* Theme F — Marigold. Heat, and the oldest colour pairing the app's largest
+   readership owns: saffron against indigo. The ground is the dyed cloth and
+   the ink is what was printed on it, which is the reverse of every other
+   theme here, where the ground is paper or night and the colour is applied.
+   Cards are opaque cream, so the wash behind them shows only in the gutters
+   — the page glows at its edges rather than under the words. */
+:root[data-theme="marigold"] {
+  --ground:        oklch(0.922 0.085 82);
+  --ink:           oklch(0.245 0.065 288);
+  --ink-2:         oklch(0.460 0.060 290);
+  --ink-3:         oklch(0.570 0.050 290);
+  --kicker:        oklch(0.530 0.180 35);
+  --kicker-near:   oklch(0.500 0.130 150);
+  --kicker-new:    oklch(0.520 0.230 355);
+  --accent:        oklch(0.500 0.215 15);
+  --reels-accent:  oklch(0.500 0.215 15);
+  --glass:         oklch(0.985 0.022 85);
+  --glass-edge:    oklch(0.860 0.060 60);
+  --glass-warm:    none;
+  --plate:         linear-gradient(150deg, oklch(0.74 0.180 55), oklch(0.68 0.200 10));
+  --shadow:        0 1px 2px oklch(0.50 0.12 40 / 0.10),
+                   0 12px 30px -14px oklch(0.45 0.18 30 / 0.30);
+  --rule:          oklch(0.870 0.045 65);
+  --ring:          oklch(0.500 0.215 15);
+  --bar:           oklch(0.880 0.105 68 / 0.92);
+  --bar-edge:      oklch(0.800 0.110 55);
+  --track:         oklch(0.885 0.055 70);
+}
+:root[data-theme="marigold"] .card {
+  border-radius: 16px;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+:root[data-theme="marigold"] body { background: transparent; }
+:root[data-theme="marigold"] .wash i { width: 520px; height: 520px; filter: blur(92px); }
+:root[data-theme="marigold"] .wash i:nth-child(1) { background: oklch(0.80 0.180 70); opacity: .72; }
+:root[data-theme="marigold"] .wash i:nth-child(2) { background: oklch(0.68 0.210 22); opacity: .52; }
+:root[data-theme="marigold"] .wash i:nth-child(3) { background: oklch(0.70 0.200 350); opacity: .44; }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
    Dark mode
 
    A second axis, not a fifth theme. BOOT resolves the reader's choice — or the
@@ -1745,13 +1881,32 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 
 :root[data-theme="pastel"][data-mode="dark"] {
-  --ground:        oklch(0.170 0.018 274);
-  --accent:        oklch(0.80 0.13 274);
-  --ring:          oklch(0.80 0.13 274);
-  --kicker:        oklch(0.79 0.07 274);
-  --plate:         linear-gradient(150deg, oklch(0.35 0.055 274), oklch(0.28 0.045 320));
-  --bar:           oklch(0.235 0.030 274 / 0.78);
-  --bar-edge:      oklch(0.42 0.048 274 / 0.70);
+  /* Near-black, and nearly neutral. At chroma 0.030 the page was the same
+     violet the cards are tinted with, so a low-chroma card had nothing to
+     separate from; the theme's colour belongs to the cards, and the page is
+     what they are seen against. */
+  --ground:        oklch(0.142 0.010 278);
+  --ink:           oklch(0.975 0.006 280);
+  --ink-2:         oklch(0.755 0.020 280);
+  --ink-3:         oklch(0.645 0.020 280);
+  --kicker:        oklch(0.820 0.120 288);
+  --accent:        oklch(0.820 0.170 288);
+  --ring:          oklch(0.820 0.170 288);
+  /* Panels and chips are not cards and have no category, so they take the
+     theme's own violet where a card takes its subject's hue. */
+  --glass:         oklch(0.28 0.055 282 / 0.42);
+  --glass-edge:    oklch(0.55 0.120 285 / 0.38);
+  --plate:         linear-gradient(150deg, oklch(0.40 0.150 288), oklch(0.32 0.120 320));
+  --shadow:        0 16px 44px -20px oklch(0.30 0.180 288 / 0.70);
+  --rule:          oklch(0.50 0.080 285 / 0.26);
+  --track:         oklch(0.42 0.070 285 / 0.35);
+  --bar:           oklch(0.205 0.055 284 / 0.80);
+  --bar-edge:      oklch(0.480 0.130 288 / 0.60);
+}
+/* The generic dark rule lays a flat white sheet over every card; this theme
+   has just spent its whole argument on what a card is made of. */
+:root[data-theme="pastel"][data-mode="dark"] .panel {
+  background: oklch(0.225 0.050 282); border-color: oklch(0.360 0.075 285);
 }
 
 /* The same paper after dark: a brown-black ground rather than a neutral one,
@@ -1816,6 +1971,70 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 /* A card is a surface here, not a sheet of lit glass, in either mode. */
 :root[data-theme="fjord"][data-mode="dark"] .card { background: var(--glass); }
+
+/* Aurora after dark: the wash is no longer light coming through cloud, it is
+   the only light in the room. The glass goes to a tenth of white and its edge
+   takes the accent's hue, so a card is a pane with a lit rim rather than a
+   grey rectangle. */
+:root[data-theme="aurora"][data-mode="dark"] {
+  --ground:        oklch(0.155 0.045 290);
+  --ink:           oklch(0.970 0.010 290);
+  --ink-2:         oklch(0.760 0.030 290);
+  --ink-3:         oklch(0.660 0.030 290);
+  --kicker:        oklch(0.800 0.140 305);
+  --kicker-near:   oklch(0.840 0.150 175);
+  --kicker-new:    oklch(0.850 0.150 35);
+  --accent:        oklch(0.800 0.180 305);
+  --on-accent:     oklch(0.160 0.050 300);
+  --ring:          oklch(0.800 0.180 305);
+  --glass:         rgba(255, 255, 255, 0.08);
+  --glass-edge:    oklch(0.70 0.160 300 / 0.32);
+  --glass-warm:    linear-gradient(140deg, oklch(0.80 0.14 300 / 0.16), rgba(255,255,255,0.05));
+  --plate:         linear-gradient(150deg, oklch(0.42 0.160 300), oklch(0.36 0.130 210));
+  --shadow:        0 20px 50px -24px oklch(0.30 0.200 300 / 0.85);
+  --rule:          oklch(0.60 0.100 300 / 0.22);
+  --bar:           oklch(0.220 0.070 295 / 0.78);
+  --bar-edge:      oklch(0.500 0.130 300 / 0.55);
+  --track:         oklch(0.45 0.090 300 / 0.35);
+}
+:root[data-theme="aurora"][data-mode="dark"] .card {
+  background: linear-gradient(155deg, oklch(0.75 0.14 300 / 0.13), oklch(0.70 0.12 200 / 0.05));
+}
+:root[data-theme="aurora"][data-mode="dark"] .wash i:nth-child(1) { background: oklch(0.62 0.230 300); opacity: .34; }
+:root[data-theme="aurora"][data-mode="dark"] .wash i:nth-child(2) { background: oklch(0.60 0.230 350); opacity: .30; }
+:root[data-theme="aurora"][data-mode="dark"] .wash i:nth-child(3) { background: oklch(0.66 0.180 200); opacity: .30; }
+
+/* Marigold at night keeps the pairing and swaps which half is the ground:
+   indigo takes the page and saffron becomes the light on it. */
+:root[data-theme="marigold"][data-mode="dark"] {
+  --ground:        oklch(0.165 0.050 295);
+  --ink:           oklch(0.965 0.020 85);
+  --ink-2:         oklch(0.760 0.035 80);
+  --ink-3:         oklch(0.650 0.035 80);
+  --kicker:        oklch(0.800 0.160 65);
+  --kicker-near:   oklch(0.820 0.140 150);
+  --kicker-new:    oklch(0.750 0.200 355);
+  --accent:        oklch(0.800 0.170 60);
+  --on-accent:     oklch(0.200 0.050 40);
+  --ring:          oklch(0.800 0.170 60);
+  --glass:         oklch(0.225 0.055 295);
+  --glass-edge:    oklch(0.360 0.080 300);
+  --glass-warm:    none;
+  --plate:         linear-gradient(150deg, oklch(0.50 0.160 50), oklch(0.42 0.170 10));
+  --shadow:        0 18px 44px -22px oklch(0.10 0.060 300 / 0.80);
+  --rule:          oklch(0.340 0.060 298);
+  --bar:           oklch(0.205 0.050 295 / 0.92);
+  --bar-edge:      oklch(0.380 0.080 300);
+  --track:         oklch(0.330 0.060 298);
+}
+:root[data-theme="marigold"][data-mode="dark"] .card { background: var(--glass); }
+:root[data-theme="marigold"][data-mode="dark"] .panel {
+  background: oklch(0.215 0.050 295); border-color: oklch(0.340 0.065 298);
+}
+:root[data-theme="marigold"][data-mode="dark"] .wash { opacity: 1; }
+:root[data-theme="marigold"][data-mode="dark"] .wash i:nth-child(1) { background: oklch(0.68 0.190 72); opacity: .42; }
+:root[data-theme="marigold"][data-mode="dark"] .wash i:nth-child(2) { background: oklch(0.58 0.210 22); opacity: .34; }
+:root[data-theme="marigold"][data-mode="dark"] .wash i:nth-child(3) { background: oklch(0.56 0.200 350); opacity: .28; }
 :root[data-mode="dark"] .wash i:nth-child(1) { background: oklch(0.62 0.14 62); opacity: .30; }
 :root[data-mode="dark"] .wash i:nth-child(2) { background: oklch(0.50 0.16 18); opacity: .30; }
 :root[data-mode="dark"] .wash i:nth-child(3) { background: oklch(0.52 0.09 108); opacity: .26; }

@@ -2,11 +2,14 @@
 import { useState } from 'react';
 import { paintChrome, resolveMode, MODE_KEY, THEME_KEY } from '../lib/boot';
 
-export type Theme = 'frost' | 'pastel' | 'broadsheet' | 'fjord';
+export type Theme =
+  | 'frost' | 'pastel' | 'aurora' | 'marigold' | 'broadsheet' | 'fjord';
 
 const OPTIONS: [Theme, string, string][] = [
   ['frost', 'Frosted', 'White glass over a soft wash. The default.'],
   ['pastel', 'Pastel', 'The same glass, each card tinted by its category.'],
+  ['aurora', 'Aurora', 'The same glass over a lit sky. Violet, magenta, cyan.'],
+  ['marigold', 'Marigold', 'Saffron and indigo. Warm cards, and the page glows at its edges.'],
   ['broadsheet', 'Broadsheet', 'Paper, serif headlines and hairlines instead of cards.'],
   ['fjord', 'Northlight', 'Cold daylight. Flat surfaces, one petrol accent, serif headlines.'],
 ];
@@ -43,9 +46,6 @@ export function ThemeControl() {
     <div className="panel">
       <div className="label">Theme</div>
       <p>{OPTIONS.find(([v]) => v === theme)?.[2]}</p>
-      {/* Five options where the other tracks have three: it is given the room
-          five need, and below 420px it becomes two rows rather than wrapping
-          one option onto a line of its own. */}
       <div className="chips" data-track="theme" role="radiogroup" aria-label="Theme">
         {OPTIONS.map(([value, label]) => (
           <button
