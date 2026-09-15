@@ -218,16 +218,22 @@ function heatIndex(d: DatabaseSync, since: number): Map<string, Set<string>> {
 function worthWriting(d: DatabaseSync, limit: number): { id: string; article_count: number }[] {
   if (limit < 1) return [];
   const since = Date.now() - 48 * 3_600_000;
+  // Heat is measured against two days of headlines, but only fresh articles are
+  // eligible to be written. An older singleton has had longer to accumulate
+  // matching names, so scoring the whole window picked day-old stories every
+  // time — and the feed only considers the last 24 hours, so they were written
+  // and then never seen. Six hours leaves a story most of its half-life.
+  const fresh = Date.now() - 6 * 3_600_000;
   const heat = heatIndex(d, since);
   const rows = d.prepare(
-    `SELECT c.id, c.article_count, a.source_id, a.title, LENGTH(COALESCE(a.body, '')) AS body_len
+    `SELECT c.id, c.article_count, a.source_id, a.title, a.published_at
        FROM clusters c JOIN articles a ON a.cluster_id = c.id
       WHERE c.headline IS NULL AND c.source_count = 1 AND c.attempts < ?
-        AND c.last_seen >= ? AND LENGTH(COALESCE(a.body, '')) > 800`,
-  ).all(MAX_ATTEMPTS, since) as unknown as
-    { id: string; article_count: number; source_id: string; title: string }[];
+        AND a.published_at >= ? AND LENGTH(COALESCE(a.body, '')) > 800`,
+  ).all(MAX_ATTEMPTS, fresh) as unknown as
+    { id: string; article_count: number; source_id: string; title: string; published_at: number }[];
 
-  const scored: { id: string; article_count: number; heat: number }[] = [];
+  const scored: { id: string; article_count: number; heat: number; at: number }[] = [];
   for (const r of rows) {
     if (CHORE.test(r.title)) continue;
     const others = new Set<string>();
@@ -237,9 +243,9 @@ function worthWriting(d: DatabaseSync, limit: number): { id: string; article_cou
     // Two other newsrooms writing about the same names is the same evidence
     // corroboration asks for, one step weaker.
     if (others.size < 2) continue;
-    scored.push({ id: r.id, article_count: r.article_count, heat: others.size });
+    scored.push({ id: r.id, article_count: r.article_count, heat: others.size, at: r.published_at });
   }
-  scored.sort((a, b) => b.heat - a.heat);
+  scored.sort((a, b) => b.heat - a.heat || b.at - a.at);
   return scored.slice(0, limit).map(({ id, article_count }) => ({ id, article_count }));
 }
 
