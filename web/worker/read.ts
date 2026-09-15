@@ -2,7 +2,7 @@ import type {
   ExplorePayload, LocalPayload, ProfilePayload, ReelsPayload, SavedPayload, Story, StoryPayload,
 } from '../shared/types';
 import { slug } from '../shared/taxonomy';
-import { cacheHeaders, conditional, notModified } from './lib/cycle';
+import { cacheHeaders, conditional, cycleStamp, notModified } from './lib/cycle';
 import { effectivePlaceIds, getLocalFeed, getPrefs, getStory, prefsFingerprint } from './lib/feed';
 import {
   getByColumn, getByPlace, getPlaceFacets,
@@ -191,7 +191,11 @@ export async function profile(_request: Request, userId: string): Promise<Respon
     prefs.geoConsent && prefs.geoPlaceId ? getPlaces([prefs.geoPlaceId]) : Promise.resolve([]),
   ]);
 
-  const payload: ProfilePayload = { prefs, stats, countries, resolved, places, geo };
+  // Carried so the page can show which cycle's data it is holding, beside the
+  // build it is running: a reader on a stale bundle and a reader on stale data
+  // look identical otherwise.
+  const payload: ProfilePayload = { prefs, stats, countries, resolved, places, geo,
+                                    stamp: await cycleStamp() };
   return Response.json(payload, { headers: PRIVATE });
 }
 

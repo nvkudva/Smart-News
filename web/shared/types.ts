@@ -130,6 +130,8 @@ export type ExploreFiltered = {
 export type ExplorePayload = ExploreIndex | ExploreFiltered;
 
 export type ProfilePayload = {
+  /** The cycle whose data this answer was built from. */
+  stamp: string | null;
   prefs: Prefs;
   stats: Stats;
   countries: string[];

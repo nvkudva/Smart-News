@@ -1,6 +1,7 @@
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
+import { execSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { defineConfig, type Plugin } from 'vite'
@@ -79,7 +80,26 @@ function serviceWorker(): Plugin {
   }
 }
 
+/**
+ * Which build the browser is actually running.
+ *
+ * A service worker and a stamp-keyed store between the reader and the server
+ * mean "I redeployed" and "the reader has the new code" are different facts,
+ * and nothing on the page said which one you were looking at. The commit is
+ * enough to tell them apart; the date is for reading it aloud.
+ */
+const BUILD = (() => {
+  const sha = (() => {
+    try { return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim() } catch { return 'nogit' }
+  })()
+  const dirty = (() => {
+    try { return execSync('git status --porcelain', { encoding: 'utf8' }).trim() ? '+' : '' } catch { return '' }
+  })()
+  return { sha: `${sha}${dirty}`, at: Date.now() }
+})()
+
 export default defineConfig({
+  define: { __BUILD_SHA__: JSON.stringify(BUILD.sha), __BUILD_AT__: JSON.stringify(BUILD.at) },
   plugins: [
     // Must precede the react plugin: it generates routeTree.gen.ts from src/routes.
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),

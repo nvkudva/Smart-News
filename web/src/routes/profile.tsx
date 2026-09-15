@@ -27,8 +27,18 @@ const nameOf = (c: string) => {
   try { return REGION.of(c) ?? c } catch { return c }
 }
 
+/** `<count>-<newest last_seen>`; the second half is when the data was current. */
+function syncedAt(stamp: string | null): number | null {
+  const ms = Number(stamp?.split('-')[1])
+  return Number.isFinite(ms) && ms > 0 ? ms : null
+}
+
+const when = (ms: number | null) => (ms === null ? 'never' : new Date(ms).toLocaleString(undefined, {
+  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+}))
+
 function Profile() {
-  const { prefs, countries, resolved, places } = Route.useLoaderData()
+  const { prefs, countries, resolved, places, stamp } = Route.useLoaderData()
 
   // Anything chosen before this list existed - or typed as plain text back when
   // the control was a search box - stays on show so it can still be unticked.
@@ -91,6 +101,17 @@ function Profile() {
             <NavPlacementControl />
           </div>
         </section>
+
+        {/* Which build this is, and which cycle's data it is showing. A service
+            worker and a cached store sit between a deploy and the reader, so
+            "it is deployed" and "they have it" are different facts. */}
+        {/* A service worker and a cached store sit between a deploy and the
+            reader, so "it is deployed" and "they have it" are different facts,
+            as are "the pipeline ran" and "this page has what it wrote". */}
+        <p className="buildstamp">
+          Last deployed {when(__BUILD_AT__)} · {__BUILD_SHA__}<br />
+          Last data synced {when(syncedAt(stamp))}
+        </p>
       </main>
       <TabBar active="profile" />
     </>
