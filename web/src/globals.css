@@ -2311,3 +2311,18 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 @media (min-width: 1024px) {
   .story__rail { flex-direction: row; align-items: baseline; gap: 18px; flex-wrap: wrap; }
 }
+
+/* --- Reported by one outlet -------------------------------------------- */
+/* Deliberately quieter than a StoryCard: nothing here is corroborated, and it
+   must not compete with the feed for attention. Text only, no image, hairline
+   rules instead of a card, and the outlet's name kept with the text. */
+.singlenote { margin: -2px 0 12px; color: var(--ink-3); font-size: var(--t-3, 13px); }
+.singlelist { border-top: 1px solid var(--rule); }
+.single { display: block; padding: 12px 2px; color: inherit; text-decoration: none;
+          border-bottom: 1px solid var(--rule); }
+.single:hover .singlehead { text-decoration: underline; }
+.singlehead { color: var(--ink); font-weight: 600; line-height: 1.3; }
+.singlelead { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.45;
+              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.singlemeta { margin-top: 6px; color: var(--ink-3); font-size: 12px;
+              text-transform: uppercase; letter-spacing: .04em; }

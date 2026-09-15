@@ -1,7 +1,7 @@
 import { warm } from './cache';
 import { cycleStamp } from './cycle';
 import { d1 } from './d1';
-import type { CategoryFacet, PlaceFacet } from '../../shared/types';
+import type { CategoryFacet, PlaceFacet, SingleReport } from '../../shared/types';
 export type { CategoryFacet, PlaceFacet };
 import { idList, storyCols, STORY_FROM, withPlaceLabels, type Story } from './feed';
 import { expandPlaceIds, placesReady } from './places';
@@ -166,4 +166,29 @@ export async function getStats() {
     articles: r.articles ?? 0, clusters: r.clusters ?? 0, summarised: r.summarised ?? 0,
     sources: r.sources ?? 0, saved: saved?.n ?? 0, newest: r.newest ?? 0,
   };
+}
+
+/**
+ * Reports only one newsroom has run.
+ *
+ * Two thirds of everything ingested is this: a Phys.org write-up, a regional
+ * feature, a story nobody else happened to cover. The feed will not carry it —
+ * it ranks on corroboration and these have none — but showing none of it
+ * throws away most of what the pipeline collects.
+ *
+ * Shown exactly as the outlet wrote it. No model has read these, so there is
+ * no summary to show and nothing of ours to get wrong; the category is the
+ * outlet's own beat rather than anything inferred. Newest first, capped, and
+ * on its own surface: uncorroborated material must never displace the feed.
+ */
+export async function getSingleReports(limit = 20): Promise<SingleReport[]> {
+  return warm(`single:${limit}`, await cycleStamp(), () => d1().all<SingleReport>(
+    `SELECT a.id, a.title, a.lead, a.url, s.name AS source, s.category, a.published_at
+       FROM clusters c
+       JOIN articles a ON a.cluster_id = c.id
+       JOIN sources s ON s.id = a.source_id
+      WHERE c.headline IS NULL AND c.source_count = 1
+        AND c.last_seen >= ? AND LENGTH(COALESCE(a.lead, '')) > 80
+      ORDER BY a.published_at DESC LIMIT ?`,
+    [Date.now() - 24 * 3_600_000, limit]));
 }

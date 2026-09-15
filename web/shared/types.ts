@@ -105,6 +105,20 @@ export type ExploreIndex = {
   stamp: string | null;
   categories: CategoryFacet[];
   places: PlaceFacet[];
+  /** Stories one outlet ran and nobody else has matched. Shown as they were
+   *  written, never rewritten, and never mixed into the ranked feed. */
+  single: SingleReport[];
+};
+
+/** An uncorroborated report: the outlet's own words, unedited. */
+export type SingleReport = {
+  id: string;
+  title: string;
+  lead: string | null;
+  url: string;
+  source: string;
+  category: string;
+  published_at: number;
 };
 
 export type ExploreFiltered = {

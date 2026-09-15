@@ -62,7 +62,7 @@ function Explore() {
     )
   }
 
-  const { categories, places } = data
+  const { categories, places, single = [] } = data
 
   return (
     <>
@@ -89,6 +89,25 @@ function Explore() {
                 {places.map((p) => (
                   <PlaceTile key={p.place_id} placeId={p.place_id} label={p.label}
                              kind={p.kind} stories={p.stories} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {single.length > 0 && (
+            <section className="exploresec">
+              <div className="label">Reported by one outlet</div>
+              <p className="singlenote">
+                Nobody else has run these yet, so they are not on the feed. Shown
+                as the outlet wrote them.
+              </p>
+              <div className="singlelist">
+                {single.map((r) => (
+                  <a key={r.id} className="single" href={r.url} target="_blank" rel="noreferrer">
+                    <div className="singlehead">{r.title}</div>
+                    {r.lead && <p className="singlelead">{r.lead}</p>}
+                    <div className="singlemeta">{r.source} · {r.category}</div>
+                  </a>
                 ))}
               </div>
             </section>
