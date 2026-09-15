@@ -149,11 +149,6 @@ export function effectivePlaceIds(p: Prefs): string[] {
  * because down-weighting a category is what the exploration slot and the
  * reader's own choices are for.
  */
-const AUDIENCE: Record<string, number> = {
-  Technology: 1.35,
-  Business: 1.15,
-  Science: 1.05,
-};
 
 /**
  * "Global news with a large economic impact" is not a category — it is a
@@ -210,7 +205,11 @@ function score(s: Story, prefs: Prefs, inside: Set<string> | null): number {
   const ageH = (Date.now() - s.last_seen) / 3_600_000;
   const recency = Math.pow(0.5, ageH / HALF_LIFE_H);
   const corroboration = Math.min(1, Math.log1p(s.source_count) / Math.log(25));
-  let interest = 0.55;
+  // 0.55 halved every story outside the reader's picks, which with the desk
+  // multipliers meant a seven-hour-old Technology story beat a ninety-minute-old
+  // one elsewhere before recency was considered. Preference should tilt the
+  // page, not decide it: at 0.8 a picked category is still worth a quarter more.
+  let interest = 0.8;
   if (prefs.categories.includes(s.category)) interest = 1;
   if (s.country && s.country === prefs.country) interest = Math.max(interest, 0.95);
   if (inside) {
@@ -223,7 +222,7 @@ function score(s: Story, prefs: Prefs, inside: Set<string> | null): number {
   // 0.6-1.0 it still sorts, but a widely-run story can now outrank a lightly-run
   // one the model happened to like better.
   return recency * (0.35 + 0.65 * corroboration) * (0.5 + 0.1 * s.importance) * interest
-         * (AUDIENCE[s.category] ?? 1) * macroLift(s);
+         * macroLift(s);
 }
 
 /**
