@@ -1,7 +1,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import type { ExplorePayload } from '../../shared/types'
 import { PageSkeleton } from '../components/PageSkeleton'
-import { CategoryTile, PlaceTile } from '../components/ExploreTiles'
+import { PlaceTile } from '../components/ExploreTiles'
 import { StoryCard, variantFor } from '../components/StoryCard'
 import { TabBar } from '../components/TabBar'
 import { load } from '../lib/load'
@@ -62,26 +62,17 @@ function Explore() {
     )
   }
 
-  const { categories, places, single = [] } = data
+  const { places, single = [] } = data
 
   return (
     <>
       <main className="shell">
         <div className="pagehead">
           <h1>Explore</h1>
-          <p>Everything covered in the last 48 hours, by subject and by place.</p>
+          <p>Where the news happened, and what only one outlet ran.</p>
         </div>
 
         <div className="explorestack">
-          <section className="exploresec">
-            <div className="label">Categories</div>
-            <div className="tiles">
-              {categories.map((c) => (
-                <CategoryTile key={c.category} name={c.category} stories={c.stories} lead={c.lead} />
-              ))}
-            </div>
-          </section>
-
           {places.length > 0 && (
             <section className="exploresec">
               <div className="label">Places</div>

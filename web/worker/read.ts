@@ -5,7 +5,7 @@ import { slug } from '../shared/taxonomy';
 import { cacheHeaders, conditional, notModified } from './lib/cycle';
 import { effectivePlaceIds, getLocalFeed, getPrefs, getStory, prefsFingerprint } from './lib/feed';
 import {
-  getByColumn, getByPlace, getCategoryFacets, getPlaceFacets,
+  getByColumn, getByPlace, getPlaceFacets,
   getReels, getSaved, getSingleReports, getStats, isSaved, savedAmong,
 } from './lib/library';
 import { getPlaces } from './lib/places';
@@ -175,10 +175,8 @@ export async function explore(request: Request, url: URL): Promise<Response> {
     return Response.json(payload, { headers });
   }
 
-  const [categories, places, single] = await Promise.all([
-    getCategoryFacets(), getPlaceFacets(), getSingleReports(),
-  ]);
-  const payload: ExplorePayload = { stamp: version.stamp, categories, places, single };
+  const [places, single] = await Promise.all([getPlaceFacets(), getSingleReports()]);
+  const payload: ExplorePayload = { stamp: version.stamp, places, single };
   return Response.json(payload, { headers });
 }
 

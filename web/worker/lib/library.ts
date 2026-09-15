@@ -120,8 +120,12 @@ export async function getByColumn(
 ): Promise<Story[]> {
   const ready = await placesReady();
   return withPlaceLabels(await d1().all<Story>(
-    `${select(ready)} WHERE c.headline IS NOT NULL AND c.${column} = ?
-       ORDER BY c.last_seen DESC LIMIT ?`, [value, limit]));
+    // Same window and same order as the strip's own query: a tile counting
+    // 48 hours must not open a list holding a week, and a reader tapping
+    // through from one should not find the stories in a different order.
+    `${select(ready)} WHERE c.headline IS NOT NULL AND c.last_seen >= ? AND c.${column} = ?
+       ORDER BY c.importance DESC, c.last_seen DESC LIMIT ?`,
+    [Date.now() - 48 * 3_600_000, value, limit]));
 }
 
 // ----------------------------------------------------------------- reels ---

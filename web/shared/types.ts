@@ -103,7 +103,6 @@ export type ReelsPayload = { stories: Story[]; saved: string[] };
 
 export type ExploreIndex = {
   stamp: string | null;
-  categories: CategoryFacet[];
   places: PlaceFacet[];
   /** Stories one outlet ran and nobody else has matched. Shown as they were
    *  written, never rewritten, and never mixed into the ranked feed. */
