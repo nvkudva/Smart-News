@@ -209,14 +209,17 @@ function heatIndex(d: DatabaseSync, since: number): Map<string, Set<string>> {
 }
 
 /**
- * The few single-source clusters worth writing up this cycle.
+ * Every single-source cluster worth writing up, best first.
  *
- * A budget, not a threshold: whatever the day's volume, the cost is N calls.
- * Everything here is a string test or a map lookup — the point of choosing
+ * There is no cap here on purpose. A cap meant a desk like Technology — where
+ * ten articles arrive in three hours and no two are about the same thing —
+ * saw one story written a day while 130 went past. What limits the work is the
+ * run's own limit and what the gates refuse, not an allowance.
+ *
+ * Everything here is a string test or a map lookup: the point of choosing
  * without the model is that choosing must not cost what writing costs.
  */
-function worthWriting(d: DatabaseSync, limit: number): { id: string; article_count: number }[] {
-  if (limit < 1) return [];
+function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] {
   const since = Date.now() - 48 * 3_600_000;
   // Heat is measured against two days of headlines, but only fresh articles are
   // eligible to be written. An older singleton has had longer to accumulate
@@ -250,14 +253,10 @@ function worthWriting(d: DatabaseSync, limit: number): { id: string; article_cou
     scored.push({ id: r.id, category: r.category, heat: others.size, at: r.published_at,
                   article_count: r.article_count });
   }
+  // Heat still sorts, so if the run's limit binds it binds on the weakest
+  // stories rather than on whichever desk happened to be queried first.
   scored.sort((a, b) => b.heat - a.heat || b.at - a.at);
-
-  // One per desk. Three slots taken by three Politics stories leaves Technology
-  // with nothing again, which is the shape of the problem, not a fix for it.
-  const seen = new Set<string>();
-  const picked = scored.filter((r) => !seen.has(r.category) && seen.add(r.category));
-  return [...picked, ...scored.filter((r) => !picked.includes(r))]
-    .slice(0, limit).map(({ id, article_count }) => ({ id, article_count }));
+  return scored.map(({ id, article_count }) => ({ id, article_count }));
 }
 
 /**
@@ -292,11 +291,9 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
       LIMIT ?`,
   ).all(minSources, MAX_ATTEMPTS, limit) as unknown as { id: string; article_count: number }[];
 
-  // Corroborated stories first, always. Whatever the cycle did not spend on
-  // them goes to the best few single-source stories, capped separately so a
-  // quiet news hour cannot turn into hundreds of calls.
-  const singles = Number(process.env.SUMMARISE_SINGLETONS ?? 0);
-  if (singles > 0) targets.push(...worthWriting(d, Math.min(singles, limit - targets.length)));
+  // Corroborated stories first, always; single-source ones fill whatever the
+  // run has left.
+  if (targets.length < limit) targets.push(...worthWriting(d).slice(0, limit - targets.length));
 
   const membersOf = d.prepare(
     `SELECT a.source_id, s.name, s.bias, a.title, a.lead, a.body

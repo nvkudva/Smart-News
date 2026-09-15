@@ -32,10 +32,6 @@ jobs:
       LLM_RPM: '100'
       LLM_CONCURRENCY: '4'
       SUMMARISE_MIN_SOURCES: '2'
-      # A budget, not a threshold: the best few single-source stories per cycle,
-      # chosen without a model call. 3 x 48 cycles is ~150 a day, about 3,000
-      # neurons, which fits beside the corroborated ones inside the free tier.
-      SUMMARISE_SINGLETONS: '3'
 
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +62,7 @@ jobs:
         run: npm run hydrate
 
       - name: Fetch, cluster, summarise
-        run: npm run cycle 40
+        run: npm run cycle 150
 
       # The runner's disk is scratch, so a failed sync throws away everything
       # the summarise step just paid Workers AI for, and the next run starts
