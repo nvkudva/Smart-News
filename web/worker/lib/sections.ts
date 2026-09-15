@@ -158,9 +158,16 @@ export async function getSection(slug: string, userId: string): Promise<Story[]>
   // it here costs nothing the ranking below was not already going to pay.
   // Keyed without a reader when the rows are the same for everyone; the four
   // that rank against preferences carry a fingerprint of what they ranked with.
+  // Latest sits between the two: it ranks against nothing, so country and
+  // places cannot move it and the full fingerprint would give every reader a
+  // private copy of one identical query. The only preference it honours is the
+  // hidden list, so that is the whole of its key — readers hiding nothing, who
+  // are most of them, share a single cached answer per cycle.
   const key = category.kind === 'topic'
     ? `${slug}:${limit}`
-    : `${slug}:${limit}:${userId}:${prefsFingerprint(await getPrefs(userId))}`;
+    : category.slug === 'latest'
+      ? `${slug}:${limit}:${(await getPrefs(userId)).hidden.join(',')}`
+      : `${slug}:${limit}:${userId}:${prefsFingerprint(await getPrefs(userId))}`;
   const stamp = await cycleStamp();
 
   let stories: Story[] = [];
