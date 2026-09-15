@@ -17,7 +17,7 @@ export function slug(name: string): string {
 
 export type SubCategory = { name: string; slug: string; keywords: readonly string[] };
 
-export type ScopeSlug = 'top' | 'national' | 'international';
+export type ScopeSlug = 'top' | 'latest' | 'national' | 'international';
 
 /**
  * The subjects that get a top-level pill, in strip order.
@@ -165,6 +165,10 @@ const TOPIC_SUBS: Record<StripSubject, SubCategory[]> = {
  */
 export const SCOPE_CATEGORIES: Section[] = [
   { kind: 'scope', name: 'Trending', slug: 'top', subs: null },
+  // The one section with no ranking in it: newest first, whatever the subject
+  // and wherever it happened. Trending answers "what matters"; this answers
+  // "what just landed", which on a half-hourly cycle is a different question.
+  { kind: 'scope', name: 'Latest', slug: 'latest', subs: null },
   { kind: 'scope', name: 'National', slug: 'national', subs: null },
   { kind: 'scope', name: 'International', slug: 'international', subs: null },
 ];
@@ -179,7 +183,8 @@ const [TECHNOLOGY, ...REST_OF_SUBJECTS] = TOPIC_CATEGORIES;
 
 /** Declared order is render order. */
 export const TAXONOMY: Section[] = [
-  SCOPE_CATEGORIES[0], TECHNOLOGY, ...SCOPE_CATEGORIES.slice(1), ...REST_OF_SUBJECTS,
+  SCOPE_CATEGORIES[0], SCOPE_CATEGORIES[1], TECHNOLOGY,
+  ...SCOPE_CATEGORIES.slice(2), ...REST_OF_SUBJECTS,
 ];
 
 export function categoryBySlug(s: string): Section | null {

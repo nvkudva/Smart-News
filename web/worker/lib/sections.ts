@@ -63,13 +63,27 @@ export async function outletsFor(ids: string[]): Promise<Map<string, Outlet[]>> 
 const stamp = (rows: Story[]): Story[] =>
   rows.map((s) => ({ ...s, exploration: 0 as const, exploration_kind: null }));
 
-async function bySql(where: string, params: unknown[], limit: number): Promise<Story[]> {
+/**
+ * `order` is the section's own ordering, not a caller's free text: the two
+ * values below are the only ones, and both are literals compiled in here
+ * rather than anything a request can reach.
+ */
+type Order = 'importance' | 'recency';
+
+const ORDER_BY: Record<Order, string> = {
+  importance: 'c.importance DESC, c.last_seen DESC',
+  recency: 'c.last_seen DESC, c.importance DESC',
+};
+
+async function bySql(
+  where: string, params: unknown[], limit: number, order: Order = 'importance',
+): Promise<Story[]> {
   const ready = await placesReady();
   const rows = withPlaceLabels(await d1().all<Story>(
     `SELECT ${storyCols(ready)}
        ${STORY_FROM}
       WHERE c.headline IS NOT NULL AND c.last_seen >= ? AND ${where}
-      ORDER BY c.importance DESC, c.last_seen DESC LIMIT ${limit}`,
+      ORDER BY ${ORDER_BY[order]} LIMIT ${limit}`,
     [Date.now() - WINDOW_MS, ...params]));
   return stamp(rows);
 }
@@ -107,6 +121,20 @@ export async function getInternationalSection(limit: number, userId: string): Pr
     await bySql('c.country IS NOT NULL AND c.country <> ?', [prefs.country], limit), prefs);
 }
 
+/**
+ * Newest first, and nothing else: no interest weighting, no exploration slot,
+ * no importance tie-break ahead of the clock. The reader who opens Latest is
+ * asking what the last cycle brought, so the only judgement applied is the
+ * reader's own — hidden categories still stay hidden.
+ *
+ * `1 = 1` rather than a fourth query shape: every other section is a filter
+ * over the same window, and this one is that window unfiltered.
+ */
+export async function getLatestSection(limit: number, userId: string): Promise<Story[]> {
+  const prefs = await getPrefs(userId);
+  return withoutHidden(await bySql('1 = 1', [], limit, 'recency'), prefs);
+}
+
 export function getTopicSection(category: string, limit = SECTION_LIMIT): Promise<Story[]> {
   return bySql('c.category = ?', [category], limit);
 }
@@ -140,6 +168,7 @@ export async function getSection(slug: string, userId: string): Promise<Story[]>
     stories = await warm(key, stamp, () => {
       if (category.kind === 'topic') return getTopicSection(category.name, limit);
       if (category.slug === 'top') return getFeed(limit, userId);
+      if (category.slug === 'latest') return getLatestSection(limit, userId);
       if (category.slug === 'national') return getNationalSection(limit, userId);
       return getInternationalSection(limit, userId);
     });
