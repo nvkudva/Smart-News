@@ -13,22 +13,22 @@
     "lint": "oxlint"
   },
   "dependencies": {
-    "@tanstack/react-router": "^1.170.35",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "@tanstack/react-router": "^1.170.36",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.54.8",
+    "@cloudflare/vite-plugin": "^1.54.9",
     "@playwright/test": "^1.63.0",
-    "@tanstack/router-plugin": "^1.168.37",
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
+    "@tanstack/router-plugin": "^1.168.38",
+    "@types/node": "^26.5.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
-    "oxlint": "^1.81.0",
+    "oxlint": "^1.83.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.2",
+    "typescript": "~7.0.2",
     "vite": "^8.3.0",
-    "wrangler": "^4.131.1"
+    "wrangler": "^4.131.2"
   }
 }
