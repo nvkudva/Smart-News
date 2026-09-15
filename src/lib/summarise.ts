@@ -179,11 +179,63 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
 
 
 /**
- * Service journalism, by the shape of its headline. None of it is news anyone
- * else will corroborate, and none of it is worth a model call: a guide to
- * making a bootable USB, a pricing note, a team of the week.
+ * A same-day safety net, no more. Recurrence below is the real test, and it
+ * needs three days before it can fire; without this a new puzzle column gets
+ * three days of the feed first. Deliberately short — every pattern here is one
+ * I have to keep guessing at, and a headline that merely reads like a chore is
+ * a real story this refuses.
  */
-const CHORE = /^(how to|q&a|best |watch:|explained:|live updates|what to know|\d+ things|can you use)|\b(team of the week|deals?|discount|coupon|how to watch|step by step|hints and answers|wordle|quordle|connections|crossword|sudoku|horoscope|daily quiz|answers for)\b/i;
+const CHORE = /^(how to|q&a|watch:|live updates|\d+ things)\b|\b(hints and answers|team of the week|daily quiz|horoscope)\b/i;
+
+/** Series worth keeping, as `sourceId|signature`. Nothing here is filtered. */
+const KEEP = new Set<string>([
+  // e.g. 'reuters|market wrap' — a daily series a reader would miss.
+]);
+
+const PERIODIC = /\b(january|february|march|april|may|june|july|august|september|october|november|december|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi;
+
+/** A headline with everything that changes daily taken out of it. */
+function signature(title: string): string {
+  return title.toLowerCase().replace(PERIODIC, ' ').replace(/[0-9]+/g, ' ')
+    .replace(/[^a-z ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Headline shapes an outlet publishes on a schedule.
+ *
+ * A chore is not identifiable by its words — every keyword list is a guess that
+ * needs maintaining — but it is identifiable by its rhythm: Euronews files
+ * "Latest news bulletin" three times a day, TechRadar posts Quordle hints every
+ * morning, BBC Sport runs a daily quiz. Nothing that happened once can look
+ * like that, so a real story cannot trip this however its headline reads.
+ *
+ * Corroboration cannot see any of it. Several outlets run the day's puzzle
+ * hints and they agree with each other perfectly, which is how Quordle reached
+ * the feed with six sources behind it.
+ */
+function routineShapes(d: DatabaseSync): Set<string> {
+  const rows = d.prepare(
+    `SELECT source_id, title, DATE(published_at / 1000, 'unixepoch') AS day
+       FROM articles WHERE published_at >= ?`,
+  ).all(Date.now() - 7 * 86_400_000) as unknown as
+    { source_id: string; title: string; day: string }[];
+
+  const days = new Map<string, Set<string>>();
+  for (const r of rows) {
+    const key = `${r.source_id}|${signature(r.title)}`;
+    (days.get(key) ?? days.set(key, new Set()).get(key)!).add(r.day);
+  }
+  // Three separate days. Twice is a coincidence, and a story that genuinely
+  // runs two days running is a story.
+  const out = new Set<string>();
+  for (const [key, seen] of days) if (seen.size >= 3 && !KEEP.has(key)) out.add(key);
+  return out;
+}
+
+/** Is this article one instalment of something its outlet files on a schedule? */
+function isRoutine(routine: Set<string>, sourceId: string, title: string): boolean {
+  return CHORE.test(title) || routine.has(`${sourceId}|${signature(title)}`);
+}
 
 /**
  * How much of the rest of the window is about the same thing.
@@ -228,6 +280,7 @@ function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] 
   // and then never seen. Six hours leaves a story most of its half-life.
   const fresh = Date.now() - 6 * 3_600_000;
   const heat = heatIndex(d, since);
+  const routine = routineShapes(d);
   const rows = d.prepare(
     `SELECT c.id, c.article_count, a.source_id, a.title, a.published_at, s.category
        FROM clusters c JOIN articles a ON a.cluster_id = c.id JOIN sources s ON s.id = a.source_id
@@ -239,7 +292,7 @@ function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] 
 
   const scored: { id: string; article_count: number; category: string; heat: number; at: number }[] = [];
   for (const r of rows) {
-    if (CHORE.test(r.title)) continue;
+    if (isRoutine(routine, r.source_id, r.title)) continue;
     const others = new Set<string>();
     for (const e of entities(r.title)) {
       for (const src of heat.get(e) ?? []) if (src !== r.source_id) others.add(src);
@@ -297,11 +350,12 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   // sources behind it. The same test that keeps chores out of the single-source
   // queue applies here; it is announced rather than silent, because a headline
   // that merely reads like a chore is a story this drops.
+  const routine = routineShapes(d);
   const titleOf = d.prepare(
-    'SELECT title FROM articles WHERE cluster_id = ? ORDER BY published_at LIMIT 1');
+    `SELECT source_id, title FROM articles WHERE cluster_id = ? ORDER BY published_at LIMIT 1`);
   const newsworthy = targets.filter((t) => {
-    const row = titleOf.get(t.id) as unknown as { title: string } | undefined;
-    if (!row || !CHORE.test(row.title)) return true;
+    const row = titleOf.get(t.id) as unknown as { source_id: string; title: string } | undefined;
+    if (!row || !isRoutine(routine, row.source_id, row.title)) return true;
     console.log(`  skipped as routine: ${row.title.slice(0, 60)}`);
     return false;
   });
