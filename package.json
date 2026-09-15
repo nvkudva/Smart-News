@@ -13,6 +13,7 @@
     "gazetteer:gen": "tsx scripts/gen-gazetteer.ts",
     "sync": "tsx scripts/sync-d1.ts",
     "migrate:d1": "tsx scripts/migrate-d1.ts",
+    "deploy": "npm run migrate:d1 && cd web && bun run deploy",
     "hydrate": "tsx scripts/hydrate-d1.ts",
     "seed:local-d1": "tsx scripts/seed-local-d1.ts"
   },

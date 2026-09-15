@@ -1,0 +1,63 @@
+name: deploy
+
+# The site does not deploy itself on a merge to main by any Cloudflare-side
+# integration — there is none — and it deliberately does not deploy on a push
+# here either. Releasing is a decision, so it is a button: Actions → deploy →
+# Run workflow, which the GitHub mobile app has too. The branch picker in that
+# dialog is what ref is deployed, so a branch can be put on the site without
+# merging it first.
+on:
+  workflow_dispatch:
+
+# One deploy at a time, and the newest wins: an older build finishing after a
+# newer one would put the previous commit back on the site.
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # Not a secret, and already in wrangler.jsonc — see cycle.yml.
+      CLOUDFLARE_D1_ID: 1e779125-88d9-4688-85f2-08c3c6bcecf3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+
+      - run: npm ci
+
+      # Before the build, never after: a release that reads a new column is live
+      # the instant it deploys, and until the next cycle every request in the
+      # gap throws "no such column". The README says the same.
+      - name: Migrate D1
+        run: npm run migrate:d1
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Not --frozen-lockfile: web/bun.lock is currently out of step with the
+      # ranges in web/package.json, and a deploy is the wrong place to discover
+      # that. Re-freeze it here once `bun install` leaves the lockfile untouched.
+      - name: Install the web app's dependencies
+        working-directory: web
+        run: bun install
+
+      # Through the package's own build script, so tsc -b runs first: a type
+      # error should fail the job rather than ship.
+      - name: Build
+        working-directory: web
+        run: bun run build
+
+      - name: Deploy the Worker
+        working-directory: web
+        run: bunx wrangler deploy
