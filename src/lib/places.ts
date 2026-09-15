@@ -50,6 +50,13 @@ for (const p of ALL) {
 // The SQL keyed on (alias, country) with '' as the global scope; so does this.
 const BY_ALIAS = new Map<string, string>(ALIASES.map((a) => [`${a[0]}\u0000${a[1]}`, a[2]]));
 
+/** Places each name points at, for deciding whether a bare name is ambiguous. */
+const PLACES_BY_ALIAS = ((): Map<string, Set<string>> => {
+  const m = new Map<string, Set<string>>();
+  for (const a of ALIASES) (m.get(a[0]) ?? m.set(a[0], new Set()).get(a[0])!).add(a[2]);
+  return m;
+})();
+
 /** The label the feed used to get from a LEFT JOIN on every candidate row. */
 export function placeLabel(id: string | null): string | null {
   return id ? BY_ID.get(id)?.label ?? null : null;
@@ -157,9 +164,15 @@ export async function resolvePlaceName(raw: string, country?: string | null): Pr
   if (!text) return null;
   const cc = country && /^[A-Za-z]{2}$/.test(country.trim()) ? country.trim().toUpperCase() : '';
 
+  // Segments most specific first. "Delhi, India" used to try the whole string,
+  // then the trailing segment — which matched the country and returned it — so
+  // the same city resolved to Delhi when a model wrote "Delhi" and to India
+  // when it wrote "Delhi, India". A trailing country name is a hint about where
+  // to look, not the answer; the leading segment is what the story is about.
   const segments = text.split(',').map((s) => s.trim()).filter(Boolean);
-  const candidates = [text];
-  if (segments.length > 1) candidates.push(segments[segments.length - 1], segments[0]);
+  const candidates = segments.length > 1
+    ? [text, ...segments]
+    : [text];
 
   const aliases: string[] = [];
   for (const c of candidates) {
@@ -168,13 +181,27 @@ export async function resolvePlaceName(raw: string, country?: string | null): Pr
   }
   if (!aliases.length) return null;
 
-  const countries = cc ? [cc, ''] : [''];
+  // A trailing country name scopes the search rather than answering it: with
+  // no country given, "Delhi, India" would otherwise fall through the city and
+  // land on India itself.
+  const hint = segments.length > 1 ? BY_ALIAS.get(`${normaliseAlias(segments[segments.length - 1])}\u0000`) : undefined;
+  const hinted = cc || (hint && BY_ID.get(hint)?.kind === 'country' ? BY_ID.get(hint)!.country : '');
+  const countries = hinted ? [hinted, ''] : [''];
   // Same priority order the SQL's caller applied to its rows: alias candidates
   // outermost, country-scoped before global.
   for (const alias of aliases) {
     for (const c of countries) {
       const id = BY_ALIAS.get(`${alias}\u0000${c}`);
       const hit = id ? BY_ID.get(id) : undefined;
+      if (hit) return hit;
+    }
+  }
+  // A name that belongs to exactly one place is not ambiguous, whatever country
+  // the seed filed it under.
+  for (const alias of aliases) {
+    const ids = PLACES_BY_ALIAS.get(alias);
+    if (ids?.size === 1) {
+      const hit = BY_ID.get([...ids][0]);
       if (hit) return hit;
     }
   }

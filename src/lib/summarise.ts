@@ -29,7 +29,8 @@ type Member = { source_id: string; name: string; title: string; lead: string | n
 
 export type Summary = {
   headline: string; crux: string; category: string;
-  place: string | null; country: string | null; importance: number;
+  place: string | null; city: string | null; region: string | null;
+  country: string | null; importance: number;
   framing_left: string | null; framing_centre: string | null; framing_right: string | null;
 };
 
@@ -50,7 +51,12 @@ category:   the subject the story is about, never where it happened - scope is
             court ruling is Crime & Courts even when the defendant is a
             minister. Conflict & Diplomacy covers war, strikes, sanctions and
             talks between states. Others only when nothing else fits.
-place:      the city or region the event happened in, else null.
+place:      where the event happened, as you would say it in a sentence, else
+            null. This is what the reader sees.
+city:       just the city or town, no country, no state, else null. "Hyderabad",
+            not "Hyderabad, India". Null for anything larger than a city.
+region:     just the state, province or region, else null. "Telangana", not
+            "Telangana, India". Null if you do not know which one.
 country:    ISO 3166-1 alpha-2 code for that place, else null.
 importance: 5 for a story a world newspaper leads its front page with, 1 for routine.
 
@@ -68,6 +74,11 @@ const SCHEMA: JsonSchema = {
     crux:       { type: 'string' },
     category:   { type: 'string', enum: CATEGORIES },
     place:      { type: 'string', nullable: true },
+    // Asked for in parts as well as prose. The parts cost a dozen output tokens
+    // on a response that already runs to hundreds, and they save the resolver
+    // from taking "Hyderabad, India" apart and guessing which half is which.
+    city:       { type: 'string', nullable: true },
+    region:     { type: 'string', nullable: true },
     country:    { type: 'string', nullable: true },
     importance: { type: 'integer' },
     framing_left:   { type: 'string', nullable: true },
@@ -156,6 +167,8 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
       crux,
       category: 'Others',
       place: null,
+      city: null,
+      region: null,
       country: null,
       importance: Math.min(5, 1 + Math.round(Math.log2(members.length + 1))),
       framing_left: null, framing_centre: null, framing_right: null,
@@ -251,9 +264,16 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
       return t && !/^(null|undefined|none|nil|n\/?a|unknown|-{1,2})$/i.test(t) ? t : null;
     };
     const place = named(s.place);
-    // The free text stays exactly as the model wrote it; place_id is the
-    // canonical row it points at, and is simply NULL when nothing matches.
-    const resolved = resolvePlaceLocal(d, place, cc);
+    // The free text stays exactly as the model wrote it — it is what the story
+    // bar shows. place_id is the canonical row it points at, resolved from the
+    // parts the model separated for us, most specific first, and falling back
+    // to the prose when it gave none. NULL when nothing matches.
+    const resolved = [named(s.city), named(s.region), place]
+      .filter((v): v is string => !!v)
+      .reduce<{ place_id: string | null; country: string | null }>(
+        (hit, name) => (hit.place_id ? hit : resolvePlaceLocal(d, name, cc)),
+        { place_id: null, country: cc },
+      );
     // A one-sentence field the model padded to a paragraph is still useful, but
     // an empty string is not — it renders as a side that said nothing.
     const framing = (v: unknown) => (typeof v === 'string' && v.trim().length > 15 ? v.trim() : null);
