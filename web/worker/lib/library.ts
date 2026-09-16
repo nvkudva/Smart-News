@@ -210,6 +210,7 @@ export async function getSingleReports(limit = 20): Promise<SingleReport[]> {
        JOIN articles a ON a.cluster_id = c.id
        JOIN sources s ON s.id = a.source_id
       WHERE c.headline IS NULL AND c.source_count = 1
+        AND COALESCE(s.tier, 'full') <> 'title'
         AND c.last_seen >= ? AND LENGTH(COALESCE(a.lead, '')) > 80
       ORDER BY a.published_at DESC LIMIT ?`,
     [Date.now() - 24 * 3_600_000, limit]));
