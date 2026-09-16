@@ -99,7 +99,18 @@ export async function getPlaceFacets(limit = 18): Promise<PlaceFacet[]> {
 /** A place and everything under it: asking for Karnataka gets Bengaluru too.
  *  D1 caps a statement at ~90 bound parameters and a subtree can be longer, so
  *  the ids are inlined; they are the gazetteer's own slugs, quoted anyway. */
+/**
+ * Warmed on the stamp like the facets above it. There is no reader in an
+ * Explore drill-down — the tile decides the query and nothing else does — so
+ * every visitor who opens the same tile in the same cycle was paying for the
+ * same scan, and a cold ETag (a new browser, a cleared cache) skipped the only
+ * cache this answer had.
+ */
 export async function getByPlace(placeId: string, limit = 40): Promise<Story[]> {
+  return warm(`place:${placeId}:${limit}`, await cycleStamp(), () => uncachedByPlace(placeId, limit));
+}
+
+async function uncachedByPlace(placeId: string, limit: number): Promise<Story[]> {
   // Empty also when the gazetteer has not been synced, which is why the query
   // below can assume the place columns exist.
   const ids = await expandPlaceIds([placeId]);
@@ -117,6 +128,13 @@ export async function getByPlace(placeId: string, limit = 40): Promise<Story[]> 
  */
 export async function getByColumn(
   column: 'category' | 'country', value: string, limit = 40,
+): Promise<Story[]> {
+  return warm(`col:${column}:${value}:${limit}`, await cycleStamp(),
+              () => uncachedByColumn(column, value, limit));
+}
+
+async function uncachedByColumn(
+  column: 'category' | 'country', value: string, limit: number,
 ): Promise<Story[]> {
   const ready = await placesReady();
   return withPlaceLabels(await d1().all<Story>(

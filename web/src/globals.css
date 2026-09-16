@@ -94,6 +94,7 @@
 :root[data-theme="pastel"] .card,
 :root[data-theme="pastel"] [data-cat]                { --cat-h: 252; }
 :root[data-theme="pastel"] [data-cat="top"]           { --cat-h: 252; }
+:root[data-theme="pastel"] [data-cat="latest"]        { --cat-h: 32; }
 :root[data-theme="pastel"] [data-cat="local"]         { --cat-h: 158; }
 :root[data-theme="pastel"] [data-cat="national"]      { --cat-h: 62; }
 :root[data-theme="pastel"] [data-cat="international"] { --cat-h: 232; }
@@ -2096,6 +2097,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    [data-cat] hues still win — they carry a :root in the selector. */
 .exploretint                      { --cat-h: 252; }
 .exploretint[data-cat="top"]           { --cat-h: 252; }
+.exploretint[data-cat="latest"]        { --cat-h: 32; }
 .exploretint[data-cat="local"]         { --cat-h: 158; }
 .exploretint[data-cat="national"]      { --cat-h: 62; }
 .exploretint[data-cat="international"] { --cat-h: 232; }
