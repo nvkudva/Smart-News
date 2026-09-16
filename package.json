@@ -13,25 +13,26 @@
     "gazetteer:gen": "tsx scripts/gen-gazetteer.ts",
     "sync": "tsx scripts/sync-d1.ts",
     "migrate:d1": "tsx scripts/migrate-d1.ts",
+    "usage": "tsx scripts/usage.ts",
     "deploy": "npm run migrate:d1 && cd web && bun run deploy",
     "hydrate": "tsx scripts/hydrate-d1.ts",
     "seed:local-d1": "tsx scripts/seed-local-d1.ts"
   },
   "dependencies": {
-    "@google/genai": "^2.21.0",
+    "@google/genai": "^2.22.0",
     "@mozilla/readability": "^0.6.0",
     "jsdom": "^30.0.1",
     "p-limit": "^7.3.2",
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260910.1",
+    "@cloudflare/workers-types": "^5.20260915.1",
     "@types/jsdom": "^30.0.0",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.5.1",
     "dotenv": "^17.4.2",
     "tsx": "^4.23.13",
-    "typescript": "^5",
-    "wrangler": "^4.129.0"
+    "typescript": "^7.0.2",
+    "wrangler": "^4.131.2"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,

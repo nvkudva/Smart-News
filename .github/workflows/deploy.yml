@@ -35,22 +35,32 @@ jobs:
 
       - run: npm ci
 
-      # Before the build, never after: a release that reads a new column is live
-      # the instant it deploys, and until the next cycle every request in the
-      # gap throws "no such column". The README says the same.
+      # Asked before it is answered: most releases change no schema at all, and
+      # those should not issue DDL against a live database. --check reports what
+      # the deployed D1 is missing, and fails the job outright if db.ts and
+      # d1-schema.ts have drifted apart — which is a bug to fix, not a thing to
+      # deploy over.
+      - name: Does D1 need migrating?
+        id: schema
+        run: npm run migrate:d1 -- --check
+
+      # Only when it does, and always before the build: a release that reads a
+      # new column is live the instant it deploys, and until the next cycle
+      # every request in the gap throws "no such column".
       - name: Migrate D1
+        if: steps.schema.outputs.needed == 'true'
         run: npm run migrate:d1
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      # Not --frozen-lockfile: web/bun.lock is currently out of step with the
-      # ranges in web/package.json, and a deploy is the wrong place to discover
-      # that. Re-freeze it here once `bun install` leaves the lockfile untouched.
+      # Frozen: a deploy installs what the lockfile says and nothing else. The
+      # lockfile is v2, so it needs the bun that wrote it — an older bun rewrites
+      # it to v1 and fails here, which is a stale toolchain and not a stale lock.
       - name: Install the web app's dependencies
         working-directory: web
-        run: bun install
+        run: bun install --frozen-lockfile
 
       # Through the package's own build script, so tsc -b runs first: a type
       # error should fail the job rather than ship.

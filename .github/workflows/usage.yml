@@ -1,0 +1,37 @@
+name: usage
+
+# What today has cost, on demand. Cloudflare's usage lives only in the dashboard
+# and in the GraphQL analytics API, and neither is reachable from a phone with
+# any comfort — this prints both numbers into a job summary instead.
+on:
+  workflow_dispatch:
+
+jobs:
+  usage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # Not a secret, and already in wrangler.jsonc — see cycle.yml.
+      CLOUDFLARE_D1_ID: 1e779125-88d9-4688-85f2-08c3c6bcecf3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+
+      - run: npm ci
+
+      # Into the run's summary as well as its log: the summary is what the
+      # mobile app shows without opening a job.
+      - name: Read today's usage
+        run: |
+          {
+            echo '```'
+            npm run --silent usage
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
