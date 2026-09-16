@@ -135,19 +135,19 @@ async function topUp(path: string): Promise<void> {
   local.close();
 
   const sources = await pull<Record<string, unknown>>('sources',
-    'id,name,feed_url,homepage,country,category,bias', '', []);
+    'id,name,feed_url,homepage,country,category,bias,tier', '', []);
   const prefsCols = ['user_id','country','categories','places','place_ids','geo_consent','geo_place_id'];
   const prefs = await pull<Record<string, unknown>>('prefs',
     (await columns('prefs', prefsCols)).join(','), '', []);
   // Anything another runner pushed while this file sat in the cache. Normally
   // empty: one cycle runs at a time, and it is the one that wrote this file.
   const articleCols = ['id','source_id','url','title','lead','body','image_url','published_at','fetched_at',
-    'content_hash','cluster_id'];
+    'content_hash','cluster_id','prominent'];
   const fresh = await pull<Record<string, unknown>>('articles', articleCols.join(','),
     'WHERE fetched_at > ?', [newest]);
 
   const d = db();
-  insertAll(d, 'sources', ['id','name','feed_url','homepage','country','category','bias'], sources);
+  insertAll(d, 'sources', ['id','name','feed_url','homepage','country','category','bias','tier'], sources);
   insertAll(d, 'prefs', prefsCols, prefs);
   if (fresh.length) {
     // Their parents may not be here; the clusterer will file them either way.
@@ -166,7 +166,7 @@ async function main() {
   console.log('Pulling from D1…');
 
   const sources = await pull<Record<string, unknown>>('sources',
-    'id,name,feed_url,homepage,country,category,bias', '', []);
+    'id,name,feed_url,homepage,country,category,bias,tier', '', []);
 
   // Before clusters: a cluster's place_id is a foreign key into places, and the
   // local store enforces them.
@@ -188,7 +188,7 @@ async function main() {
 
   const clusterCols = ['id','headline','crux','category','place','country','place_id','importance','image_url','image_source',
     'framing_left','framing_centre','framing_right',
-    'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'];
+    'article_count','source_count','prominence','first_seen','last_seen','summarised_at','summarised_n','attempts'];
   const haveClusterCols = (await columns('clusters', clusterCols)).join(',');
   const clusters = await pull<Record<string, unknown>>('clusters',
     haveClusterCols, 'WHERE last_seen >= ?', [since]);
@@ -243,7 +243,7 @@ async function main() {
   }
 
   const local = db();                 // creates the schema
-  insertAll(local, 'sources', ['id','name','feed_url','homepage','country','category','bias'], sources);
+  insertAll(local, 'sources', ['id','name','feed_url','homepage','country','category','bias','tier'], sources);
   insertAll(local, 'places', placeCols, places);
   insertAll(local, 'place_aliases', aliasCols, aliases);
   insertAll(local, 'clusters', clusterCols, clusters);

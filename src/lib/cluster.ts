@@ -80,6 +80,7 @@ export type ClusterOpts = {
 type Counted = {
   id: string; source_id: string; body: string | null;
   content_hash: string | null; published_at: number;
+  tier: string; prominent: number;
 };
 
 type Row = {
@@ -134,8 +135,16 @@ function bestImage(members: Row[]): Row | null {
  * Compared on the body, not the headline the clustering uses: an outlet running
  * agency copy rewrites the headline and keeps the text, so the title is the one
  * part that reliably differs.
+ *
+ * Title-tier members are excluded outright. They have no body by construction,
+ * so they would take the bodiless branch below and each count on their own —
+ * which is the exact syndication inflation the rest of this function exists to
+ * prevent, and it would be worse here: seven front pages carrying one wire
+ * story would read as seven independent newsrooms. What they carry is
+ * prominence, counted separately.
  */
-function independentSources(members: Counted[]): number {
+function independentSources(all: Counted[]): number {
+  const members = all.filter((m) => m.tier !== 'title');
   // One per outlet first — the same outlet's follow-up is not a second source
   // however different it reads — longest body first so the comparison has text.
   const bySource = new Map<string, Counted>();
@@ -487,30 +496,55 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
   // rewritten downward as it got older — reading as single-source, and so
   // dropping out of a feed that ranks on exactly that number.
   const allOf = d.prepare(
-    'SELECT id, source_id, body, content_hash, published_at FROM articles WHERE cluster_id = ?',
+    `SELECT a.id, a.source_id, a.body, a.content_hash, a.published_at, a.prominent,
+            COALESCE(s.tier, 'full') AS tier
+       FROM articles a JOIN sources s ON s.id = a.source_id
+      WHERE a.cluster_id = ?`,
   );
   const stored = d.prepare(
-    'SELECT article_count, source_count, first_seen, last_seen FROM clusters WHERE id = ?',
+    'SELECT article_count, source_count, prominence, first_seen, last_seen FROM clusters WHERE id = ?',
   );
   const recount = d.prepare(
-    'UPDATE clusters SET article_count = ?, source_count = ?, first_seen = ?, last_seen = ? WHERE id = ?',
+    `UPDATE clusters SET article_count = ?, source_count = ?, prominence = ?,
+            first_seen = ?, last_seen = ? WHERE id = ?`,
   );
+
+  /**
+   * How many outlets put this on their own front page. One per outlet, because
+   * a story appears on a masthead's front page once however many of its desks
+   * also ran it — and the count has to stay comparable with the three-front-page
+   * cap the ranker applies to it.
+   */
+  const prominenceOf = (members: Counted[]) =>
+    new Set(members.filter((m) => m.prominent).map((m) => m.source_id)).size;
+
+  /**
+   * Articles the reader could be shown, which is the same exclusion
+   * source_count makes: a front-page listing we never followed to its article
+   * is not a piece of coverage, and counting it would put a number on the card
+   * that the outlet list beneath it cannot account for.
+   */
+  const articleCountOf = (members: Counted[]) =>
+    new Set(members.filter((m) => m.tier !== 'title').map((m) => m.content_hash ?? m.id)).size;
   const changed: string[] = [];
 
   // A written-up story keeps the timestamps it was written with: it must not
   // climb back up a feed ranked on recency for having gained a seventh article
   // saying what the first six said. Only the counts move.
   const recountFrozen = d.prepare(
-    'UPDATE clusters SET article_count = ?, source_count = ? WHERE id = ?',
+    'UPDATE clusters SET article_count = ?, source_count = ?, prominence = ? WHERE id = ?',
   );
   for (const id of grown) {
     const members = allOf.all(id) as unknown as Counted[];
     if (!members.length) continue;
-    const articles = new Set(members.map((m) => m.content_hash ?? m.id)).size;
+    const articles = articleCountOf(members);
     const sources = independentSources(members);
-    const was = stored.get(id) as unknown as { article_count: number; source_count: number } | undefined;
-    if (was && was.article_count === articles && was.source_count === sources) continue;
-    recountFrozen.run(articles, sources, id);
+    const prominence = prominenceOf(members);
+    const was = stored.get(id) as unknown as
+      { article_count: number; source_count: number; prominence: number } | undefined;
+    if (was && was.article_count === articles && was.source_count === sources
+        && was.prominence === prominence) continue;
+    recountFrozen.run(articles, sources, prominence, id);
     changed.push(id);
   }
 
@@ -518,15 +552,18 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
     const members = allOf.all(id) as unknown as Counted[];
     if (!members.length) continue;
     const counts = {
-      article_count: new Set(members.map((m) => m.content_hash ?? m.id)).size,
+      article_count: articleCountOf(members),
       source_count: independentSources(members),
+      prominence: prominenceOf(members),
       first_seen: Math.min(...members.map((m) => m.published_at)),
       last_seen: Math.max(...members.map((m) => m.published_at)),
     };
     const was = stored.get(id) as unknown as typeof counts | undefined;
     if (was && was.article_count === counts.article_count && was.source_count === counts.source_count
+        && was.prominence === counts.prominence
         && was.first_seen === counts.first_seen && was.last_seen === counts.last_seen) continue;
-    recount.run(counts.article_count, counts.source_count, counts.first_seen, counts.last_seen, id);
+    recount.run(counts.article_count, counts.source_count, counts.prominence,
+                counts.first_seen, counts.last_seen, id);
     changed.push(id);
   }
   markDirty('article', movedArticles);

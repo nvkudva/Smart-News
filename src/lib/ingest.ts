@@ -40,14 +40,28 @@ function imageOf(item: Item): string | null {
 
 function seedSources() {
   const d = db();
+  // A duplicated id silently reassigns every article the first entry owns —
+  // adding the Times of India's front page under an id an existing source
+  // already held moved 1020 of its articles to the title tier, and with them
+  // out of source_count. A duplicated feed_url is the subtler half of the same
+  // mistake: an outlet read in both tiers has every article marked prominent,
+  // which says no more than marking none of them would.
+  const ids = new Set<string>(), feeds = new Set<string>();
+  for (const s of SOURCES) {
+    if (ids.has(s.id)) throw new Error(`duplicate source id: ${s.id}`);
+    if (feeds.has(s.feed_url)) throw new Error(`duplicate feed_url: ${s.feed_url}`);
+    ids.add(s.id); feeds.add(s.feed_url);
+  }
   const stmt = d.prepare(
-    `INSERT INTO sources (id, name, feed_url, homepage, country, category, bias)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO sources (id, name, feed_url, homepage, country, category, bias, tier)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET name=excluded.name, feed_url=excluded.feed_url,
        homepage=excluded.homepage, country=excluded.country, category=excluded.category,
-       bias=excluded.bias`,
+       bias=excluded.bias, tier=excluded.tier`,
   );
-  for (const s of SOURCES) stmt.run(s.id, s.name, s.feed_url, s.homepage, s.country, s.category, s.bias);
+  for (const s of SOURCES) {
+    stmt.run(s.id, s.name, s.feed_url, s.homepage, s.country, s.category, s.bias, s.tier ?? 'full');
+  }
 }
 
 /**
@@ -114,43 +128,106 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
   const d = db();
   seedSources();
 
-  const exists = d.prepare('SELECT 1 FROM articles WHERE url = ?');
+  // The URL is the identity, never (source, URL): a front page and the desk feed
+  // beneath it carry the same story, and the tier of whoever holds it decides
+  // what happens next.
+  const owner = d.prepare(
+    `SELECT a.id, s.tier FROM articles a JOIN sources s ON s.id = a.source_id WHERE a.url = ?`,
+  );
   const insert = d.prepare(
     `INSERT OR IGNORE INTO articles
-       (id, source_id, url, title, lead, body, image_url, published_at, fetched_at, content_hash)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, source_id, url, title, lead, body, image_url, published_at, fetched_at, content_hash, prominent)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
+  // A story its own front page carried first would otherwise be stranded under
+  // a title-tier owner for good: never body-fetched, and never counted as a
+  // source. When the desk feed brings the same URL in, hand the row over to the
+  // outlet we are allowed to read. The id does not change, so anything already
+  // pointing at the article — cluster membership above all — survives.
+  const upgrade = d.prepare('UPDATE articles SET source_id = ? WHERE id = ?');
+  const markProminent = d.prepare('UPDATE articles SET prominent = 1 WHERE id = ? AND prominent = 0');
 
   const now = Date.now();
   const feedLimit = pLimit(8);
   const pending: { id: string; url: string }[] = [];
   let seen = 0;
 
-  await Promise.all(SOURCES.map((s) => feedLimit(async () => {
-    let feed;
-    try {
-      feed = await parser.parseURL(s.feed_url);
-    } catch (err) {
-      console.warn(`  ! ${s.id}: ${(err as Error).message.slice(0, 70)}`);
-      return;
-    }
-    let added = 0;
+  const readFeed = async (s: { id: string; feed_url: string }) => {
+    try { return await parser.parseURL(s.feed_url); }
+    catch (err) { console.warn(`  ! ${s.id}: ${(err as Error).message.slice(0, 70)}`); return null; }
+  };
+  const usable = (item: Item) => {
+    if (!item.title || !item.link) return null;
+    const published = Date.parse(item.isoDate ?? item.pubDate ?? '') || now;
+    if (now - published > MAX_AGE_MS) return null;
+    return { url: normaliseUrl(item.link), published, title: item.title.trim() };
+  };
+  const idFor = (sourceId: string, url: string) =>
+    `${sourceId}:${Buffer.from(url).toString('base64url').slice(-24)}`;
+  const leadOf = (item: Item) =>
+    (item.contentSnippet ?? '').replace(/\s+/g, ' ').trim().slice(0, 600);
+
+  // Pass 1: the feeds we read in full, exactly as before. It is awaited to
+  // completion before the front pages run, so within a cycle a story always
+  // lands under the outlet whose body we can fetch and no title-tier row for it
+  // is ever created. The upgrade below is for the case the ordering cannot fix
+  // — a front page carrying a story hours before the desk feed does.
+  await Promise.all(SOURCES.filter((s) => s.tier !== 'title').map((s) => feedLimit(async () => {
+    const feed = await readFeed(s);
+    if (!feed) return;
+    let added = 0, upgraded = 0;
     for (const item of feed.items ?? []) {
-      if (!item.title || !item.link) continue;
-      const published = Date.parse(item.isoDate ?? item.pubDate ?? '') || now;
-      if (now - published > MAX_AGE_MS) continue;
-      const url = normaliseUrl(item.link);
+      const u = usable(item);
+      if (!u) continue;
       seen++;
-      if (exists.get(url)) continue;
-      const id = `${s.id}:${Buffer.from(url).toString('base64url').slice(-24)}`;
-      const lead = (item.contentSnippet ?? '').replace(/\s+/g, ' ').trim().slice(0, 600);
-      insert.run(id, s.id, url, item.title.trim(), lead, null, imageOf(item), published, now,
-                 titleFingerprint(item.title));
-      pending.push({ id, url });
+      const held = owner.get(u.url) as { id: string; tier: string } | undefined;
+      if (held) {
+        if (held.tier !== 'title') continue;
+        upgrade.run(s.id, held.id);
+        pending.push({ id: held.id, url: u.url });
+        markDirty('article', [held.id]);
+        upgraded++;
+        continue;
+      }
+      const id = idFor(s.id, u.url);
+      insert.run(id, s.id, u.url, u.title, leadOf(item), null, imageOf(item), u.published, now,
+                 titleFingerprint(u.title), 0);
+      pending.push({ id, url: u.url });
       markDirty('article', [id]);
       added++;
     }
-    console.log(`  ${s.id.padEnd(20)} ${String(added).padStart(3)} new / ${feed.items?.length ?? 0}`);
+    console.log(`  ${s.id.padEnd(20)} ${String(added).padStart(3)} new / ${feed.items?.length ?? 0}`
+                + `${upgraded ? ` (+${upgraded} upgraded)` : ''}`);
+  })));
+
+  // Pass 2: front pages, headline only. Nothing here is ever followed to an
+  // article page, so robots.txt does not enter into it and an outlet that
+  // refuses automated retrieval can still tell us what it is leading with. A
+  // URL we already hold is flagged where it lies; one we have not seen is
+  // inserted body-less, so it can still cluster on its headline — title and
+  // lead are what the clustering reads anyway.
+  await Promise.all(SOURCES.filter((s) => s.tier === 'title').map((s) => feedLimit(async () => {
+    const feed = await readFeed(s);
+    if (!feed) return;
+    let flagged = 0, added = 0;
+    for (const item of feed.items ?? []) {
+      const u = usable(item);
+      if (!u) continue;
+      const held = owner.get(u.url) as { id: string; tier: string } | undefined;
+      if (held) {
+        markProminent.run(held.id);
+        markDirty('article', [held.id]);
+        flagged++;
+        continue;
+      }
+      const id = idFor(s.id, u.url);
+      insert.run(id, s.id, u.url, u.title, leadOf(item), null, imageOf(item), u.published, now,
+                 titleFingerprint(u.title), 1);
+      markDirty('article', [id]);
+      added++;
+    }
+    console.log(`  ${s.id.padEnd(20)} ${String(flagged + added).padStart(3)} prominent`
+                + ` / ${feed.items?.length ?? 0}`);
   })));
 
   // A body that failed once was never tried again: `pending` holds only rows
@@ -158,9 +235,9 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
   // a robots.txt 5xx read as a refusal, one blip on a publisher's server
   // silently cost that source its text for good. Recent misses get another go.
   const retry = d.prepare(
-    `SELECT id, url FROM articles
-      WHERE body IS NULL AND fetched_at >= ? AND fetched_at < ?
-      ORDER BY fetched_at DESC LIMIT 200`,
+    `SELECT a.id, a.url FROM articles a JOIN sources s ON s.id = a.source_id
+      WHERE a.body IS NULL AND s.tier = 'full' AND a.fetched_at >= ? AND a.fetched_at < ?
+      ORDER BY a.fetched_at DESC LIMIT 200`,
   ).all(now - RETRY_WINDOW_MS, now) as unknown as { id: string; url: string }[];
 
   const work = [...pending, ...retry];

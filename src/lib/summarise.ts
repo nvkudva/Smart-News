@@ -366,10 +366,14 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   // run has left.
   if (targets.length < limit) targets.push(...worthWriting(d).slice(0, limit - targets.length));
 
+  // Title-tier members are excluded: we never fetched their article, so the
+  // only text they could contribute is an RSS blurb, and they are not counted
+  // as sources anywhere else either. They put the story on a front page; that
+  // is a ranking fact, not something the write-up may attribute to them.
   const membersOf = d.prepare(
     `SELECT a.source_id, s.name, s.bias, a.title, a.lead, a.body
        FROM articles a JOIN sources s ON s.id = a.source_id
-      WHERE a.cluster_id = ?`,
+      WHERE a.cluster_id = ? AND COALESCE(s.tier, 'full') <> 'title'`,
   );
   const save = d.prepare(
     `UPDATE clusters SET headline=?, crux=?, category=?, place=?, country=?, place_id=?,

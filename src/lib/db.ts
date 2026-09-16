@@ -51,7 +51,8 @@ function migrate(d: DatabaseSync) {
       homepage    TEXT,
       country     TEXT,
       category    TEXT,
-      bias        TEXT
+      bias        TEXT,
+      tier        TEXT NOT NULL DEFAULT 'full'
     );
 
     CREATE TABLE IF NOT EXISTS articles (
@@ -65,7 +66,8 @@ function migrate(d: DatabaseSync) {
       published_at  INTEGER NOT NULL,
       fetched_at    INTEGER NOT NULL,
       content_hash  TEXT,
-      cluster_id    TEXT REFERENCES clusters(id)
+      cluster_id    TEXT REFERENCES clusters(id),
+      prominent     INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS articles_published ON articles(published_at DESC);
     CREATE INDEX IF NOT EXISTS articles_cluster   ON articles(cluster_id);
@@ -83,6 +85,7 @@ function migrate(d: DatabaseSync) {
       image_source   TEXT,
       article_count  INTEGER NOT NULL DEFAULT 0,
       source_count   INTEGER NOT NULL DEFAULT 0,
+      prominence     INTEGER NOT NULL DEFAULT 0,
       first_seen     INTEGER NOT NULL,
       last_seen      INTEGER NOT NULL,
       summarised_at  INTEGER,
@@ -150,6 +153,12 @@ function migrate(d: DatabaseSync) {
     if (!cols.some((c) => c.name === column)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
   };
   add('clusters', 'attempts', 'attempts INTEGER NOT NULL DEFAULT 0');
+  // How many front pages led with this. Kept apart from source_count because it
+  // answers a different question: breadth is how many newsrooms covered it,
+  // prominence is how many of them thought it was the day's story.
+  add('clusters', 'prominence', 'prominence INTEGER NOT NULL DEFAULT 0');
+  add('articles', 'prominent', 'prominent INTEGER NOT NULL DEFAULT 0');
+  add('sources', 'tier', `tier TEXT NOT NULL DEFAULT 'full'`);
   add('clusters', 'place_id', 'place_id TEXT REFERENCES places(id)');
   // One paragraph per side that actually ran the story, written in the same
   // summarisation call. Nullable: a cluster summarised before v2.0 has none,

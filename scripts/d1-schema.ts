@@ -28,11 +28,13 @@ CREATE TABLE IF NOT EXISTS place_aliases (
   PRIMARY KEY (alias, country));
 CREATE TABLE IF NOT EXISTS sources (
   id TEXT PRIMARY KEY, name TEXT NOT NULL, feed_url TEXT NOT NULL,
-  homepage TEXT, country TEXT, category TEXT, bias TEXT);
+  homepage TEXT, country TEXT, category TEXT, bias TEXT,
+  tier TEXT NOT NULL DEFAULT 'full');
 CREATE TABLE IF NOT EXISTS clusters (
   id TEXT PRIMARY KEY, headline TEXT, crux TEXT, category TEXT, place TEXT,
   country TEXT, importance INTEGER DEFAULT 3, image_url TEXT, image_source TEXT,
   article_count INTEGER NOT NULL DEFAULT 0, source_count INTEGER NOT NULL DEFAULT 0,
+  prominence INTEGER NOT NULL DEFAULT 0,
   first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
   summarised_at INTEGER, summarised_n INTEGER DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0,
   place_id TEXT,
@@ -40,7 +42,8 @@ CREATE TABLE IF NOT EXISTS clusters (
 CREATE TABLE IF NOT EXISTS articles (
   id TEXT PRIMARY KEY, source_id TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL,
   lead TEXT, body TEXT, image_url TEXT, published_at INTEGER NOT NULL,
-  fetched_at INTEGER, content_hash TEXT, cluster_id TEXT);
+  fetched_at INTEGER, content_hash TEXT, cluster_id TEXT,
+  prominent INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS prefs (
   user_id TEXT PRIMARY KEY, country TEXT, categories TEXT, places TEXT,
   place_ids TEXT, geo_consent INTEGER NOT NULL DEFAULT 0, geo_place_id TEXT,
@@ -90,6 +93,13 @@ export const ADDED_COLUMNS: Record<string, [string, string][]> = {
     ['framing_centre', 'framing_centre TEXT'],
     ['framing_right', 'framing_right TEXT'],
     ['image_source', 'image_source TEXT'],
+    ['prominence', 'prominence INTEGER NOT NULL DEFAULT 0'],
+  ],
+  articles: [
+    ['prominent', 'prominent INTEGER NOT NULL DEFAULT 0'],
+  ],
+  sources: [
+    ['tier', `tier TEXT NOT NULL DEFAULT 'full'`],
   ],
   prefs: [
     ['place_ids', 'place_ids TEXT'],

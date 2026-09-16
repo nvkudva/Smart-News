@@ -30,7 +30,7 @@ export const DEFAULT_PREFS: Prefs = {
 export const storyCols = (ready: boolean) => `c.id, c.headline, c.crux, c.category, c.place, c.country,
        ${ready ? 'c.place_id' : 'NULL AS place_id'}, NULL AS place_label,
        c.importance, c.image_url, c.image_source,
-       c.article_count, c.source_count, c.first_seen, c.last_seen`;
+       c.article_count, c.source_count, c.prominence, c.first_seen, c.last_seen`;
 export const STORY_FROM = 'FROM clusters c';
 
 /**
@@ -201,10 +201,49 @@ const CANDIDATE_WINDOW_H = 24;
  * prefs — and then the place term stays the free-text substring test, so their
  * feed is unchanged.
  */
-function score(s: Story, prefs: Prefs, inside: Set<string> | null): number {
+/**
+ * Breadth, 0.35 at a single source and 1 at twenty-five — the curve the whole
+ * ranking used to be multiplied by.
+ *
+ * It is no longer part of `rank`, because the feed now reserves half its
+ * known-category slots for corroborated stories outright. Weighing breadth in
+ * the ordering *as well* counted it twice: a widely-run story won its own half
+ * on merit and then outranked the fresh single-source stories in the other
+ * half too, which is the crowding this split exists to stop. Applied in the two
+ * places that have no halves to rely on — the corroborated queue itself, where
+ * it is the discriminator, and the fallback for a reader who has stated no
+ * interests at all.
+ */
+function breadthWeight(s: Story): number {
+  return 0.35 + 0.65 * Math.min(1, Math.log1p(s.source_count) / Math.log(25));
+}
+
+/**
+ * How many outlets led with this on their own front page.
+ *
+ * Saturates at two, which is a fact about the source list rather than a taste:
+ * sources.ts carries five front pages and they barely overlap, three of them
+ * British and American and two Indian. Over a day's clusters, 13% reach one and
+ * 0.3% reach two — so a cap of three would have made the full lift unreachable
+ * and quietly turned this into a flat 17% bonus for anything a front page
+ * touched. Raise it when there are more front pages to reach.
+ *
+ * At the full +50% it is worth about three and a half hours of freshness
+ * against the six-hour half-life: enough to lift a big story over a merely
+ * newer one, not enough to hold yesterday's above this morning's. Floored at 1,
+ * so it only ever lifts — a story no front page carried ranks exactly where it
+ * ranked before this existed, which is what keeps it from becoming a gate on
+ * scoops.
+ */
+const PROMINENCE_FULL = 2;
+
+function prominenceLift(s: Story): number {
+  return 1 + 0.5 * Math.min(1, (s.prominence ?? 0) / PROMINENCE_FULL);
+}
+
+function rank(s: Story, prefs: Prefs, inside: Set<string> | null): number {
   const ageH = (Date.now() - s.last_seen) / 3_600_000;
   const recency = Math.pow(0.5, ageH / HALF_LIFE_H);
-  const corroboration = Math.min(1, Math.log1p(s.source_count) / Math.log(25));
   // 0.55 halved every story outside the reader's picks, which with the desk
   // multipliers meant a seven-hour-old Technology story beat a ninety-minute-old
   // one elsewhere before recency was considered. Preference should tilt the
@@ -221,8 +260,8 @@ function score(s: Story, prefs: Prefs, inside: Set<string> | null): number {
   // own and leaves the other three terms arguing over the remainder. Mapped to
   // 0.6-1.0 it still sorts, but a widely-run story can now outrank a lightly-run
   // one the model happened to like better.
-  return recency * (0.35 + 0.65 * corroboration) * (0.5 + 0.1 * s.importance) * interest
-         * macroLift(s);
+  return recency * (0.5 + 0.1 * s.importance) * interest
+         * prominenceLift(s) * macroLift(s);
 }
 
 /**
@@ -265,7 +304,7 @@ export async function getFeed(limit: number, userId: string): Promise<Story[]> {
     [Date.now() - CANDIDATE_WINDOW_H * 3_600_000]));
 
   const scored = withoutHidden(rows, prefs)
-    .map((s) => ({ s, k: score(s, prefs, inside) })).sort((a, b) => b.k - a.k);
+    .map((s) => ({ s, k: rank(s, prefs, inside) })).sort((a, b) => b.k - a.k);
   const known = scored.filter(({ s }) => prefs.categories.includes(s.category));
   const novel = scored.filter(({ s }) => !prefs.categories.includes(s.category));
   // Geo-adjacent: near a stated place but not inside it, and not something the
@@ -278,7 +317,11 @@ export async function getFeed(limit: number, userId: string): Promise<Story[]> {
   // With no stated interests nothing is "outside" them: every story would fall
   // into novel and the marker would make a claim that is false on every card.
   if (known.length === 0) {
-    return scored.slice(0, limit)
+    // The one path with no halves to balance, so breadth has to be weighed in
+    // the ordering here or nothing weighs it at all.
+    return [...scored]
+      .sort((a, b) => b.k * breadthWeight(b.s) - a.k * breadthWeight(a.s))
+      .slice(0, limit)
       .map(({ s }) => ({ ...s, exploration: 0 as const, exploration_kind: null }));
   }
 
@@ -296,7 +339,17 @@ export async function getFeed(limit: number, userId: string): Promise<Story[]> {
     used.add(s.id);
   };
 
-  let ki = 0, ni = 0, gi = 0, spent = 0;
+  // Known-category slots split 50/50: one queue in rank order, which after the
+  // six-hour half-life is very nearly freshest-first, and one holding only what
+  // more than one newsroom carried. A stream of fresh single-source stories was
+  // crowding corroborated ones off the top, and reserving half the slots fixes
+  // that structurally — which is why `rank` itself no longer weighs breadth.
+  // The corroborated queue is the one place that ordering belongs.
+  const knownMulti = [...known]
+    .sort((a, b) => b.k * breadthWeight(b.s) - a.k * breadthWeight(a.s))
+    .filter(({ s }) => s.source_count >= 2);
+
+  let ki = 0, kci = 0, kToggle = 0, ni = 0, gi = 0, spent = 0;
   while (out.length < limit) {
     ni = skip(novel, ni);
     gi = skip(geo, gi);
@@ -308,7 +361,15 @@ export async function getFeed(limit: number, userId: string): Promise<Story[]> {
       else take(novel[ni++].s, 'category');
       spent++;
     }
-    else if (ki < known.length) take(known[ki++].s, null);
+    else if (ki < known.length || kci < knownMulti.length) {
+      ki = skip(known, ki);
+      kci = skip(knownMulti, kci);
+      const wantMulti = kToggle % 2 === 1 && kci < knownMulti.length;
+      if (wantMulti) take(knownMulti[kci++].s, null);
+      else if (ki < known.length) take(known[ki++].s, null);
+      else take(knownMulti[kci++].s, null);
+      kToggle++;
+    }
     else if (ni < novel.length) {
       // Padding past the known set: these are off-interest too, but the reserve
       // is one slot in four, so stamp only while the budget lasts.
@@ -358,7 +419,7 @@ export async function getLocalFeed(limit: number, userId: string): Promise<Story
       return [];
     }
 
-    return withoutHidden(withPlaceLabels(rows), prefs).map((s) => ({ s, k: score(s, prefs, inside) }))
+    return withoutHidden(withPlaceLabels(rows), prefs).map((s) => ({ s, k: rank(s, prefs, inside) }))
       .sort((a, b) => b.k - a.k)
       .slice(0, limit)
       .map(({ s }) => ({ ...s, exploration: 0 as const, exploration_kind: null }));
@@ -381,9 +442,13 @@ export async function getStory(id: string) {
   // paying that distance twice to learn two unrelated facts.
   const [articles, related] = await Promise.all([
     d.all<Article>(
+      // Title-tier outlets are left out: we read their front page, never their
+      // article, so listing them would credit reporting we never saw and would
+      // put them into the bias split coverageOf derives from this very list.
       `SELECT a.title, a.url, a.published_at, s.name AS source, s.homepage, s.bias
          FROM articles a JOIN sources s ON s.id = a.source_id
-        WHERE a.cluster_id = ? ORDER BY a.published_at ASC`, [id]),
+        WHERE a.cluster_id = ? AND COALESCE(s.tier, 'full') <> 'title'
+        ORDER BY a.published_at ASC`, [id]),
     // The whole row, not four columns: the related list renders real cards now,
     // so it needs the crux, the photograph and the place the card foot reads.
     // Six of them on one indexed category filter is not worth economising on.

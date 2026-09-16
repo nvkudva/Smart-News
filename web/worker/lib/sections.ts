@@ -50,7 +50,7 @@ export async function outletsFor(ids: string[]): Promise<Map<string, Outlet[]>> 
   const rows = await d1().all<Outlet & { cluster_id: string }>(
     `SELECT a.cluster_id, s.name AS source, s.bias, min(a.url) AS url
        FROM articles a JOIN sources s ON s.id = a.source_id
-      WHERE a.cluster_id IN (${idList(ids)})
+      WHERE a.cluster_id IN (${idList(ids)}) AND COALESCE(s.tier, 'full') <> 'title'
       GROUP BY a.cluster_id, s.name
       ORDER BY min(a.published_at) ASC`);
   for (const { cluster_id, ...o } of rows) {

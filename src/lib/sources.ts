@@ -22,9 +22,23 @@
  */
 export type Bias = 'left' | 'centre' | 'right';
 
+/**
+ * `title` marks a front-page feed: read for headlines only, never fetched for
+ * body text. Two consequences, both deliberate. Nothing here goes through
+ * Readability or robots.txt, because only the article page is ever gated and
+ * these feeds are never followed to one — so an outlet that refuses automated
+ * retrieval can still tell us what it is leading with. And a title-tier outlet
+ * is kept out of `source_count`, out of the outlet list and out of the bias
+ * split, because we did not read what it said: all it supplies is the fact
+ * that it put the story on its front page.
+ */
+export type Tier = 'full' | 'title';
+
 export type SourceSeed = {
   id: string; name: string; feed_url: string;
   homepage: string; country: string; category: string; bias: Bias;
+  /** Absent means 'full'. */
+  tier?: Tier;
 };
 
 export const SOURCES: SourceSeed[] = [
@@ -148,4 +162,23 @@ export const SOURCES: SourceSeed[] = [
   // --- health. STAT News and Medical Xpress are the obvious two and both
   // disallow ClaudeBot on their articles, so this desk stays thin on purpose.
   { id: 'healthpolicywatch', name: 'Health Policy Watch', feed_url: 'https://healthpolicy-watch.news/feed/',      homepage: 'https://healthpolicy-watch.news', country: 'CH', category: 'Health', bias: 'centre' },
+
+  // --- front pages, title-only. What separates a story six outlets ran from
+  // one six outlets LED with, which breadth alone cannot see: the daily puzzle
+  // hints that reached the feed with six corroborating sources were on nobody's
+  // front page. Selectivity is the whole signal, so a feed only belongs here if
+  // it is a curated front page — the Guardian's international feed (117 items)
+  // and the Indian Express firehose (200) were rejected for that reason, not
+  // for quality, since a feed that carries everything marks everything
+  // prominent. Hindustan Times' top-news feed returns nothing and is absent.
+  //
+  // NDTV's and the Times of India's front pages are absent for a different
+  // reason: both are already ingested as ordinary sources reading those exact
+  // feeds. Listing a feed in both tiers would mark everything those outlets
+  // publish as prominent, which is the same as marking none of it.
+  { id: 'bbc-top',      name: 'BBC News',      feed_url: 'https://feeds.bbci.co.uk/news/rss.xml',                 homepage: 'https://bbc.co.uk/news',      country: 'GB', category: 'World',    bias: 'centre', tier: 'title' },
+  { id: 'nyt-top',      name: 'The New York Times', feed_url: 'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml', homepage: 'https://nytimes.com',  country: 'US', category: 'World',    bias: 'left',   tier: 'title' },
+  { id: 'cnn-top',      name: 'CNN',           feed_url: 'http://rss.cnn.com/rss/edition.rss',                    homepage: 'https://cnn.com',             country: 'US', category: 'World',    bias: 'left',   tier: 'title' },
+  { id: 'thehindu-top', name: 'The Hindu',     feed_url: 'https://www.thehindu.com/feeder/default.rss',           homepage: 'https://thehindu.com',        country: 'IN', category: 'World',    bias: 'left',   tier: 'title' },
+  { id: 'et-top',       name: 'The Economic Times', feed_url: 'https://economictimes.indiatimes.com/rssfeedstopstories.cms', homepage: 'https://economictimes.indiatimes.com', country: 'IN', category: 'Business', bias: 'centre', tier: 'title' },
 ];

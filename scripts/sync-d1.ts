@@ -64,6 +64,9 @@ async function push(table: string, cols: string[], rows: Record<string, unknown>
  * them and push only when the content actually differs from what D1 last got.
  * The fingerprint lives in D1 because the runner keeps nothing between cycles.
  */
+/** The names in a SELECT list, so a push cannot name a different set. */
+const colList = (sql: string) => sql.split(',').map((c) => c.trim()).filter(Boolean);
+
 async function pushSeed(d: D1, table: string, cols: string[], rows: Record<string, unknown>[]) {
   const fingerprint = createHash('sha256')
     .update(JSON.stringify(rows.map((r) => cols.map((c) => r[c] ?? null))))
@@ -239,8 +242,11 @@ async function main() {
       .map((r) => r.id);
 
   console.log(full ? 'Pushing the full window…' : 'Pushing what the cycle recorded as changed…');
-  await pushSeed(d, 'sources', ['id', 'name', 'feed_url', 'homepage', 'country', 'category', 'bias'],
-    all('SELECT id,name,feed_url,homepage,country,category,bias FROM sources'));
+  // One list, read and written. Holding the SELECT and the column list apart
+  // let `tier` be added to the second and not the first, which pushed a null
+  // tier over all 72 rows: every front-page source read as an ordinary one.
+  const sourceCols = ['id', 'name', 'feed_url', 'homepage', 'country', 'category', 'bias', 'tier'];
+  await pushSeed(d, 'sources', sourceCols, all(`SELECT ${sourceCols.join(',')} FROM sources`));
 
   // The gazetteer goes up whole or not at all — a changed-since column would
   // not pay for itself on a few hundred rows — but it goes up only when its
@@ -252,32 +258,26 @@ async function main() {
 
   const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,image_source,
             framing_left,framing_centre,framing_right,
-            article_count,source_count,first_seen,last_seen,summarised_at,summarised_n,attempts`;
+            article_count,source_count,prominence,first_seen,last_seen,summarised_at,summarised_n,attempts`;
   const dirtyClusters = full ? [] : dirtyIds('cluster');
   const clusters = full
     ? all<Record<string, unknown>>(`SELECT ${clusterCols} FROM clusters WHERE last_seen >= ?`, since)
     : inChunks(dirtyClusters, (ids) => all<Record<string, unknown>>(
         `SELECT ${clusterCols} FROM clusters
           WHERE last_seen >= ? AND id IN (${ids.map(() => '?').join(',')})`, since, ...ids));
-  await push('clusters',
-    ['id','headline','crux','category','place','country','place_id','importance','image_url','image_source',
-     'framing_left','framing_centre','framing_right',
-     'article_count','source_count','first_seen','last_seen','summarised_at','summarised_n','attempts'],
-    clusters);
+  await push('clusters', colList(clusterCols), clusters);
 
   await reap(d, local, since);
 
   const articleCols = `id,source_id,url,title,lead,body,image_url,published_at,fetched_at,
-            content_hash,cluster_id`;
+            content_hash,cluster_id,prominent`;
   const dirtyArticles = full ? [] : dirtyIds('article');
   const articles = full
     ? all<Record<string, unknown>>(`SELECT ${articleCols} FROM articles WHERE published_at >= ?`, since)
     : inChunks(dirtyArticles, (ids) => all<Record<string, unknown>>(
         `SELECT ${articleCols} FROM articles
           WHERE published_at >= ? AND id IN (${ids.map(() => '?').join(',')})`, since, ...ids));
-  await push('articles',
-    ['id','source_id','url','title','lead','body','image_url','published_at',
-     'fetched_at','content_hash','cluster_id'], articles);
+  await push('articles', colList(articleCols), articles);
 
   // Cleared only once both pushes have landed: anything that threw above stays
   // on the list and goes up next cycle. Ids the window no longer covers are

@@ -20,6 +20,8 @@ export type Story = {
   importance: number;
   image_url: string | null; image_source: string | null;
   article_count: number; source_count: number;
+  /** Front pages that led with this. See sources.ts on the title tier. */
+  prominence: number;
   first_seen: number; last_seen: number;
   framing_left: string | null; framing_centre: string | null; framing_right: string | null;
   exploration: 0 | 1; exploration_kind: 'category' | 'place' | null;
