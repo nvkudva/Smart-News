@@ -219,12 +219,13 @@ function toGeminiSchema(s: JsonSchema): Record<string, unknown> {
 
 let gemini: GoogleGenAI | null = null;
 
-async function callGemini(c: LlmConfig, system: string, user: string, schema: JsonSchema): Promise<string> {
+async function callGemini(c: LlmConfig, system: string, user: string, schema: JsonSchema, signal?: AbortSignal): Promise<string> {
   gemini ??= new GoogleGenAI({ apiKey: c.apiKey });
   const res = await gemini.models.generateContent({
     model: c.model,
     contents: user,
     config: {
+      abortSignal: signal,
       systemInstruction: system,
       responseMimeType: 'application/json',
       responseSchema: toGeminiSchema(schema) as never,
@@ -249,7 +250,7 @@ function quietReasoning(model: string): { suffix: string; body: Record<string, u
   return { suffix: '', body: {} };
 }
 
-async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, schema: JsonSchema): Promise<string> {
+async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, schema: JsonSchema, signal?: AbortSignal): Promise<string> {
   const quiet = c.reasoning ? { suffix: '', body: {} } : quietReasoning(c.model);
   const responseFormat =
     c.jsonMode === 'schema'
@@ -262,7 +263,10 @@ async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, 
   const res = await fetch(`${c.baseUrl!.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.apiKey}` },
-    signal: AbortSignal.timeout(90_000),
+    // The per-call ceiling, and the caller's own deadline if it set one. Five
+    // attempts at ninety seconds plus backoff is eight minutes on ONE cluster,
+    // spent in silence; a run that has to finish needs to be able to say stop.
+    signal: signal ? AbortSignal.any([AbortSignal.timeout(90_000), signal]) : AbortSignal.timeout(90_000),
     body: JSON.stringify({
       model: c.model,
       temperature: 0.2,
@@ -303,21 +307,26 @@ export type LlmOutcome<T> =
 
 export async function completeJson<T>(
   system: string, user: string, schema: JsonSchema, config = llmConfig(),
+  signal?: AbortSignal,
 ): Promise<LlmOutcome<T>> {
   if (!config) return { ok: false, reason: 'unconfigured' };
 
   let text = '';
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // Checked before the slot as well as after the failure: a caller that has
+    // given up should not sit through this call's share of the RPM pacing.
+    if (signal?.aborted) { bump('transport'); return { ok: false, reason: 'transport', kind: 'transport' }; }
     await takeSlot(config.rpm);
     try {
       text = config.provider === 'gemini'
-        ? await callGemini(config, system, user, schema)
-        : await callOpenAiCompatible(config, system, user, schema);
+        ? await callGemini(config, system, user, schema, signal)
+        : await callOpenAiCompatible(config, system, user, schema, signal);
       break;
     } catch (err) {
       const kind = classify(err);
       if (kind === 'auth') { bump(kind); return { ok: false, reason: 'auth', kind }; }
-      if (kind === 'other' || attempt === MAX_RETRIES) {
+      // Retrying against an expired deadline just spends the backoff.
+      if (kind === 'other' || attempt === MAX_RETRIES || signal?.aborted) {
         bump(kind);
         return { ok: false, reason: 'transport', kind };
       }

@@ -89,7 +89,7 @@ const SCHEMA: JsonSchema = {
   required: ['headline', 'crux', 'category', 'importance'],
 };
 
-export async function summariseCluster(members: Member[]): Promise<LlmOutcome<Summary>> {
+export async function summariseCluster(members: Member[], signal?: AbortSignal): Promise<LlmOutcome<Summary>> {
   // One article per source, longest body first: diverse and substantive.
   const bySource = new Map<string, Member>();
   for (const m of [...members].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))) {
@@ -112,6 +112,8 @@ export async function summariseCluster(members: Member[]): Promise<LlmOutcome<Su
     SYSTEM,
     `${members.length} articles cover this one event. Here are ${picked.length} of them.\n\n${corpus}`,
     SCHEMA,
+    undefined,
+    signal,
   );
 
   if (!out.ok) return out;
@@ -469,6 +471,23 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   let done = 0, skipped = 0, stalled = 0;
   let authFailure = false;
 
+  /**
+   * When this run has to be over, whatever the queue still holds.
+   *
+   * A call that never answers costs 90 seconds, and llm.ts spends five of them
+   * with backoff before giving up - eight minutes on one cluster, in silence,
+   * because a transport failure is deliberately not an attempt against the
+   * cluster and so prints nothing and records nothing. Four of those at a time
+   * is how a run that had already written 436 of 471 stories sat for another
+   * half hour looking like it had hung.
+   *
+   * Eight minutes by default, under cycle.yml's twelve-minute job timeout, so a
+   * cycle that overruns ends itself and syncs what it has rather than being
+   * killed with its work unpushed. Whatever it did not reach is still pending
+   * and is simply the next run's queue.
+   */
+  const stop = AbortSignal.timeout(Number(process.env.SUMMARISE_DEADLINE_MS ?? 8 * 60_000));
+
   // summarised_n doubles as "how many articles we last judged": a spent attempt
   // records the count it was spent on, so the reset above can tell growth from
   // a cluster that has not changed since it failed.
@@ -480,9 +499,9 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   );
 
   await Promise.all(targets.map((t) => limiter(async () => {
-    if (authFailure) return;
+    if (authFailure || stop.aborted) { skipped++; return; }
     const members = membersOf.all(t.id) as unknown as Member[];
-    const r = config ? await summariseCluster(members) : extractive(members);
+    const r = config ? await summariseCluster(members, stop) : extractive(members);
     if (!r.ok) {
       // Only the model's own failure to produce a usable summary spends an
       // attempt. A call that never got an answer says nothing about this
@@ -538,6 +557,12 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   }
   if (stalled) {
     process.stdout.write(`  ! ${stalled} cluster(s) unreachable — retry budget untouched\n`);
+  }
+  // Said out loud, because the whole reason for the deadline is that the
+  // alternative looked like a hang rather than like work.
+  if (stop.aborted) {
+    process.stdout.write(`  ! deadline reached with ${targets.length - done - skipped} still queued — they stay pending
+`);
   }
 
   return { done, skipped, using: config ? describe(config) : 'extractive placeholder (no API key)' };
