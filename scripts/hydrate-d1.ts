@@ -72,6 +72,14 @@ async function columns(table: string, wanted: string[]): Promise<string[]> {
   const have = new Set((await d.all<{ name: string }>(`PRAGMA table_info(${table})`)).map((c) => c.name));
   const got = wanted.filter((c) => have.has(c));
   if (!got.length) throw new Error(`D1 has no table ${table}`);
+  // Said out loud. A column dropped here hydrates as NULL for as long as it
+  // stays dropped, and silence made that indistinguishable from a column that
+  // is genuinely empty - so an ALTER that never landed on D1 would go on
+  // quietly blanking the field every cycle with nothing in the log to say why.
+  const missing = wanted.filter((c) => !have.has(c));
+  if (missing.length) {
+    console.warn(`  ! ${table}: D1 has no ${missing.join(', ')} — hydrating as NULL; run \`npm run sync\` to add it`);
+  }
   return got;
 }
 
@@ -234,6 +242,12 @@ async function main() {
     aliases = await pull<Record<string, unknown>>('place_aliases', aliasCols.join(','), '', [],
       'alias, country');
   } catch (e) {
+    // Only an absent table is tolerated. Everything else - a 500 from the edge,
+    // a timeout, a rate limit - is D1 having a bad moment over a gazetteer it
+    // does hold, and swallowing that is how 996 aliases were reported as "not
+    // in D1 yet" and rebuilt as zero. The place resolver runs off that table,
+    // so it fails quietly and forever rather than loudly and once.
+    if (!/no such table|no such column/i.test((e as Error).message)) throw e;
     console.warn(`\n  ! gazetteer not in D1 yet (${(e as Error).message}) — run \`npm run gazetteer && npm run sync\``);
   }
 
