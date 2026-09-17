@@ -334,14 +334,36 @@ function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] 
   // time — and the feed only considers the last 24 hours, so they were written
   // and then never seen. Six hours leaves a story most of its half-life.
   const fresh = Date.now() - 6 * 3_600_000;
+  // And a floor beneath it, because writing is what ends a story's chances.
+  // Once a cluster has a headline it is frozen: a late article can still join
+  // it, but two written-up clusters can never be merged into one, and nothing
+  // in the clusterer ever compares two anchors. So the half-hour cycle was
+  // freezing a scoop about thirty minutes after it landed, and when the second
+  // outlet's version failed to match on wording it started a cluster of its
+  // own, was written up in turn, and the split became permanent.
+  //
+  // Two hours, measured rather than chosen: of 196 pairs in a 48-hour window
+  // that score as one story but sit in two written-up clusters, 34 were
+  // published within two hours of each other. Four hours would reach 60, and
+  // costs every single-source story another two hours of a 24-hour feed's
+  // attention — a worse trade than it looks, because the mass is at the short
+  // end (22 of those 34 are inside one hour) and 87 of the 196 are 12 hours
+  // apart, which no floor under the freshness ceiling above can reach.
+  //
+  // What makes the wait worth anything is that the second look is not the same
+  // look: 131 of the 196 had one side gain a member between the two publishing
+  // times, so a cluster left unfrozen is re-scored against a group that has
+  // actually changed, not re-asked a question already answered.
+  const settled = Date.now() - 2 * 3_600_000;
   const heat = heatIndex(d, since);
   const routine = routineShapes(d);
   const rows = d.prepare(
     `SELECT c.id, c.article_count, a.source_id, a.title, a.published_at, s.category
        FROM clusters c JOIN articles a ON a.cluster_id = c.id JOIN sources s ON s.id = a.source_id
       WHERE c.headline IS NULL AND c.source_count = 1 AND c.attempts < ?
-        AND a.published_at >= ? AND LENGTH(COALESCE(a.body, '')) > 800`,
-  ).all(MAX_ATTEMPTS, fresh) as unknown as
+        AND a.published_at >= ? AND a.published_at <= ?
+        AND LENGTH(COALESCE(a.body, '')) > 800`,
+  ).all(MAX_ATTEMPTS, fresh, settled) as unknown as
     { id: string; article_count: number; source_id: string; title: string;
       published_at: number; category: string }[];
 
