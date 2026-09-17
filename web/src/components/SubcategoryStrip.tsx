@@ -16,33 +16,32 @@ export function SubcategoryStrip(
   const all = active === null;
 
   /**
-   * The sub lives in the URL so it can be shared and restored, but changing it
-   * is not a navigation: the rows are already here and SectionFeed filters them
-   * in place. A <Link> would still fetch the route's RSC payload for the new
-   * query string — one request to learn nothing — so the URL is rewritten with
-   * history.pushState, which useSearchParams picks up all the same.
+   * Plain router Links, and the sub arrives as `search` rather than as a query
+   * string glued onto the path.
    *
-   * The href stays real: a middle-click, a copied link and a crawler all still
-   * get a page, and this only intercepts the plain left click it can satisfy.
+   * These used to call history.pushState from an onClick that preventDefaulted
+   * the Link, to avoid the RSC payload a Next <Link> fetched for a query string
+   * that changed nothing. That reasoning left with Next, and what remained was
+   * a bug: pushState writes the address bar without telling the router, so the
+   * useSearch() in SectionFeed never saw the new sub. `active` stayed null, so
+   * All stayed lit however many times you picked something else, and the rows
+   * never filtered.
+   *
+   * Nothing is fetched now either, and for a better reason than interception:
+   * ?sub= is declared in validateSearch and the route's loader does not depend
+   * on it, so changing it re-renders and does not re-load.
    */
-  const swap = (href: string) => (e: React.MouseEvent) => {
-    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-    e.preventDefault();
-    window.history.pushState(null, '', href);
-  };
-
   return (
     <StripScroller className="substrip" data-cat={cat} label={`${label} sub-categories`}
                    activeKey={active ?? 'all'}>
       <div className="substrip__row">
-        <Link to={base} preload={false} className="subpill" data-active={all} onClick={swap(base)}
+        <Link to={base} search={{}} preload={false} className="subpill" data-active={all}
               aria-current={all ? 'page' : undefined}>All</Link>
         {subs.map((s) => {
           const on = s.slug === active;
-          const href = `${base}?sub=${encodeURIComponent(s.slug)}`;
           return (
-            <Link key={s.slug} to={href} preload={false} className="subpill" data-active={on}
-                  onClick={swap(href)}
+            <Link key={s.slug} to={base} search={{ sub: s.slug }} preload={false}
+                  className="subpill" data-active={on}
                   aria-current={on ? 'page' : undefined}>{s.name}</Link>
           );
         })}
