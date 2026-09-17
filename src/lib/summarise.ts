@@ -363,8 +363,25 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   targets.push(...newsworthy);
 
   // Corroborated stories first, always; single-source ones fill whatever the
-  // run has left.
-  if (targets.length < limit) targets.push(...worthWriting(d).slice(0, limit - targets.length));
+  // run has left - but only up to a cap of their own.
+  //
+  // Without one this was the entire bill. The run limit is 150 and corroborated
+  // supply is about 117 clusters a DAY, so the corroborated queue can fill
+  // roughly 2% of the 7,200 slots 48 runs offer and worthWriting took the rest:
+  // 20,173 neurons on 16 Sep against a 10,000 free allowance.
+  //
+  // The default is set from the allowance rather than from taste. Six a run is
+  // 288 a day, which at the measured 17.8 neurons a summary is ~5,100 neurons,
+  // leaving the ~2,100 the corroborated stories cost and half the allowance
+  // spare for the days ingest runs hot.
+  //
+  // It also settles what heat is for. worthWriting sorts by heat and refuses
+  // nothing, which was right while nothing else bounded the work; with a cap,
+  // the cap refuses the tail and heat decides which stories are in it.
+  const singleMax = Number(process.env.SUMMARISE_SINGLE_MAX ?? 6);
+  if (targets.length < limit) {
+    targets.push(...worthWriting(d).slice(0, Math.min(singleMax, limit - targets.length)));
+  }
 
   // Title-tier members are excluded: we never fetched their article, so the
   // only text they could contribute is an RSS blurb, and they are not counted
