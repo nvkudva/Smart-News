@@ -28,21 +28,32 @@ async function pull<T>(table: string, cols: string, where: string, params: unkno
   const out: T[] = [];
   // Every table's primary key comes first, except where it is composite — then
   // the caller passes the whole key, or paging silently skips and repeats rows.
-  const key = orderBy ?? cols.split(',')[0].trim();
+  //
+  // A composite one has to be compared as a row value. Interpolating it into
+  // `${key} > ?` reads as `alias, country > ?`, which is a syntax error, and
+  // the cursor then looked itself up under the literal column name
+  // "alias, country" and found undefined - so place_aliases came back as its
+  // first page and was reported as a gazetteer D1 did not have. It had 996.
+  const keys = (orderBy ?? cols.split(',')[0]).split(',').map((k) => k.trim());
+  const order = keys.join(', ');
+  const after1 = keys.length === 1
+    ? `${keys[0]} > ?`
+    : `(${order}) > (${keys.map(() => '?').join(', ')})`;
   // Keyset, not OFFSET. `OFFSET n` makes SQLite walk and discard n rows before
   // returning any, so paging a table costs roughly half its length squared over
   // the page size — measured at 2.8M rows a day against a 5M daily allowance,
   // for 5.5k articles. Carrying the last key read instead makes it linear.
-  let after: unknown = null;
+  let after: unknown[] | null = null;
   for (;;) {
-    const clause = after === null ? where : `${where ? `${where} AND` : 'WHERE'} ${key} > ?`;
+    const clause = after === null ? where : `${where ? `${where} AND` : 'WHERE'} ${after1}`;
     const page = await d.all<T>(
-      `SELECT ${cols} FROM ${table} ${clause} ORDER BY ${key} LIMIT ${PAGE}`,
-      after === null ? params : [...params, after]);
+      `SELECT ${cols} FROM ${table} ${clause} ORDER BY ${order} LIMIT ${PAGE}`,
+      after === null ? params : [...params, ...after]);
     out.push(...page);
     process.stdout.write(`\r  ${table}: ${out.length}`);
     if (page.length < PAGE) break;
-    after = (page[page.length - 1] as Record<string, unknown>)[key];
+    const last = page[page.length - 1] as Record<string, unknown>;
+    after = keys.map((k) => last[k]);
   }
   process.stdout.write(`\r  ${table}: ${out.length}\n`);
   return out;
