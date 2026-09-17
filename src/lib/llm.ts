@@ -102,6 +102,19 @@ async function takeSlot(rpm: number) {
   if (at > now) await sleep(at - now);
 }
 
+/**
+ * What the calls actually spent, so the next cost decision is measured.
+ *
+ * summarise.ts records that input is 84% of what a summary costs, from 471,808
+ * input tokens against 90,021 output over a day - but that is a ratio of
+ * TOKENS, and Workers AI prices output about 6.6x input. Applying the published
+ * prices to those same counts makes output the larger half, which points the
+ * opposite way about whether trimming MAX_CHARS_EACH buys anything. Neither
+ * reading can be checked against the account, because the analytics API reports
+ * neurons per model and not the split. So count them here.
+ */
+export const tokenTally = { input: 0, output: 0, calls: 0 };
+
 export type LlmError = 'rate_limit' | 'unavailable' | 'transport' | 'auth' | 'empty' | 'bad_json' | 'other';
 export const errorTally = new Map<LlmError, number>();
 const bump = (k: LlmError) => errorTally.set(k, (errorTally.get(k) ?? 0) + 1);
@@ -129,6 +142,15 @@ function backoffMs(message: string, attempt: number): number {
 
 const MAX_RETRIES = 4;
 const MAX_TOKENS = Number(process.env.LLM_MAX_TOKENS ?? 2048);
+
+/** Best effort: a provider that reports no usage leaves the tally where it is
+ *  rather than recording a zero that would read as a free call. */
+function count(input?: number, output?: number): void {
+  if (!input && !output) return;
+  tokenTally.input += input ?? 0;
+  tokenTally.output += output ?? 0;
+  tokenTally.calls += 1;
+}
 
 // -------------------------------------------------------------- back ends ---
 
@@ -204,6 +226,7 @@ async function callGemini(c: LlmConfig, system: string, user: string, schema: Js
       maxOutputTokens: MAX_TOKENS,
     },
   });
+  count(res.usageMetadata?.promptTokenCount, res.usageMetadata?.candidatesTokenCount);
   return res.text ?? '';
 }
 
@@ -251,7 +274,11 @@ async function callOpenAiCompatible(c: LlmConfig, system: string, user: string, 
     err.status = res.status;
     throw err;
   }
-  const body = await res.json() as { choices?: { message?: { content?: string } }[] };
+  const body = await res.json() as {
+    choices?: { message?: { content?: string } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
+  };
+  count(body.usage?.prompt_tokens, body.usage?.completion_tokens);
   return body.choices?.[0]?.message?.content ?? '';
 }
 

@@ -4,7 +4,7 @@ config({ path: '.env.local', quiet: true });
 import { writeFileSync } from 'node:fs';
 import { clusterRecent } from '../src/lib/cluster';
 import { ingest } from '../src/lib/ingest';
-import { errorTally } from '../src/lib/llm';
+import { errorTally, tokenTally } from '../src/lib/llm';
 import { summarisePending } from '../src/lib/summarise';
 
 /** One scheduled pass: pull what's new, re-cluster, summarise what changed. */
@@ -21,6 +21,15 @@ async function main() {
   const { done, skipped, using } = await summarisePending(limit);
   console.log(`+${added} articles (${withBody} with text) · ${done} summarised, ${skipped} skipped · ${using}`);
   if (errorTally.size) console.log(`failures: ${[...errorTally].map(([k, n]) => `${k}=${n}`).join(', ')}`);
+  // Printed per run so a day of logs answers where the money goes without
+  // another instrumentation pass. Cloudflare prices output ~6.6x input, so the
+  // cost split is not the token split - the ratio below is the one to read.
+  if (tokenTally.calls) {
+    const { input, output, calls } = tokenTally;
+    console.log(`tokens: ${input} in, ${output} out over ${calls} calls ` +
+                `(${(input / calls).toFixed(0)}/${(output / calls).toFixed(0)} each, ` +
+                `out/in ${(output / Math.max(1, input)).toFixed(3)})`);
+  }
   console.log(`${((Date.now() - t0) / 1000).toFixed(0)}s`);
 
   // Stamp when this pass began so `sync` can push only the rows it touched.
