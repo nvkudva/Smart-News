@@ -1,16 +1,106 @@
 import { config } from 'dotenv';
 config({ path: '.env.local', quiet: true });
 
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, openSync, readdirSync, rmSync, statSync, writeFileSync, writeSync } from 'node:fs';
+import { join } from 'node:path';
 import { clusterRecent } from '../src/lib/cluster';
 import { ingest } from '../src/lib/ingest';
 import { errorTally, tokenTally } from '../src/lib/llm';
 import { summarisePending } from '../src/lib/summarise';
 
+/**
+ * Mirror everything the run prints into a log, so a cycle can be followed live
+ * with `tail -f` and read back afterwards. Written with writeSync rather than a
+ * stream because main() ends in process.exit(), which drops a stream's pending
+ * buffer: the last line of a run is the summary line, and losing it would make
+ * the log useless for exactly the runs worth analysing. Piping stdout to `tee`
+ * does not substitute — node block-buffers stdout when it is a pipe, so the
+ * output arrives in 4KB lumps and a slow cycle looks stalled.
+ *
+ * One file per cycle rather than one file appended to for ever. A single log
+ * answers "what happened just now" only by tailing it, and answers "what did
+ * the 04:00 run do" not at all without counting backwards through the ones
+ * after it; a named file per run is grep-able across days and deletable by age.
+ * The name is the start time to the second, which the concurrency group in
+ * cycle.yml makes unique — two runs never overlap.
+ */
+const LOG_DIR = process.env.CYCLE_LOG_DIR ?? 'data/logs';
+const KEEP_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * Every time a run states is IST, in the clock the person reading it is on.
+ *
+ * The runner is UTC and toISOString was showing 11:41 for a cycle that ran at
+ * quarter past five in the evening, so comparing a log against the feed - or
+ * against the measured shape of the day, which is the whole reason these are
+ * kept - meant adding five and a half hours by hand every time.
+ *
+ * Derived from the same parts for the file name and the line inside it, so the
+ * two can never disagree about when a run happened.
+ */
+function istParts(d: Date): Record<string, string> {
+  const parts: Record<string, string> = {};
+  for (const p of new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+  }).formatToParts(d)) parts[p.type] = p.value;
+  return parts;
+}
+
+/** `2026-09-17 05:11:06 pm IST` — what the run prints above its own output. */
+function istStamp(d: Date): string {
+  const p = istParts(d);
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second} ` +
+         `${(p.dayPeriod ?? '').toLowerCase()} IST`;
+}
+
+/**
+ * `cycle-2026-09-17-05-11-06-pm.log` — the same instant, with the separators a
+ * file name can carry.
+ *
+ * A twelve-hour clock costs the lexical sort within a day: `01-...-pm` sorts
+ * above `05-...-am`. Across days the date still orders correctly, and `ls -t`
+ * or the stamp on the first line settles the rest.
+ */
+function logName(d: Date): string {
+  const p = istParts(d);
+  return `cycle-${p.year}-${p.month}-${p.day}-${p.hour}-${p.minute}-${p.second}` +
+         `-${(p.dayPeriod ?? '').toLowerCase()}.log`;
+}
+
+/**
+ * Three days of runs is about 144 files and a few megabytes, which is enough to
+ * compare a quiet morning against a busy evening and not enough to notice.
+ *
+ * Swept at the start of the run that is about to add to it, so nothing has to
+ * schedule anything: the only process that creates these is the only one that
+ * needs to remove them. Best-effort throughout — a log that cannot be tidied
+ * must not stop a cycle from running.
+ */
+function sweepLogs(): void {
+  try {
+    const cutoff = Date.now() - KEEP_MS;
+    for (const name of readdirSync(LOG_DIR)) {
+      if (!name.startsWith('cycle-') || !name.endsWith('.log')) continue;
+      const path = join(LOG_DIR, name);
+      try { if (statSync(path).mtimeMs < cutoff) rmSync(path); } catch { /* raced with another reader */ }
+    }
+  } catch { /* no directory yet, which is the same as nothing to sweep */ }
+}
+
+mkdirSync(LOG_DIR, { recursive: true });
+sweepLogs();
+const logFd = openSync(join(LOG_DIR, logName(new Date())), 'a');
+const stdoutWrite = process.stdout.write.bind(process.stdout);
+process.stdout.write = ((chunk: string | Uint8Array, ...rest: unknown[]) => {
+  try { writeSync(logFd, typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk)); } catch { /* a full disk must not kill a cycle */ }
+  return (stdoutWrite as (...a: unknown[]) => boolean)(chunk, ...rest);
+}) as typeof process.stdout.write;
+
 /** One scheduled pass: pull what's new, re-cluster, summarise what changed. */
 async function main() {
   const t0 = Date.now();
-  const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  const stamp = istStamp(new Date());
   console.log(`\n── ${stamp} ─────────────────────────────`);
 
   const { added, withBody } = await ingest();
