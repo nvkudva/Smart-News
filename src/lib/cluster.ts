@@ -1,3 +1,4 @@
+import type { DatabaseSync } from 'node:sqlite';
 import { db, markDirty } from './db';
 import { distinctByText, entities, idf, overlap, termFreq, tokenise, vector } from './text';
 
@@ -24,6 +25,96 @@ const CANDIDATE_MS = 4 * 24 * 60 * 60 * 1000;
  * two articles match on one strong name instead of needing broad overlap.
  */
 const CORPUS_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * How many outlets put this on their own front page. One per outlet, because
+ * a story appears on a masthead's front page once however many of its desks
+ * also ran it — and the count has to stay comparable with the three-front-page
+ * cap the ranker applies to it.
+ */
+const prominenceOf = (members: Counted[]) =>
+  new Set(members.filter((m) => m.prominent).map((m) => m.source_id)).size;
+
+/**
+ * Articles the reader could be shown, which is the same exclusion source_count
+ * makes: a front-page listing we never followed to its article is not a piece
+ * of coverage, and counting it would put a number on the card that the outlet
+ * list beneath it cannot account for.
+ */
+const articleCountOf = (members: Counted[]) =>
+  new Set(members.filter((m) => m.tier !== 'title').map((m) => m.content_hash ?? m.id)).size;
+
+/**
+ * Bring a cluster's stored numbers back in line with the articles it actually
+ * holds. Returns the ids that moved, for the caller to mark dirty.
+ *
+ * Exported because membership changes in two places and only one of them used
+ * to recount. Re-clustering moves articles between clusters and recounts what
+ * it touched; the prune in sync-d1.ts DELETES articles out from under clusters
+ * it never looks at again, and deletes only the clusters it empties completely.
+ * A cluster that lost some of its articles kept the counts it had when they
+ * were there — measured on 16 Sep, 83 of 754 written-up stories overstated
+ * source_count, 54 of them claiming corroboration while holding one live
+ * source, which is the number the feed ranks on.
+ *
+ * Written-up stories keep the timestamps they were written with: one must not
+ * climb back up a recency-ranked feed for having gained a seventh article that
+ * says what the first six said. Only their counts move. That is why the
+ * headline decides which UPDATE runs rather than the caller doing so - the two
+ * callers would otherwise have to remember a rule that belongs to the row.
+ */
+export function recountClusters(d: DatabaseSync, ids: Iterable<string>): string[] {
+  const allOf = d.prepare(
+    `SELECT a.id, a.source_id, a.body, a.content_hash, a.published_at, a.prominent,
+            COALESCE(s.tier, 'full') AS tier
+       FROM articles a JOIN sources s ON s.id = a.source_id
+      WHERE a.cluster_id = ?`,
+  );
+  const stored = d.prepare(
+    `SELECT article_count, source_count, prominence, first_seen, last_seen,
+            headline IS NOT NULL AS written FROM clusters WHERE id = ?`,
+  );
+  const recount = d.prepare(
+    `UPDATE clusters SET article_count = ?, source_count = ?, prominence = ?,
+            first_seen = ?, last_seen = ? WHERE id = ?`,
+  );
+  const recountFrozen = d.prepare(
+    'UPDATE clusters SET article_count = ?, source_count = ?, prominence = ? WHERE id = ?',
+  );
+
+  const changed: string[] = [];
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const members = allOf.all(id) as unknown as Counted[];
+    // Nothing left to count. The caller deletes these; recounting one to zero
+    // would leave a headline over an empty outlet list, which is worse.
+    if (!members.length) continue;
+    const was = stored.get(id) as unknown as
+      { article_count: number; source_count: number; prominence: number;
+        first_seen: number; last_seen: number; written: number } | undefined;
+    if (!was) continue;
+
+    const articles = articleCountOf(members);
+    const sources = independentSources(members);
+    const prominence = prominenceOf(members);
+    const sameCounts = was.article_count === articles && was.source_count === sources
+      && was.prominence === prominence;
+
+    if (was.written) {
+      if (sameCounts) continue;
+      recountFrozen.run(articles, sources, prominence, id);
+    } else {
+      const first = Math.min(...members.map((m) => m.published_at));
+      const last = Math.max(...members.map((m) => m.published_at));
+      if (sameCounts && was.first_seen === first && was.last_seen === last) continue;
+      recount.run(articles, sources, prominence, first, last, id);
+    }
+    changed.push(id);
+  }
+  return changed;
+}
 
 /**
  * Nearest-member linkage is what lets a story keep matching as it accretes
@@ -495,77 +586,7 @@ export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assig
   // whose early coverage had aged out of it was having its own corroboration
   // rewritten downward as it got older — reading as single-source, and so
   // dropping out of a feed that ranks on exactly that number.
-  const allOf = d.prepare(
-    `SELECT a.id, a.source_id, a.body, a.content_hash, a.published_at, a.prominent,
-            COALESCE(s.tier, 'full') AS tier
-       FROM articles a JOIN sources s ON s.id = a.source_id
-      WHERE a.cluster_id = ?`,
-  );
-  const stored = d.prepare(
-    'SELECT article_count, source_count, prominence, first_seen, last_seen FROM clusters WHERE id = ?',
-  );
-  const recount = d.prepare(
-    `UPDATE clusters SET article_count = ?, source_count = ?, prominence = ?,
-            first_seen = ?, last_seen = ? WHERE id = ?`,
-  );
-
-  /**
-   * How many outlets put this on their own front page. One per outlet, because
-   * a story appears on a masthead's front page once however many of its desks
-   * also ran it — and the count has to stay comparable with the three-front-page
-   * cap the ranker applies to it.
-   */
-  const prominenceOf = (members: Counted[]) =>
-    new Set(members.filter((m) => m.prominent).map((m) => m.source_id)).size;
-
-  /**
-   * Articles the reader could be shown, which is the same exclusion
-   * source_count makes: a front-page listing we never followed to its article
-   * is not a piece of coverage, and counting it would put a number on the card
-   * that the outlet list beneath it cannot account for.
-   */
-  const articleCountOf = (members: Counted[]) =>
-    new Set(members.filter((m) => m.tier !== 'title').map((m) => m.content_hash ?? m.id)).size;
-  const changed: string[] = [];
-
-  // A written-up story keeps the timestamps it was written with: it must not
-  // climb back up a feed ranked on recency for having gained a seventh article
-  // saying what the first six said. Only the counts move.
-  const recountFrozen = d.prepare(
-    'UPDATE clusters SET article_count = ?, source_count = ?, prominence = ? WHERE id = ?',
-  );
-  for (const id of grown) {
-    const members = allOf.all(id) as unknown as Counted[];
-    if (!members.length) continue;
-    const articles = articleCountOf(members);
-    const sources = independentSources(members);
-    const prominence = prominenceOf(members);
-    const was = stored.get(id) as unknown as
-      { article_count: number; source_count: number; prominence: number } | undefined;
-    if (was && was.article_count === articles && was.source_count === sources
-        && was.prominence === prominence) continue;
-    recountFrozen.run(articles, sources, prominence, id);
-    changed.push(id);
-  }
-
-  for (const id of touched) {
-    const members = allOf.all(id) as unknown as Counted[];
-    if (!members.length) continue;
-    const counts = {
-      article_count: articleCountOf(members),
-      source_count: independentSources(members),
-      prominence: prominenceOf(members),
-      first_seen: Math.min(...members.map((m) => m.published_at)),
-      last_seen: Math.max(...members.map((m) => m.published_at)),
-    };
-    const was = stored.get(id) as unknown as typeof counts | undefined;
-    if (was && was.article_count === counts.article_count && was.source_count === counts.source_count
-        && was.prominence === counts.prominence
-        && was.first_seen === counts.first_seen && was.last_seen === counts.last_seen) continue;
-    recount.run(counts.article_count, counts.source_count, counts.prominence,
-                counts.first_seen, counts.last_seen, id);
-    changed.push(id);
-  }
+  const changed = recountClusters(d, [...grown, ...touched]);
   markDirty('article', movedArticles);
   markDirty('cluster', changed);
 

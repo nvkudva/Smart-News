@@ -4,6 +4,7 @@ config({ path: '.env.local', quiet: true });
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { recountClusters } from '../src/lib/cluster';
 import { d1, type D1 } from '../src/lib/d1';
 import { applySchema } from './d1-schema';
 
@@ -185,11 +186,25 @@ async function prune(d: D1, since: number) {
  */
 function pruneLocal(local: DatabaseSync, since: number): void {
   const before = (local.prepare('SELECT COUNT(*) AS n FROM articles').get() as { n: number }).n;
+  // Which clusters are about to lose articles, asked before the delete because
+  // afterwards there is nothing left to join on. A cluster that loses only SOME
+  // of its articles survives the sweep below and used to keep the counts it had
+  // when they were there — see recountClusters for what that cost.
+  const losing = (local.prepare(
+    `SELECT DISTINCT cluster_id AS id FROM articles
+      WHERE published_at < ? AND cluster_id IS NOT NULL`).all(since) as unknown as
+    { id: string }[]).map((r) => r.id);
   local.exec('BEGIN');
   local.prepare('DELETE FROM articles WHERE published_at < ?').run(since);
   // A cluster with nothing left to show is a headline over an empty source list.
   local.exec(`DELETE FROM clusters
                WHERE id NOT IN (SELECT DISTINCT cluster_id FROM articles WHERE cluster_id IS NOT NULL)`);
+  // The survivors, now that the sweep above has taken the empty ones. Marked
+  // dirty by hand rather than through markDirty, which opens db.ts's own handle
+  // and not the one this script is holding mid-transaction.
+  const recounted = recountClusters(local, losing);
+  const dirty = local.prepare("INSERT OR IGNORE INTO dirty (kind, id) VALUES ('cluster', ?)");
+  for (const id of recounted) dirty.run(id);
   // Rows that no longer exist cannot be owed to D1; the prune above told it.
   local.exec(`DELETE FROM dirty
                WHERE (kind = 'article' AND id NOT IN (SELECT id FROM articles))
