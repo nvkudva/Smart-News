@@ -116,6 +116,16 @@ function migrate(d: DatabaseSync) {
       PRIMARY KEY (kind, id)
     );
 
+    -- Which push of D1 this file is. sync writes the same token here and into
+    -- D1's sync_meta as its last act, so hydrate can ask whether the file the
+    -- Actions cache just handed it is the one that wrote what D1 currently
+    -- holds - rather than an older entry restore-keys matched by prefix, or a
+    -- survivor of an eviction. Local only; never pushed.
+    CREATE TABLE IF NOT EXISTS local_meta (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS prefs (
       user_id      TEXT PRIMARY KEY,
       country      TEXT,

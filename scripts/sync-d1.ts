@@ -3,7 +3,7 @@ config({ path: '.env.local', quiet: true });
 
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { recountClusters } from '../src/lib/cluster';
 import { checkpoint } from '../src/lib/db';
 import { d1, type D1 } from '../src/lib/d1';
@@ -369,6 +369,23 @@ async function main() {
   } else {
     console.log(`\nCycle stamp: ${cycle} (unchanged)`);
   }
+
+  // Which push of D1 this file is, so `hydrate` can tell the file that wrote
+  // D1's current state from an older one the Actions cache happened to hand
+  // back. A token rather than the cycle stamp above: that stamp is derived from
+  // the data and deliberately does not move when a cycle pushed nothing, so two
+  // different files can carry it.
+  //
+  // D1 first and the local copy second. Then the only way the two can disagree
+  // is a file that never recorded a push D1 took, which reads as a stale file
+  // and costs a full rebuild - correct, merely expensive. The reverse ordering
+  // would let a file claim a push D1 never received.
+  // `local` is a raw handle, not db(), so the migration that declares this
+  // table has not necessarily run against this file.
+  local.exec('CREATE TABLE IF NOT EXISTS local_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+  const token = `${Date.now()}-${randomUUID().slice(0, 8)}`;
+  await d.run('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)', ['store', token]);
+  local.prepare('INSERT OR REPLACE INTO local_meta (key, value) VALUES (?, ?)').run('store', token);
 
   // The dirty list was cleared above and the prune ran; both are writes, and
   // the cache saves the database file without the WAL they are sitting in.

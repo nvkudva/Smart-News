@@ -117,22 +117,62 @@ function insertAll(local: ReturnType<typeof db>, table: string, cols: string[], 
  * events, and prefs are deliberately never pushed, so they are pulled fresh
  * below either way.
  *
- * The check is deliberately shallow — the schema exists and there are recent
- * articles. Anything else and we pay for the full rebuild, which is the old
- * behaviour and always correct.
+ * That holds only while the file IS the one the last sync wrote, and nothing
+ * guarantees the Actions cache hands that one back. `restore-keys:
+ * smartnews-db-` matches by prefix, so a run whose save step never happened -
+ * a cancellation, a timeout, a failed job - restores whatever older entry the
+ * prefix still matches. Entries are also evicted, by age and by the repo's
+ * 10 GB ceiling. Counting articles cannot tell those apart: a file days out of
+ * date has recent articles too, passes the check, and skips the cluster pull
+ * entirely, so the runner re-clusters and re-summarises work D1 already holds
+ * and then pushes its own older answer back over it.
+ *
+ * So the file has to say which push of D1 it is. `sync` writes the same token
+ * into D1's sync_meta and into the file, D1 first; they agree only when this
+ * file recorded the push D1 currently holds. Anything else and we pay for the
+ * full rebuild, which is the old behaviour and always correct.
+ *
+ * Recency is deliberately NOT part of this. A matching token already means the
+ * file agrees with D1, and D1 being itself stale is a separate outage - one
+ * where forcing a 14,000-row rebuild every half hour would be the wrong answer.
  */
-function usableLocalStore(path: string, since: number): boolean {
+async function usableLocalStore(path: string, since: number): Promise<boolean> {
   if (process.env.HYDRATE_FRESH === '1') return false;
   if (!existsSync(path)) return false;
+
+  let held: string | null = null;
   try {
     const old = new DatabaseSync(path, { readOnly: true });
-    const row = old.prepare('SELECT COUNT(*) AS n FROM articles WHERE published_at >= ?').get(since) as
-      { n: number } | undefined;
-    old.close();
-    return (row?.n ?? 0) > 0;
+    try {
+      const row = old.prepare('SELECT COUNT(*) AS n FROM articles WHERE published_at >= ?').get(since) as
+        { n: number } | undefined;
+      if (!(row?.n ?? 0)) return false;
+      // Absent on a file written before this shipped, and on one no sync has
+      // finished against. Both are stale by this rule, which is the safe way
+      // round: one extra rebuild, once.
+      const meta = old.prepare(`SELECT value FROM local_meta WHERE key = 'store'`).get() as
+        { value: string } | undefined;
+      held = meta?.value ?? null;
+    } finally {
+      // Before any checkpoint runs: TRUNCATE gives up while a reader is
+      // attached, and this one would otherwise stay open for the whole run.
+      old.close();
+    }
   } catch {
+    return false;                     // no schema, no local_meta, unreadable file
+  }
+  if (!held) {
+    console.log('Cached store carries no sync token — rebuilding');
     return false;
   }
+
+  const d = await d1();
+  const remote = await d.get<{ value: string }>(`SELECT value FROM sync_meta WHERE key = 'store'`);
+  if (remote?.value !== held) {
+    console.log(`Cached store is from another push (${held} vs ${remote?.value ?? 'none'}) — rebuilding`);
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -172,7 +212,7 @@ async function main() {
   const path = process.env.SMARTNEWS_DB ?? 'data/smartnews.db';
   const since = Date.now() - WINDOW_MS;
 
-  if (usableLocalStore(path, since)) return topUp(path);
+  if (await usableLocalStore(path, since)) return topUp(path);
 
   console.log('Pulling from D1…');
 
