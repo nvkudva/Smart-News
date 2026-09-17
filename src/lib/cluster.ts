@@ -147,13 +147,20 @@ const MIN_SHARED_NAMES = 1;
 
 /**
  * What a group already holds is evidence about what it is, so the price of
- * joining rises with its size. Two articles pair on 0.16; the 30th needs 0.35,
+ * joining rises with its size. Two articles pair on 0.16; the 30th needs 0.36,
  * and an article reaching a group of 300 would need more than any real pair of
  * headlines scores. Without this, every India politics story in a week of
  * candidates eventually finds some member of the largest group to link through.
+ *
+ * log2(size), not log2(size + 1): the curve is meant to start at 1.0x, and the
+ * shifted version charged a lone article 0.20 to pair with another - the price
+ * of the 2nd member, levied on the 1st. That is the commonest case in the
+ * store by far, and it stranded 667 cross-source pairs of a 48-hour window in
+ * the band between 0.16 and 0.20. Callers only ever pass a live group, so size
+ * is at least 1 and the log is never taken at zero.
  */
 function thresholdFor(size: number, base: number): number {
-  return base * (1 + 0.25 * Math.log2(size + 1));
+  return base * (1 + 0.25 * Math.log2(size));
 }
 
 /** A cluster this wide is taken as ground truth about what belongs together. */
