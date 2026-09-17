@@ -128,10 +128,18 @@ async function reap(d: D1, local: DatabaseSync, since: number) {
   const ghosts = remote.filter((id) => !localIds.has(id));
   if (!ghosts.length) return;
 
-  // A store that was never hydrated looks exactly like "every story merged".
+  // A store that was never hydrated looks exactly like "every story merged",
+  // so the deletion is refused. It used to warn and carry on, which meant the
+  // ghosts stayed in D1 - a second card for an event that already has one -
+  // and accumulated, with the only record a console line in a runner log
+  // nobody reads. Thrown instead, so the run goes red and the Actions tab says
+  // what happened. Everything above this point has already been pushed; what
+  // is skipped is the cycle stamp and the store token, which is the safe half
+  // to skip - the next hydrate sees no matching token and rebuilds.
   if (ghosts.length > remote.length / 10) {
-    console.warn(`  ! ${ghosts.length}/${remote.length} clusters absent locally — not deleting; hydrate first`);
-    return;
+    throw new Error(
+      `${ghosts.length}/${remote.length} clusters absent locally — refusing to delete. ` +
+      `The working store is behind D1; hydrate before syncing.`);
   }
   for (let i = 0; i < ghosts.length; i += MAX_PARAMS) {
     const batch = ghosts.slice(i, i + MAX_PARAMS);
