@@ -122,7 +122,16 @@ export async function getWorld(userId: string, since: number): Promise<World> {
       kind: c.kind,
       total: page.length,
       ids: page.map((s) => s.id),
-      subs: subCategoriesFor(c.slug, rows),
+      // Counted over the page, not the pool behind it. subCategoriesFor calls
+      // itself the non-empty gate and describes one pass over "the rows the
+      // page is already rendering"; it was handed `rows`, of which the page is
+      // the first forty-eight. Two things followed. A pill could offer a
+      // subject with nothing visible under it, because the filter in
+      // SectionFeed runs over the ids sent here and not over the pool. And
+      // Trending and Latest showed identical pills - they draw the same pool
+      // and differ only in how it is ordered, so counting the pool threw away
+      // the only thing that distinguishes them.
+      subs: subCategoriesFor(c.slug, page),
     };
     for (const s of page) if (!bodies.has(s.id)) bodies.set(s.id, s);
   }
