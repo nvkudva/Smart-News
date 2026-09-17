@@ -1,6 +1,7 @@
 
 import { useState, useTransition } from 'react';
 import { toggleSavedAction } from '../lib/actions';
+import { markSaved } from '../lib/saved';
 import { Bookmark } from './icons';
 
 /**
@@ -23,7 +24,11 @@ export function SaveButton(
       aria-pressed={saved}
       aria-label={iconOnly ? (saved ? 'Saved' : 'Save story') : undefined}
       disabled={pending}
-      onClick={() => start(async () => setSaved(await toggleSavedAction(clusterId)))}
+      onClick={() => start(async () => {
+        const on = await toggleSavedAction(clusterId);
+        markSaved(clusterId, on);
+        setSaved(on);
+      })}
     >
       <Bookmark size={17} />
       {!iconOnly && <span>{saved ? 'Saved' : 'Save'}</span>}

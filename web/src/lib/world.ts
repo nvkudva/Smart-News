@@ -1,7 +1,7 @@
 import type { SubCount } from '../../shared/taxonomy';
 import type { Outlet, Story } from '../../shared/types';
 import { fetchJson, keep, readFresh } from './load';
-import { deleteEntry, forgetStamp, readEntry } from './store';
+import { forgetStamp, readEntry, unstampEntry } from './store';
 
 /**
  * The world this tab is holding, and everything that loads or drops it.
@@ -70,8 +70,22 @@ async function resolve(): Promise<World> {
   // rest of this function: when the stamp HAS moved, the stored copy is still
   // worth something - it holds three hundred bodies that have not changed - so
   // this asks for what is newer and merges, rather than re-fetching all of it.
-  const { data: current } = await readFresh<World>(WORLD);
-  if (current) return current;
+  //
+  // A preference change re-ranks the orderings without moving the stamp, so
+  // the stored copy cannot be trusted as fresh - but its bodies are still
+  // good, and `since` lets the server send only the orderings and whatever is
+  // newer. It used to delete the copy and re-fetch all three hundred bodies
+  // for a change to the list of hidden categories.
+  const force = unstamping;
+  unstamping = null;
+  // Before the freshness check below, and before this load's own write: the
+  // unstamp is a read then a write in two transactions, and landing after
+  // keep() would replace a fresh world with the stale one.
+  if (force) await force;
+  else {
+    const { data: current } = await readFresh<World>(WORLD);
+    if (current) return current;
+  }
 
   const stale = await readEntry<World>(WORLD);
   // Nothing stored is the same shape as nothing worth keeping: `since` is 0, so
@@ -79,8 +93,11 @@ async function resolve(): Promise<World> {
   // Special-casing that was a branch and a non-null assertion for a state merge
   // already answers.
   const have = stale?.data ?? { stamp: null, sections: {}, stories: [] };
+  // Both clocks: a written story keeps the last_seen its articles gave it and
+  // is written hours later, so a cursor on last_seen alone sat behind nearly
+  // every new story and the delta came back short every cycle.
   const since = have.stories.length
-    ? Math.max(...have.stories.map((s) => s.last_seen))
+    ? Math.max(...have.stories.map((s) => Math.max(s.last_seen, s.summarised_at ?? 0)))
     : 0;
 
   // `short` is merge's answer, not part of the world, so it does not get stored.
@@ -96,8 +113,26 @@ async function resolve(): Promise<World> {
   return merged;
 }
 
+/**
+ * Past the browser's own cache: the client only asks when the stamp moved or
+ * the preferences changed, so every ask is one it wants answered. Left to
+ * max-age and stale-while-revalidate, a re-ask after a preference change could
+ * be answered with the previous delta - same URL, same `since` - and the old
+ * ordering would be stored against a stamp that cannot expire it.
+ */
 function ask(since: number): Promise<World> {
-  return fetchJson<World>(since ? `${WORLD}?since=${since}` : WORLD);
+  return fetchJson<World>(since ? `${WORLD}?since=${since}` : WORLD, undefined, { cache: 'no-cache' });
+}
+
+/**
+ * The world only if this browser already holds it - in memory, or on disk and
+ * still current - and never a fetch. A story page reached from the feed has
+ * it; a shared link opened cold does not, and downloading three hundred bodies
+ * to show one of them is the wrong trade, so that page asks for its story.
+ */
+export async function heldWorld(): Promise<World | null> {
+  if (inflight && Date.now() - at < TTL_MS) return inflight.catch(() => null);
+  return (await readFresh<World>(WORLD)).data;
 }
 
 /**
@@ -131,6 +166,11 @@ function byId(w: World): Map<string, SectionStory> {
   return m;
 }
 
+/** One story out of the world, or null when the id is not in the window. */
+export function storyFrom(w: World, id: string): SectionStory | null {
+  return byId(w).get(id) ?? null;
+}
+
 export function sectionFrom(w: World, cat: string): SectionData {
   const s = w.sections[cat];
   // One missing-section case, stated once, instead of a default per field.
@@ -150,12 +190,18 @@ export function sectionFrom(w: World, cat: string): SectionData {
  * orderings, and what is held here was built before the save; a TTL would let
  * the old order stand for up to a minute after the reader watched it change.
  */
+let unstamping: Promise<void> | null = null;
+
+/**
+ * The orderings are stale; the bodies are not. IndexedDB outlives the tab and
+ * is keyed on the cycle stamp, which a preference change does not move, so the
+ * stored copy loses its stamp on disk - a reload inside the same cycle must
+ * not read the old ranking back - and the next load in this session is told
+ * outright, holding the write so it can wait for it.
+ */
 export function clearSections() {
   inflight = null; at = 0;
-  // IndexedDB outlives the tab and is keyed on the cycle stamp, which a
-  // preference change does not move. Dropping the map alone would read the
-  // old ranking straight back off disk.
-  deleteEntry(WORLD);
+  unstamping = unstampEntry(WORLD).catch(() => {});
 }
 
 /**

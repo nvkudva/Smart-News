@@ -1,12 +1,13 @@
 import type {
-  ExplorePayload, LocalPayload, ProfilePayload, ReelsPayload, SavedPayload, Story, StoryPayload,
+  ExplorePayload, LocalPayload, ProfilePayload, ReelsPayload, SavedIdsPayload, SavedPayload, Story,
+  StoryPayload,
 } from '../shared/types';
 import { slug } from '../shared/taxonomy';
 import { cacheHeaders, conditional, cycleStamp, notModified } from './lib/cycle';
 import { effectivePlaceIds, getLocalFeed, getPrefs, getStory, prefsFingerprint } from './lib/feed';
 import {
   getByColumn, getByPlace, getPlaceFacets,
-  getReels, getSaved, getSingleReports, getStats, isSaved, savedAmong,
+  getReels, getSaved, getSavedIds, getSingleReports, getStats, isSaved,
 } from './lib/library';
 import { getPlaces } from './lib/places';
 import { countriesWithNews } from './lib/sections';
@@ -28,9 +29,9 @@ import { getWorld } from './lib/world';
  *   which prefsFingerprint puts in the scope.
  *
  *   A save or a preference change does NOT move the stamp. So /api/saved,
- *   /api/reels, /api/story and /api/profile - every one of which embeds this
- *   reader's own save state or settings - are no-store. A validator keyed on
- *   the stamp would hand a reader back the list they had before they saved.
+ *   /api/saved-ids, /api/story and /api/profile - every one of which embeds
+ *   this reader's own save state or settings - are no-store. A validator keyed
+ *   on the stamp would hand a reader back the list they had before they saved.
  */
 
 const REGION = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -129,13 +130,24 @@ export async function saved(_request: Request, userId: string): Promise<Response
   return Response.json(payload, { headers: PRIVATE });
 }
 
-export async function reels(_request: Request, userId: string): Promise<Response> {
-  const stories = await getReels(20);
-  const marked = await savedAmong(stories.map((s) => s.id), userId);
-  // A Set does not survive JSON, so it crosses as an array and the page builds
-  // its own.
-  const payload: ReelsPayload = { stories, saved: [...marked] };
+/**
+ * The reader's saved ids, and nothing else. Small, never cached, and read once
+ * a session: it is what lets reels and a story page be answered from the
+ * stamp-keyed world while still knowing which bookmark to light.
+ */
+export async function savedIds(_request: Request, userId: string): Promise<Response> {
+  const payload: SavedIdsPayload = { ids: await getSavedIds(userId) };
   return Response.json(payload, { headers: PRIVATE });
+}
+
+/** The same twenty for everyone: the save state that made this no-store now
+ *  travels separately, so it is public and conditional like explore. */
+export async function reels(request: Request): Promise<Response> {
+  const version = await conditional(request, 'reels');
+  const headers = cacheHeaders(version, 60, 600, 'public');
+  if (version.fresh) return notModified(headers);
+  const payload: ReelsPayload = { stamp: version.stamp, stories: await getReels(20) };
+  return Response.json(payload, { headers });
 }
 
 export async function explore(request: Request, url: URL): Promise<Response> {

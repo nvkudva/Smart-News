@@ -67,10 +67,16 @@ export function readEntry<T>(key: string): Promise<Entry<T> | null> {
   return tx<Entry<T>>('readonly', (s) => s.get(key));
 }
 
-/** Saving preferences re-ranks four of the fourteen orderings without moving
- *  the cycle stamp the stored copy is keyed on, so that copy has to go. */
-export function deleteEntry(key: string): void {
-  void tx('readwrite', (s) => s.delete(key));
+/**
+ * Keep the data, drop its claim to be current. Saving preferences re-ranks the
+ * orderings without moving the cycle stamp the copy is keyed on; stored with
+ * no stamp it can never read as fresh, and the next load re-asks with `since`
+ * so the bodies in it are still worth having. Written to disk rather than
+ * only remembered, so a reload inside the same cycle cannot read the old
+ * ranking straight back.
+ */
+export function unstampEntry(key: string): Promise<void> {
+  return readEntry<unknown>(key).then((e) => { if (e) writeEntry(key, null, e.data); });
 }
 
 export function writeEntry<T>(key: string, stamp: string | null, data: T): void {
@@ -111,7 +117,11 @@ export function stillGood({ stamp, known }: StampRead, was: string | null): bool
  */
 let stampAt = 0;
 let stamp: Promise<StampRead> | null = null;
-const STAMP_TTL_MS = 60_000;
+// Five minutes, not one. The pipeline runs every thirty and the idle refresh
+// every fifteen, so a reader moving between routes was asking for the stamp
+// far more often than it could have moved; this is the most the client can
+// be behind, and the timer already accepts three times that.
+const STAMP_TTL_MS = 5 * 60_000;
 
 export function sessionStamp(): Promise<StampRead> {
   if (stamp && Date.now() - stampAt < STAMP_TTL_MS) return stamp;

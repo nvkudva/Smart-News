@@ -6,12 +6,20 @@ import { storyWhen } from '../lib/format'
 import { TabBar } from '../components/TabBar'
 import { Back, Photo } from '../components/icons'
 import { load } from '../lib/load'
+import { savedIds } from '../lib/saved'
 
 /** Full-screen vertical stack. Scroll-snap pages it for a thumb; ReelKeys does
  *  the same for a keyboard, which snap alone leaves with nothing but Tab. */
 export const Route = createFileRoute('/reels')({
-  loader: ({ abortController }) =>
-    load<ReelsPayload>('/api/reels', { signal: abortController.signal }),
+  // The twenty are the same for everyone and keyed on the stamp, so they are
+  // kept like the world is; the save state comes from the session's own set.
+  loader: async ({ abortController }) => {
+    const [reels, saved] = await Promise.all([
+      load<ReelsPayload>('/api/reels', { persist: true, signal: abortController.signal }),
+      savedIds(),
+    ]);
+    return { stories: reels.stories, saved: [...saved] };
+  },
   pendingComponent: LoadingReels,
   component: Reels,
 })

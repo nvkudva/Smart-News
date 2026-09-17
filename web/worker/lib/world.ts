@@ -139,8 +139,15 @@ export async function getWorld(userId: string, since: number): Promise<World> {
   // The orderings always ship in full and the bodies do not: an id that stops
   // appearing is how the client learns a story was reaped, which a `since`
   // alone could never say.
+  //
+  // Both clocks, because a written story keeps the last_seen its articles gave
+  // it and is written two to six hours later: of 806 writes in one day, 645
+  // sat behind a last_seen-only cursor, so the delta came back short and the
+  // client re-fetched the whole world every cycle.
   const all = [...bodies.values()];
-  const changed = since > 0 ? all.filter((s) => s.last_seen > since) : all;
+  const changed = since > 0
+    ? all.filter((s) => s.last_seen > since || (s.summarised_at ?? 0) > since)
+    : all;
 
   const outlets = await outletsFor(changed.map((s) => s.id));
   const stories = changed.map(({ scopes: _dropped, ...s }: Story & { scopes?: string[] }) => ({

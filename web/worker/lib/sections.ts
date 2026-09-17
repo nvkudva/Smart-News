@@ -1,7 +1,7 @@
 import { d1 } from './d1';
 import {
   getFeed, getPrefs, idList, prefsFingerprint, storyCols, STORY_FROM,
-  withPlaceLabels, withoutHidden, type Outlet, type Story,
+  withPlaceLabels, type Outlet, type Story,
 } from './feed';
 import { warm } from './cache';
 import { cycleStamp } from './cycle';
@@ -22,14 +22,22 @@ import { logError } from './log';
 
 const WINDOW_MS = 48 * 3_600_000;
 
-/** Generous by design: the counts under the strip describe the whole section,
- *  not the first screen of it. */
-export const SECTION_LIMIT = 200;
-
-/** How many of those actually reach the page. The counts need every row; the
- *  reader needs the first few screens, and rendering all 200 was most of what
- *  made switching categories feel slow. */
+/**
+ * How many rows a section ships. Once 200, with the sub-counts taken over the
+ * whole pool; the counts are now taken over the page, so the other 152 rows
+ * were read from D1 on every cold isolate and thrown away.
+ */
 export const SECTION_PAGE = 48;
+
+/**
+ * The hidden categories, in the WHERE rather than filtered off the result:
+ * with a limit that is exactly the page, filtering afterwards would leave a
+ * reader who hides two categories with a shorter page than everyone else.
+ */
+function notHidden(prefs: { hidden: string[] }): { where: string; params: string[] } {
+  if (!prefs.hidden.length) return { where: '1 = 1', params: [] };
+  return { where: `c.category NOT IN (${prefs.hidden.map(() => '?').join(',')})`, params: prefs.hidden };
+}
 
 /**
  * The outlets behind a page of stories, keyed by cluster.
@@ -112,13 +120,15 @@ async function uncachedCountriesWithNews(): Promise<string[]> {
 
 export async function getNationalSection(limit: number, userId: string): Promise<Story[]> {
   const prefs = await getPrefs(userId);
-  return withoutHidden(await bySql('c.country = ?', [prefs.country], limit), prefs);
+  const h = notHidden(prefs);
+  return bySql(`c.country = ? AND ${h.where}`, [prefs.country, ...h.params], limit);
 }
 
 export async function getInternationalSection(limit: number, userId: string): Promise<Story[]> {
   const prefs = await getPrefs(userId);
-  return withoutHidden(
-    await bySql('c.country IS NOT NULL AND c.country <> ?', [prefs.country], limit), prefs);
+  const h = notHidden(prefs);
+  return bySql(`c.country IS NOT NULL AND c.country <> ? AND ${h.where}`,
+               [prefs.country, ...h.params], limit);
 }
 
 /**
@@ -127,15 +137,13 @@ export async function getInternationalSection(limit: number, userId: string): Pr
  * asking what the last cycle brought, so the only judgement applied is the
  * reader's own — hidden categories still stay hidden.
  *
- * `1 = 1` rather than a fourth query shape: every other section is a filter
- * over the same window, and this one is that window unfiltered.
  */
 export async function getLatestSection(limit: number, userId: string): Promise<Story[]> {
-  const prefs = await getPrefs(userId);
-  return withoutHidden(await bySql('1 = 1', [], limit, 'recency'), prefs);
+  const h = notHidden(await getPrefs(userId));
+  return bySql(h.where, h.params, limit, 'recency');
 }
 
-export function getTopicSection(category: string, limit = SECTION_LIMIT): Promise<Story[]> {
+export function getTopicSection(category: string, limit = SECTION_PAGE): Promise<Story[]> {
   return bySql('c.category = ?', [category], limit);
 }
 
@@ -150,24 +158,23 @@ export function getTopicSection(category: string, limit = SECTION_LIMIT): Promis
 export async function getSection(slug: string, userId: string): Promise<Story[]> {
   const category = categoryBySlug(slug);
   if (!category) return [];
-  const limit = SECTION_LIMIT;
+  const limit = SECTION_PAGE;
 
-  // A topic section is the same rows for everyone, so it is keyed without a
-  // reader at all; the four that rank against preferences carry a fingerprint
-  // of the prefs they were ranked with. getPrefs is request-scoped, so naming
-  // it here costs nothing the ranking below was not already going to pay.
-  // Keyed without a reader when the rows are the same for everyone; the four
-  // that rank against preferences carry a fingerprint of what they ranked with.
+  // Keyed without a reader when the rows are the same for everyone; the three
+  // that rank against preferences carry a fingerprint of what they ranked
+  // with, and nothing else - the queries read the prefs and never the reader,
+  // so two readers on the same prefs (most of them, on the defaults) share one
+  // answer per cycle. The key used to carry the userId as well, which gave
+  // each of them a private copy of one identical query.
   // Latest sits between the two: it ranks against nothing, so country and
   // places cannot move it and the full fingerprint would give every reader a
   // private copy of one identical query. The only preference it honours is the
-  // hidden list, so that is the whole of its key — readers hiding nothing, who
-  // are most of them, share a single cached answer per cycle.
+  // hidden list, so that is the whole of its key.
   const key = category.kind === 'topic'
     ? `${slug}:${limit}`
     : category.slug === 'latest'
       ? `${slug}:${limit}:${(await getPrefs(userId)).hidden.join(',')}`
-      : `${slug}:${limit}:${userId}:${prefsFingerprint(await getPrefs(userId))}`;
+      : `${slug}:${limit}:${prefsFingerprint(await getPrefs(userId))}`;
   const stamp = await cycleStamp();
 
   let stories: Story[] = [];

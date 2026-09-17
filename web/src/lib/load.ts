@@ -20,7 +20,7 @@ import { readEntry, sessionStamp, stillGood, writeEntry } from './store';
  *   /api/world, /api/local and /api/explore.
  *
  *   A save or a preference change does NOT move the stamp. An answer carrying
- *   the reader's own state - /api/saved, /api/reels, /api/profile,
+ *   the reader's own state - /api/saved, /api/saved-ids, /api/profile,
  *   /api/story/:id - would therefore be stored against a stamp that cannot
  *   expire it, and the reader would be handed the list they had before they
  *   saved. Those are no-store on the Worker and unpersisted here, for one
@@ -42,8 +42,8 @@ export type LoadOptions = {
  * Same-origin and credentialed by default, so sn_uid rides along and the
  * Worker resolves the reader exactly as it does for /api/world.
  */
-export async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(path, { signal });
+export async function fetchJson<T>(path: string, signal?: AbortSignal, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(path, { ...init, signal });
   // 404 is the router's, not an error: the Worker answers it for a story id
   // that is not in the feed, and notFound() renders the route's own screen.
   if (res.status === 404) throw notFound();

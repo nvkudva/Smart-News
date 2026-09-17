@@ -1,5 +1,5 @@
-import { SOURCES, type Bias } from '../../shared/sources';
-import type { Coverage } from '../../shared/types';
+import { SOURCES, type Bias } from './sources';
+import type { Coverage } from './types';
 export type { Coverage };
 
 /**

@@ -22,7 +22,7 @@ export type Story = {
   article_count: number; source_count: number;
   /** Front pages that led with this. See sources.ts on the title tier. */
   prominence: number;
-  first_seen: number; last_seen: number;
+  first_seen: number; last_seen: number; summarised_at: number | null;
   framing_left: string | null; framing_centre: string | null; framing_right: string | null;
   exploration: 0 | 1; exploration_kind: 'category' | 'place' | null;
 };
@@ -101,7 +101,9 @@ export type LocalPayload = {
 
 export type SavedPayload = { stories: (Story & { saved_at: number })[] };
 
-export type ReelsPayload = { stories: Story[]; saved: string[] };
+export type ReelsPayload = { stamp: string | null; stories: Story[] };
+
+export type SavedIdsPayload = { ids: string[] };
 
 export type ExploreIndex = {
   stamp: string | null;

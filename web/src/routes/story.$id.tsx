@@ -1,6 +1,7 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { slug } from '../../shared/taxonomy'
-import type { StoryPayload } from '../../shared/types'
+import { coverageOf } from '../../shared/coverage'
+import type { Coverage, Outlet, Story, StoryPayload } from '../../shared/types'
 import { CategoryStrip } from '../components/CategoryStrip'
 import { CoverageSplit } from '../components/CoverageSplit'
 import { SaveButton } from '../components/SaveButton'
@@ -9,6 +10,46 @@ import { ago } from '../lib/format'
 import { TabBar } from '../components/TabBar'
 import { Back, Photo } from '../components/icons'
 import { load } from '../lib/load'
+import { savedIds } from '../lib/saved'
+import { heldWorld, sectionFrom, storyFrom } from '../lib/world'
+
+/** What the page renders, whichever of the two sources answered. */
+type StoryView = {
+  cluster: Story; outlets: Outlet[]; related: Story[]; coverage: Coverage; saved: boolean;
+}
+
+/**
+ * From the world the browser already holds, when the story is in it.
+ *
+ * The world ships each story's body, its outlets with their lean, and every
+ * ordering, which is everything this page shows: the outlet list is one per
+ * masthead, coverage is a function of the outlets, and Related is the six
+ * most recent in the same category. Opening a story - and every hover that
+ * warmed one - used to be a Worker invocation and four D1 reads for a payload
+ * the client had. Only a world already held counts: a cold shared link must
+ * not download the feed to show one story.
+ */
+function fromWorld(id: string): Promise<StoryView | null> {
+  return Promise.all([heldWorld(), savedIds()]).then(([w, saved]) => {
+    const s = w && storyFrom(w, id)
+    if (!s) return null
+    const related = sectionFrom(w, s.cslug).stories
+      .filter((r) => r.id !== id)
+      .sort((a, b) => b.last_seen - a.last_seen)
+      .slice(0, 6)
+    return { cluster: s, outlets: s.outlets, related, coverage: coverageOf(s.outlets),
+             saved: saved.has(id) }
+  })
+}
+
+/** The server's answer, for a story outside the window: a shared link, a
+ *  saved story from last week. */
+async function fromServer(id: string, signal: AbortSignal): Promise<StoryView> {
+  const p = await load<StoryPayload>(`/api/story/${encodeURIComponent(id)}`, { signal })
+  const outlets = [...new Map(p.articles.map((a) => [a.source, a])).values()]
+    .map((a) => ({ source: a.source, url: a.url, bias: a.bias }))
+  return { cluster: p.cluster, outlets, related: p.related, coverage: p.coverage, saved: p.saved }
+}
 
 /**
  * Back goes back, not home.
@@ -48,19 +89,15 @@ function BackLink() {
  * shows notFoundComponent - so there is a pending state AND a real 404.
  */
 export const Route = createFileRoute('/story/$id')({
-  loader: ({ params, abortController }) =>
-    load<StoryPayload>(`/api/story/${encodeURIComponent(params.id)}`, {
-      signal: abortController.signal,
-    }),
+  loader: async ({ params, abortController }) =>
+    (await fromWorld(params.id)) ?? fromServer(params.id, abortController.signal),
   pendingComponent: LoadingStory,
   notFoundComponent: StoryNotFound,
   component: StoryPage,
 })
 
 function StoryPage() {
-  const { cluster, articles, related, coverage, saved } = Route.useLoaderData()
-
-  const outlets = [...new Map(articles.map((a) => [a.source, a])).values()]
+  const { cluster, outlets, related, coverage, saved } = Route.useLoaderData()
   // Two sentences per paragraph reads better than one wall of prose.
   const paragraphs = cluster.crux.split(/(?<=\.)\s+(?=[A-Z])/)
     .reduce<string[][]>((acc, s, i) => { (acc[Math.floor(i / 2)] ??= []).push(s); return acc }, [])
@@ -135,7 +172,7 @@ function StoryPage() {
           </div>
 
           <section className="story__coverage">
-            <CoverageSplit coverage={coverage} articleCount={articles.length} framing={framing} />
+            <CoverageSplit coverage={coverage} articleCount={cluster.article_count} framing={framing} />
           </section>
 
           {related.length > 0 && (

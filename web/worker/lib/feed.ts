@@ -5,7 +5,7 @@ import type { Article, Outlet, Prefs, Story } from '../../shared/types';
 // Re-exported: sections.ts, world.ts and library.ts import these from here,
 // as they did when this file declared them.
 export type { Article, Outlet, Prefs, Story };
-import { coverageOf } from './coverage';
+import { coverageOf } from '../../shared/coverage';
 import { expandPlaceIds, geoAdjacentPlaceIds, placeLabel, placesReady } from './places';
 import { matchesSub } from '../../shared/taxonomy';
 
@@ -30,7 +30,8 @@ export const DEFAULT_PREFS: Prefs = {
 export const storyCols = (ready: boolean) => `c.id, c.headline, c.crux, c.category, c.place, c.country,
        ${ready ? 'c.place_id' : 'NULL AS place_id'}, NULL AS place_label,
        c.importance, c.image_url, c.image_source,
-       c.article_count, c.source_count, c.prominence, c.first_seen, c.last_seen`;
+       c.article_count, c.source_count, c.prominence, c.first_seen, c.last_seen, c.summarised_at,
+       c.framing_left, c.framing_centre, c.framing_right`;
 export const STORY_FROM = 'FROM clusters c';
 
 /**

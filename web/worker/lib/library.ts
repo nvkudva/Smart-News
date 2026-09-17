@@ -3,7 +3,7 @@ import { cycleStamp } from './cycle';
 import { d1 } from './d1';
 import type { CategoryFacet, PlaceFacet, SingleReport } from '../../shared/types';
 export type { CategoryFacet, PlaceFacet };
-import { idList, storyCols, STORY_FROM, withPlaceLabels, type Story } from './feed';
+import { storyCols, STORY_FROM, withPlaceLabels, type Story } from './feed';
 import { expandPlaceIds, placesReady } from './places';
 
 // Shape shared with the feed, so an unmigrated store degrades identically here.
@@ -27,13 +27,12 @@ export async function isSaved(clusterId: string, userId: string): Promise<boolea
  * billed. A page that renders twenty stories should ask one question about
  * twenty ids.
  */
-export async function savedAmong(clusterIds: string[], userId: string): Promise<Set<string>> {
-  if (!clusterIds.length) return new Set();
+export async function getSavedIds(userId: string): Promise<string[]> {
   const rows = await d1().all<{ cluster_id: string }>(
-    `SELECT cluster_id FROM saved WHERE user_id = ? AND cluster_id IN (${idList(clusterIds)})`,
-    [userId]);
-  return new Set(rows.map((r) => r.cluster_id));
+    'SELECT cluster_id FROM saved WHERE user_id = ?', [userId]);
+  return rows.map((r) => r.cluster_id);
 }
+
 
 export async function toggleSaved(clusterId: string, userId: string): Promise<boolean> {
   const d = d1();
