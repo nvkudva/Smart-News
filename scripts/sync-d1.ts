@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { recountClusters } from '../src/lib/cluster';
+import { checkpoint } from '../src/lib/db';
 import { d1, type D1 } from '../src/lib/d1';
 import { applySchema } from './d1-schema';
 
@@ -368,6 +369,10 @@ async function main() {
   } else {
     console.log(`\nCycle stamp: ${cycle} (unchanged)`);
   }
+
+  // The dirty list was cleared above and the prune ran; both are writes, and
+  // the cache saves the database file without the WAL they are sitting in.
+  checkpoint(local);
 }
 
 main().then(() => process.exit(0));

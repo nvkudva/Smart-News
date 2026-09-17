@@ -201,3 +201,25 @@ export function markDirty(kind: 'cluster' | 'article', ids: Iterable<string>): v
   const stmt = db().prepare('INSERT OR IGNORE INTO dirty (kind, id) VALUES (?, ?)');
   for (const id of ids) stmt.run(kind, id);
 }
+
+/**
+ * Fold the write-ahead log back into the database file.
+ *
+ * The Actions cache saves `data/smartnews.db` and neither `data/smartnews.db-wal`
+ * nor `-shm`. SQLite commits land in the WAL and only reach the main file when
+ * something checkpoints - automatically at about a thousand pages, so the bulk
+ * of a cycle does get folded in and the tail behind that threshold does not.
+ * It is committed, it is on disk, and it is dropped when the file is packed
+ * without the sidecar it lives in. Measured on a real store: 45 articles, and
+ * a cluster whose recount sat in the tail keeps a count for rows that vanished.
+ *
+ * TRUNCATE rather than PASSIVE, which gives up quietly while any reader holds a
+ * read transaction. `busy` says it gave up anyway, and that is worth a line
+ * rather than a silent return to the behaviour this replaces.
+ */
+export function checkpoint(d: DatabaseSync = db()): void {
+  const r = d.prepare('PRAGMA wal_checkpoint(TRUNCATE)').get() as { busy: number } | undefined;
+  if (r?.busy) {
+    console.warn('  ! wal_checkpoint busy - a reader is still attached and the WAL tail will not survive the cache');
+  }
+}

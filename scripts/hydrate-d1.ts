@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { d1 } from '../src/lib/d1';
-import { db } from '../src/lib/db';
+import { checkpoint, db } from '../src/lib/db';
 
 /**
  * Rebuild the local SQLite working store from D1.
@@ -265,4 +265,9 @@ async function main() {
               `${articles.length} articles, ${places.length} places, ${aliases.length} aliases`);
 }
 
-main().then(() => process.exit(0));
+main().then(() => {
+  // Both paths leave rows in the WAL, and the cache saves the database file
+  // without it.
+  checkpoint();
+  process.exit(0);
+});

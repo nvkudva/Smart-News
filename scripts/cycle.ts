@@ -4,6 +4,7 @@ config({ path: '.env.local', quiet: true });
 import { mkdirSync, openSync, readdirSync, rmSync, statSync, writeFileSync, writeSync } from 'node:fs';
 import { join } from 'node:path';
 import { clusterRecent } from '../src/lib/cluster';
+import { checkpoint } from '../src/lib/db';
 import { ingest } from '../src/lib/ingest';
 import { errorTally, tokenTally } from '../src/lib/llm';
 import { summarisePending } from '../src/lib/summarise';
@@ -121,6 +122,10 @@ async function main() {
                 `out/in ${(output / Math.max(1, input)).toFixed(3)})`);
   }
   console.log(`${((Date.now() - t0) / 1000).toFixed(0)}s`);
+
+  // Before the stamp: `.t0` tells the next sync to push only what this pass
+  // touched, so it must not outlive the rows it is describing.
+  checkpoint();
 
   // Stamp when this pass began so `sync` can push only the rows it touched.
   // Written last on purpose: a cycle that dies half-way leaves no stamp, and
