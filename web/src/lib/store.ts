@@ -78,6 +78,30 @@ export function writeEntry<T>(key: string, stamp: string | null, data: T): void 
 }
 
 /**
+ * What a stamp read learnt.
+ *
+ * Two answers used to arrive as the same `null`, and they mean opposite things
+ * to a caller holding a stored copy. `known: true, stamp: null` is the Worker
+ * saying there is no cycle to key on - nothing can be fresh, so fetch. `known:
+ * false` is not having asked successfully at all, which says nothing about the
+ * copy on disk: offline, that copy is the only answer there is, and it is the
+ * right one. Collapsing the two threw away a perfectly good stored feed every
+ * time the network was down and rendered the error screen instead.
+ */
+export type StampRead = { stamp: string | null; known: boolean };
+
+/**
+ * Is a copy stored against `was` still the right answer?
+ *
+ * The rule above, as the one expression both callers need - readFresh for a
+ * section, HeaderAside for the place line - so the offline case cannot be
+ * fixed in one of them and left in the other.
+ */
+export function stillGood({ stamp, known }: StampRead, was: string | null): boolean {
+  return known ? stamp !== null && was === stamp : true;
+}
+
+/**
  * The version of the world, asked once per session.
  *
  * One row read on the server, one small response, and every section this
@@ -86,18 +110,25 @@ export function writeEntry<T>(key: string, stamp: string | null, data: T): void 
  * because that is when a reader who left it open for an hour looks again.
  */
 let stampAt = 0;
-let stamp: Promise<string | null> | null = null;
+let stamp: Promise<StampRead> | null = null;
 const STAMP_TTL_MS = 60_000;
 
-export function sessionStamp(): Promise<string | null> {
+export function sessionStamp(): Promise<StampRead> {
   if (stamp && Date.now() - stampAt < STAMP_TTL_MS) return stamp;
   stampAt = Date.now();
   stamp = fetch('/api/stamp')
-    .then((r) => (r.ok ? r.json() as Promise<{ stamp: string | null }> : null))
-    .then((j) => j?.stamp ?? null)
-    // No stamp is not an error: it only means nothing can be trusted to be
-    // unchanged, so callers fall back to fetching.
-    .catch(() => null);
+    .then(async (r): Promise<StampRead> => (r.ok
+      ? { stamp: ((await r.json()) as { stamp: string | null }).stamp ?? null, known: true }
+      // A 5xx reached the Worker and still did not say what the stamp is, so
+      // it is the same non-answer a dropped connection is.
+      : { stamp: null, known: false }))
+    .catch((): StampRead => ({ stamp: null, known: false }))
+    .then((r) => {
+      // Not worth a minute of memory: the next call happens after the reader
+      // has come back, and coming back is usually the network coming back too.
+      if (!r.known) stampAt = 0;
+      return r;
+    });
   return stamp;
 }
 

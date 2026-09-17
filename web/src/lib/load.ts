@@ -1,5 +1,5 @@
 import { notFound } from '@tanstack/react-router';
-import { readEntry, sessionStamp, writeEntry } from './store';
+import { readEntry, sessionStamp, stillGood, writeEntry } from './store';
 
 /**
  * What every route loader calls, and the one place that decides whether an
@@ -60,9 +60,14 @@ export async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<
  * this; everything else wants the two lines in `load` below.
  */
 export async function readFresh<T>(key: string): Promise<{ stamp: string | null; data: T | null }> {
-  const [stamp, stored] = await Promise.all([sessionStamp(), readEntry<T>(key)]);
-  const fresh = stored && stamp && stored.stamp === stamp;
-  return { stamp, data: fresh ? stored.data : null };
+  const [read, stored] = await Promise.all([sessionStamp(), readEntry<T>(key)]);
+  // A stamp we could not read is not a stamp that failed to match. Offline the
+  // fetch below cannot succeed, so discarding the stored copy for want of a
+  // comparison trades the feed the browser is holding for the error screen -
+  // and keying on the stamp rather than a TTL exists precisely so that a copy
+  // stays good until something says otherwise. Nothing has said otherwise.
+  const fresh = stored && stillGood(read, stored.stamp);
+  return { stamp: read.stamp, data: fresh ? stored.data : null };
 }
 
 /** Store an answer against the cycle it was true for. */
@@ -74,8 +79,9 @@ export async function load<T>(path: string, opts: LoadOptions = {}): Promise<T> 
   if (!opts.persist) return fetchJson<T>(path, opts.signal);
 
   const { stamp, data } = await readFresh<T>(path);
-  // A stamp read settles the whole app, so an unmoved one means the copy on
-  // disk is still the right answer and there is nothing to ask for.
+  // A stamp read settles the whole app, so an unmoved one - or, offline, one
+  // that could not be read at all - means the copy on disk is still the right
+  // answer and there is nothing to ask for.
   if (data) return data;
 
   const fresh = await fetchJson<T>(path, opts.signal);

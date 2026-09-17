@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Pin } from './icons';
 import { ModeToggle } from './Mode';
 import { readPlaceLine, writePlaceLine, type PlaceLine } from '../lib/placeLine';
-import { sessionStamp } from '../lib/store';
+import { sessionStamp, stillGood } from '../lib/store';
 
 /**
  * The date and the place are the only part of the header that is not the same
@@ -25,12 +25,14 @@ export function HeaderAside() {
     if (held?.here) setHere(held.here);
 
     void (async () => {
-      const stamp = await sessionStamp();
+      const read = await sessionStamp();
       // The line is the reader's own preferences read through the gazetteer,
       // and the gazetteer only changes on a sync — which is what moves the
       // stamp. So an unmoved stamp means the stored answer is still the right
       // one, and the fetch was a Worker invocation spent to be told nothing.
-      if (held?.here && stamp && held.stamp === stamp) return;
+      // Offline the same rule keeps the pin naming the reader's place rather
+      // than blanking it for want of a stamp to compare against.
+      if (held?.here && stillGood(read, held.stamp)) return;
 
       try {
         const res = await fetch('/api/place');
@@ -38,7 +40,7 @@ export function HeaderAside() {
         const { here: h } = await res.json() as { here: string };
         if (!live || !h) return;
         setHere(h);
-        writePlaceLine({ stamp, here: h });
+        writePlaceLine({ stamp: read.stamp, here: h });
       } catch { /* the pin keeps whatever it had; it is not the story */ }
     })();
 
