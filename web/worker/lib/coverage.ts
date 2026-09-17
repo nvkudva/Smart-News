@@ -23,8 +23,16 @@ const BLINDSPOT_MIN_OUTLETS = 5;
  * still count in the split bar — they just never generate a blindspot claim.
  */
 const MIN_OUTLETS_TO_CLAIM_SILENCE = 5;
+/**
+ * Front pages are excluded, for the reason stated where the tier is defined: a
+ * title-tier outlet is kept out of source_count, out of the outlet list and out
+ * of the bias split, because we never read what it said. Counting one here
+ * would also count the same masthead twice - BBC and The Hindu are each in this
+ * list under both tiers - and would let a side clear the floor below on
+ * outlets that can never appear in the articles being rated.
+ */
 const CORPUS: Record<Bias, number> = SOURCES.reduce(
-  (acc, s) => { acc[s.bias]++; return acc; },
+  (acc, s) => { if ((s.tier ?? 'full') !== 'title') acc[s.bias]++; return acc; },
   { left: 0, centre: 0, right: 0 } as Record<Bias, number>);
 
 export function coverageOf(articles: { source: string; bias: Bias | null }[]): Coverage {

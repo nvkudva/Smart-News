@@ -16,7 +16,8 @@
     "usage": "tsx scripts/usage.ts",
     "deploy": "npm run migrate:d1 && cd web && bun run deploy",
     "hydrate": "tsx scripts/hydrate-d1.ts",
-    "seed:local-d1": "tsx scripts/seed-local-d1.ts"
+    "seed:local-d1": "tsx scripts/seed-local-d1.ts",
+    "check:sources": "tsx scripts/check-sources.ts"
   },
   "dependencies": {
     "@google/genai": "^2.22.0",
