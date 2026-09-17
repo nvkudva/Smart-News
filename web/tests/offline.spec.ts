@@ -57,11 +57,24 @@ async function forgetApiCache(page: Page): Promise<number> {
 const localStories = (page: Page) =>
   page.waitForSelector('.feed:not([aria-busy]) a[href^="/story/"]', { timeout: 20_000 });
 
+/**
+ * /local is the reader's own places over a 48-hour window, so whether it has
+ * anything in it depends on the seeded store rather than on the code. An empty
+ * one renders its "Quiet so far" panel instead of a feed, and waiting for a
+ * story card then times out twenty seconds later saying nothing about the rule
+ * under test. Asked once, up front, so a thin fixture skips rather than fails.
+ */
+async function localIsPopulated(page: Page): Promise<boolean> {
+  await page.waitForSelector('.feed:not([aria-busy]) a[href^="/story/"], .panel', { timeout: 20_000 });
+  return (await page.locator('.feed:not([aria-busy]) a[href^="/story/"]').count()) > 0;
+}
+
 test('a section already stored is served offline rather than failing', async ({ page, context }) => {
   // Once online, so /api/local is in IndexedDB against the current stamp.
   await page.goto('/local');
   await controlled(page);
-  await localStories(page);
+  test.skip(!await localIsPopulated(page),
+            'the seeded store has nothing in the reader\'s places; run npm run seed:local-d1');
 
   // A full document load, so the router starts again knowing only this route
   // and the click below actually runs /local's loader.
