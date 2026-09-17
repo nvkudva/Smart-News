@@ -4,6 +4,7 @@ config({ path: '.env.local', quiet: true });
 import { mkdirSync, openSync, readdirSync, rmSync, statSync, writeFileSync, writeSync } from 'node:fs';
 import { join } from 'node:path';
 import { clusterRecent } from '../src/lib/cluster';
+import { affordable, DAILY_NEURONS, NEURON_BUDGET, neuronsToday } from '../src/lib/budget';
 import { checkpoint } from '../src/lib/db';
 import { ingest } from '../src/lib/ingest';
 import { errorTally, tokenTally } from '../src/lib/llm';
@@ -108,8 +109,22 @@ async function main() {
   const { clusters, assigned } = clusterRecent();
   console.log(`${clusters} clusters over ${assigned} articles`);
 
-  const limit = Number(process.argv[2] ?? 40);
-  const { done, skipped, using } = await summarisePending(limit);
+  const asked = Number(process.argv[2] ?? 40);
+  // Asked of Cloudflare before anything is written, because the allowance is
+  // shared with every other thing that draws on it and a count kept here would
+  // only know about itself. A meter that cannot be read leaves `asked` alone.
+  const spent = await neuronsToday();
+  const limit = affordable(spent, asked);
+  if (spent !== null) {
+    console.log(`neurons: ${spent}/${NEURON_BUDGET} spent of a ${DAILY_NEURONS} day` +
+                (limit < asked ? ` — summarising ${limit} not ${asked}` : ''));
+  }
+  // A budget stop is not a failure: ingest and clustering both did their work
+  // and are worth keeping, and stopping is the plan working. The line below
+  // reports it in the same place as everything else.
+  const { done, skipped, using } = limit === 0
+    ? { done: 0, skipped: 0, using: `budget spent — no summarising until 00:00 UTC` }
+    : await summarisePending(limit);
   console.log(`+${added} articles (${withBody} with text) · ${done} summarised, ${skipped} skipped · ${using}`);
   if (errorTally.size) console.log(`failures: ${[...errorTally].map(([k, n]) => `${k}=${n}`).join(', ')}`);
   // Printed per run so a day of logs answers where the money goes without
@@ -131,6 +146,20 @@ async function main() {
   // Written last on purpose: a cycle that dies half-way leaves no stamp, and
   // the next sync falls back to pushing the whole window.
   writeFileSync(`${process.env.SMARTNEWS_DB ?? 'data/smartnews.db'}.t0`, String(t0));
+
+  // A run that tried to summarise and got nothing back is not a quiet news
+  // day, and used to exit 0 looking exactly like one. Every call being
+  // rejected - an exhausted allowance, a dead token, a model that has gone
+  // away - is the case this catches. A budget stop is not: nothing was
+  // attempted, so there is nothing to have failed.
+  if (limit > 0 && done === 0 && skipped > 0 && errorTally.size) {
+    throw new Error(`every summarise call failed (${[...errorTally].map(([k, n]) => `${k}=${n}`).join(', ')})`);
+  }
 }
 
-main().then(() => process.exit(0));
+main().then(() => process.exit(0)).catch((e) => {
+  // Named on one line rather than thrown as an unhandled rejection, which
+  // buries the sentence that matters under a stack through the module loader.
+  console.error(`\ncycle failed: ${(e as Error).message}`);
+  process.exit(1);
+});
