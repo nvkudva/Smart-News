@@ -298,6 +298,30 @@ async function main() {
   const aliasCols = ['alias','country','place_id','source','confidence','updated_at'];
   await pushSeed(d, 'place_aliases', aliasCols, all(`SELECT ${aliasCols.join(',')} FROM place_aliases`), ['alias', 'country']);
 
+  // Articles before clusters, and the order is the whole point.
+  //
+  // A cluster row carries article_count and source_count for rows that live in
+  // the articles table. D1 enforces no foreign key, so whichever of the two
+  // pushes does not happen leaves the other standing on its own. Push the
+  // counts first and a run that dies in between - the job's twelve-minute
+  // timeout, a cancellation, the D1 blip this branch also fixes - leaves D1
+  // serving stories that claim five sources over articles it never received,
+  // and the dirty list that would have repaired them dies with the file.
+  //
+  // The other way round the leftovers are invisible: an article whose cluster
+  // is not there yet is only ever reached through that cluster, and the next
+  // hydrate nulls its link and hands it back to the clusterer, which files it
+  // again. Wrong-and-showing becomes absent-and-self-healing.
+  const articleCols = `id,source_id,url,title,lead,body,image_url,published_at,fetched_at,
+            content_hash,cluster_id,prominent`;
+  const dirtyArticles = full ? [] : dirtyIds('article');
+  const articles = full
+    ? all<Record<string, unknown>>(`SELECT ${articleCols} FROM articles WHERE published_at >= ?`, since)
+    : inChunks(dirtyArticles, (ids) => all<Record<string, unknown>>(
+        `SELECT ${articleCols} FROM articles
+          WHERE published_at >= ? AND id IN (${ids.map(() => '?').join(',')})`, since, ...ids));
+  await push('articles', colList(articleCols), articles);
+
   const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,image_source,
             framing_left,framing_centre,framing_right,
             article_count,source_count,prominence,first_seen,last_seen,summarised_at,summarised_n,attempts`;
@@ -310,16 +334,6 @@ async function main() {
   await push('clusters', colList(clusterCols), clusters);
 
   await reap(d, local, since);
-
-  const articleCols = `id,source_id,url,title,lead,body,image_url,published_at,fetched_at,
-            content_hash,cluster_id,prominent`;
-  const dirtyArticles = full ? [] : dirtyIds('article');
-  const articles = full
-    ? all<Record<string, unknown>>(`SELECT ${articleCols} FROM articles WHERE published_at >= ?`, since)
-    : inChunks(dirtyArticles, (ids) => all<Record<string, unknown>>(
-        `SELECT ${articleCols} FROM articles
-          WHERE published_at >= ? AND id IN (${ids.map(() => '?').join(',')})`, since, ...ids));
-  await push('articles', colList(articleCols), articles);
 
   // Cleared only once both pushes have landed: anything that threw above stays
   // on the list and goes up next cycle. Ids the window no longer covers are
