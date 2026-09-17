@@ -43,7 +43,7 @@ instead of asserting them. Never adopt a headline's spin, never editorialise,
 never introduce a fact no source states. Where sources disagree, say so plainly.
 
 headline:   under 70 characters, sentence case, no outlet name, no clickbait.
-crux:       4 to 6 sentences of plain declarative prose. What happened, who says
+crux:       6 to 8 sentences of plain declarative prose. What happened, who says
             so, and what follows from it. No bullets, no preamble, no hedging filler.
 category:   the subject the story is about, never where it happened - scope is
             derived from country. Governance is the business of governing
