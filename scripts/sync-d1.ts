@@ -40,16 +40,42 @@ function inChunks<T>(ids: string[], read: (slice: string[]) => T[]): T[] {
   return out;
 }
 
-async function push(table: string, cols: string[], rows: Record<string, unknown>[]) {
+/**
+ * Upsert, and D1 bills what this touches.
+ *
+ * `INSERT OR REPLACE` was a DELETE followed by an INSERT: it rewrote every
+ * index entry of every row it sent, whether or not the indexed column had
+ * changed, and D1 counts index writes as rows written. clusters carries four
+ * indexes and articles two, so a re-pushed cluster whose source_count moved was
+ * billed for rewriting its category, country, place and last_seen entries as
+ * well. `ON CONFLICT DO UPDATE` updates in place, and SQLite then touches only
+ * the indexes whose columns actually changed.
+ *
+ * The WHERE makes a row that is byte-identical to what D1 already holds free
+ * rather than merely cheap. That is a small share of a normal push - measured
+ * at 66 of 4,020 rows, 1.6% - because the dirty list is already tight. It is
+ * here because it is one clause with no bookkeeping behind it, and because the
+ * cost of the dirty list ever loosening is then bounded.
+ *
+ * `IS NOT` rather than `<>`: half these columns are nullable, and `<>` against
+ * NULL is NULL, which would make every row with a null headline look changed.
+ */
+async function push(table: string, cols: string[], rows: Record<string, unknown>[], key = ['id']) {
   const d = await d1();
   const perBatch = Math.max(1, Math.floor(MAX_PARAMS / cols.length));
   const placeholder = `(${cols.map(() => '?').join(',')})`;
+  const rest = cols.filter((c) => !key.includes(c));
+  const onConflict = rest.length
+    ? `ON CONFLICT(${key.join(',')}) DO UPDATE SET ` +
+      rest.map((c) => `${c}=excluded.${c}`).join(',') +
+      ` WHERE ` + rest.map((c) => `${table}.${c} IS NOT excluded.${c}`).join(' OR ')
+    : `ON CONFLICT(${key.join(',')}) DO NOTHING`;
   let done = 0;
 
   for (let i = 0; i < rows.length; i += perBatch) {
     const batch = rows.slice(i, i + perBatch);
-    const sql = `INSERT OR REPLACE INTO ${table} (${cols.join(',')}) VALUES ` +
-                batch.map(() => placeholder).join(',');
+    const sql = `INSERT INTO ${table} (${cols.join(',')}) VALUES ` +
+                batch.map(() => placeholder).join(',') + ' ' + onConflict;
     await d.run(sql, batch.flatMap((r) => cols.map((c) => r[c] ?? null)));
     done += batch.length;
     process.stdout.write(`\r  ${table}: ${done}/${rows.length}`);
@@ -68,7 +94,7 @@ async function push(table: string, cols: string[], rows: Record<string, unknown>
 /** The names in a SELECT list, so a push cannot name a different set. */
 const colList = (sql: string) => sql.split(',').map((c) => c.trim()).filter(Boolean);
 
-async function pushSeed(d: D1, table: string, cols: string[], rows: Record<string, unknown>[]) {
+async function pushSeed(d: D1, table: string, cols: string[], rows: Record<string, unknown>[], pk = ['id']) {
   const fingerprint = createHash('sha256')
     .update(JSON.stringify(rows.map((r) => cols.map((c) => r[c] ?? null))))
     .digest('hex');
@@ -78,7 +104,7 @@ async function pushSeed(d: D1, table: string, cols: string[], rows: Record<strin
     const seen = await d.get<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', [key]);
     if (seen?.value === fingerprint) { console.log(`  ${table}: unchanged`); return; }
   }
-  await push(table, cols, rows);
+  await push(table, cols, rows, pk);
   await d.run('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)', [key, fingerprint]);
 }
 
@@ -269,7 +295,7 @@ async function main() {
   const placeCols = ['id','kind','name','label','country','admin1_id','parent_id','lat','lon','population','updated_at'];
   await pushSeed(d, 'places', placeCols, all(`SELECT ${placeCols.join(',')} FROM places`));
   const aliasCols = ['alias','country','place_id','source','confidence','updated_at'];
-  await pushSeed(d, 'place_aliases', aliasCols, all(`SELECT ${aliasCols.join(',')} FROM place_aliases`));
+  await pushSeed(d, 'place_aliases', aliasCols, all(`SELECT ${aliasCols.join(',')} FROM place_aliases`), ['alias', 'country']);
 
   const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,image_source,
             framing_left,framing_centre,framing_right,
