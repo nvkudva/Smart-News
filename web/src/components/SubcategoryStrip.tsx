@@ -30,18 +30,29 @@ export function SubcategoryStrip(
    * Nothing is fetched now either, and for a better reason than interception:
    * ?sub= is declared in validateSearch and the route's loader does not depend
    * on it, so changing it re-renders and does not re-load.
+   *
+   * activeOptions is load-bearing. A Link decides for ITSELF whether it is
+   * active and stamps aria-current="page" and an `active` class when it thinks
+   * so, and the stylesheet lights a pill on aria-current exactly as it does on
+   * data-active. By default the match ignores search, so All - which is the
+   * bare path - counted as active under every ?sub= there is, and stayed lit
+   * beside whichever pill the reader had actually chosen. `includeSearch`
+   * makes ?sub= part of the comparison and `exact` stops All prefix-matching
+   * its own siblings, so the router's opinion and this component's agree.
    */
+  const activeOptions = { exact: true, includeSearch: true } as const;
   return (
     <StripScroller className="substrip" data-cat={cat} label={`${label} sub-categories`}
                    activeKey={active ?? 'all'}>
       <div className="substrip__row">
-        <Link to={base} search={{}} preload={false} className="subpill" data-active={all}
+        <Link to={base} search={{}} activeOptions={activeOptions} preload={false}
+              className="subpill" data-active={all}
               aria-current={all ? 'page' : undefined}>All</Link>
         {subs.map((s) => {
           const on = s.slug === active;
           return (
-            <Link key={s.slug} to={base} search={{ sub: s.slug }} preload={false}
-                  className="subpill" data-active={on}
+            <Link key={s.slug} to={base} search={{ sub: s.slug }} activeOptions={activeOptions}
+                  preload={false} className="subpill" data-active={on}
                   aria-current={on ? 'page' : undefined}>{s.name}</Link>
           );
         })}
