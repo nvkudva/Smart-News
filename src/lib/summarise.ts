@@ -1,6 +1,6 @@
 import pLimit from 'p-limit';
 import { CATEGORIES, db, markDirty } from './db';
-import type { Bias } from './sources';
+import type { Bias } from '../../web/shared/sources';
 import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } from './llm';
 import { isoCountry, resolvePlaceLocal } from './places-local';
 import type { DatabaseSync } from 'node:sqlite';
@@ -59,7 +59,16 @@ city:       just the city or town, no country, no state, else null. "Hyderabad",
 region:     just the state, province or region, else null. "Telangana", not
             "Telangana, India". Null if you do not know which one.
 country:    ISO 3166-1 alpha-2 code for that place, else null.
-importance: 5 for a story a world newspaper leads its front page with, 1 for routine.
+importance: 5 for a story a world newspaper leads its front page with, 1 for routine.`;
+
+/**
+ * Asked for only when the cluster holds more than one lean. With one outlet,
+ * or several of the same lean, there is no "rest" for a framing sentence to
+ * contrast against - it was describing one article and the story page was
+ * rendering it as a split. Leaving it out is also a quarter of the output
+ * tokens on the single-source clusters that are 84% of what gets written.
+ */
+const FRAMING = `
 
 Some articles are tagged with the outlet's political lean. For each lean that
 appears, write ONE sentence in framing_<lean> saying what those outlets
@@ -82,11 +91,18 @@ const SCHEMA: JsonSchema = {
     region:     { type: 'string', nullable: true },
     country:    { type: 'string', nullable: true },
     importance: { type: 'integer' },
+  },
+  required: ['headline', 'crux', 'category', 'importance'],
+};
+
+const FRAMING_SCHEMA: JsonSchema = {
+  ...SCHEMA,
+  properties: {
+    ...SCHEMA.properties,
     framing_left:   { type: 'string', nullable: true },
     framing_centre: { type: 'string', nullable: true },
     framing_right:  { type: 'string', nullable: true },
   },
-  required: ['headline', 'crux', 'category', 'importance'],
 };
 
 export async function summariseCluster(members: Member[], signal?: AbortSignal): Promise<LlmOutcome<Summary>> {
@@ -104,14 +120,15 @@ export async function summariseCluster(members: Member[], signal?: AbortSignal):
   const picked = distinct.slice(0, MAX_ARTICLES);
   if (!picked.length) return { ok: false, reason: 'content' };
 
+  const framed = new Set(picked.map((m) => m.bias).filter(Boolean)).size > 1;
   const corpus = picked.map((m, i) =>
-    `<article n="${i + 1}" source="${m.name}"${m.bias ? ` lean="${m.bias}"` : ''}>\n<title>${m.title}</title>\n` +
+    `<article n="${i + 1}" source="${m.name}"${framed && m.bias ? ` lean="${m.bias}"` : ''}>\n<title>${m.title}</title>\n` +
     `${(m.body ?? m.lead ?? '').slice(0, MAX_CHARS_EACH)}\n</article>`).join('\n\n');
 
   const out = await completeJson<Summary>(
-    SYSTEM,
+    framed ? SYSTEM + FRAMING : SYSTEM,
     `${members.length} articles cover this one event. Here are ${picked.length} of them.\n\n${corpus}`,
-    SCHEMA,
+    framed ? FRAMING_SCHEMA : SCHEMA,
     undefined,
     signal,
   );
@@ -240,11 +257,6 @@ const POSTING = /^[A-Z][\w.'’-]+(?:\s+[A-Z][\w.'’-]+){1,3}\s+(?:Appointed|Na
 /** A chief executive changing company is news, not a trade posting. */
 const NOT_POSTING = /\b(CEO|Chief Executive)\b/;
 
-/** Series worth keeping, as `sourceId|signature`. Nothing here is filtered. */
-const KEEP = new Set<string>([
-  // e.g. 'reuters|market wrap' — a daily series a reader would miss.
-]);
-
 const PERIODIC = /\b(january|february|march|april|may|june|july|august|september|october|november|december|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi;
 
 /** A headline with everything that changes daily taken out of it. */
@@ -281,7 +293,7 @@ function routineShapes(d: DatabaseSync): Set<string> {
   // Three separate days. Twice is a coincidence, and a story that genuinely
   // runs two days running is a story.
   const out = new Set<string>();
-  for (const [key, seen] of days) if (seen.size >= 3 && !KEEP.has(key)) out.add(key);
+  for (const [key, seen] of days) if (seen.size >= 3) out.add(key);
   return out;
 }
 
@@ -326,6 +338,55 @@ function heatIndex(d: DatabaseSync, since: number): Map<string, Set<string>> {
  * Everything here is a string test or a map lookup: the point of choosing
  * without the model is that choosing must not cost what writing costs.
  */
+/**
+ * How many single-source stories one outlet may have written in a day.
+ *
+ * Three feeds were 45% of single-source writes over three days - Yahoo Finance
+ * 372, The Hindu 364, Times of India 231 - and the run's cap never bound (8 to
+ * 10 singles a run against a cap of 30), so heat alone let a high-volume feed
+ * take whatever it produced. A share per outlet is what makes the cut land on
+ * single-ticker analysis and broadsheet filler rather than on the desk nobody
+ * else covers.
+ *
+ * A day, not a run: a story refused this run is still inside the six-hour
+ * window next run, so a per-run share only defers and the outlet writes
+ * everything over the window anyway. Against a trailing day it ages out
+ * unwritten. Measured on 16 Sep, 30 a day would have refused 205 of 512
+ * singles; on the 17th, 56 of 418.
+ */
+const PER_SOURCE_DAY = Number(process.env.SUMMARISE_PER_SOURCE ?? 30);
+
+/**
+ * Slots each outlet has left today, from what it has already had written in
+ * the last 24 hours against its share.
+ *
+ * The share is halved for an outlet whose single-source stories the model
+ * itself has rated below importance 3 on average over the last week. It is
+ * the model's own rating, so it moves with the model - a prior for allocating
+ * slots, not a verdict on the outlet - and an outlet with under ten samples
+ * keeps the full share rather than being judged on a handful. An outlet
+ * absent from the map has written nothing today and gets the full share.
+ */
+function sourceAllowance(d: DatabaseSync): Map<string, number> {
+  const now = Date.now();
+  const rows = d.prepare(
+    `SELECT source_id,
+            SUM(CASE WHEN summarised_at >= ? THEN 1 ELSE 0 END) AS today,
+            AVG(importance) AS imp, COUNT(*) AS n
+       FROM (SELECT DISTINCT c.id, a.source_id, c.importance, c.summarised_at
+               FROM clusters c JOIN articles a ON a.cluster_id = c.id
+              WHERE c.source_count = 1 AND c.summarised_at >= ?)
+      GROUP BY source_id`,
+  ).all(now - 86_400_000, now - 7 * 86_400_000) as unknown as
+    { source_id: string; today: number; imp: number; n: number }[];
+  const left = new Map<string, number>();
+  for (const r of rows) {
+    const share = r.n >= 10 && r.imp < 3 ? Math.max(1, Math.floor(PER_SOURCE_DAY / 2)) : PER_SOURCE_DAY;
+    left.set(r.source_id, Math.max(0, share - r.today));
+  }
+  return left;
+}
+
 function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] {
   const since = Date.now() - 48 * 3_600_000;
   // Heat is measured against two days of headlines, but only fresh articles are
@@ -358,16 +419,15 @@ function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] 
   const heat = heatIndex(d, since);
   const routine = routineShapes(d);
   const rows = d.prepare(
-    `SELECT c.id, c.article_count, a.source_id, a.title, a.published_at, s.category
-       FROM clusters c JOIN articles a ON a.cluster_id = c.id JOIN sources s ON s.id = a.source_id
+    `SELECT c.id, c.article_count, a.source_id, a.title, a.published_at
+       FROM clusters c JOIN articles a ON a.cluster_id = c.id
       WHERE c.headline IS NULL AND c.source_count = 1 AND c.attempts < ?
         AND a.published_at >= ? AND a.published_at <= ?
         AND LENGTH(COALESCE(a.body, '')) > 800`,
   ).all(MAX_ATTEMPTS, fresh, settled) as unknown as
-    { id: string; article_count: number; source_id: string; title: string;
-      published_at: number; category: string }[];
+    { id: string; article_count: number; source_id: string; title: string; published_at: number }[];
 
-  const scored: { id: string; article_count: number; category: string; heat: number; at: number }[] = [];
+  const scored: { id: string; article_count: number; source_id: string; heat: number; at: number }[] = [];
   for (const r of rows) {
     if (isRoutine(routine, r.source_id, r.title)) continue;
     const others = new Set<string>();
@@ -380,13 +440,26 @@ function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] 
     // writing about Kioxia, or about whatever The Verge noticed this morning,
     // and that is the normal condition of a technology desk rather than a
     // reason to publish nothing.
-    scored.push({ id: r.id, category: r.category, heat: others.size, at: r.published_at,
+    scored.push({ id: r.id, source_id: r.source_id, heat: others.size, at: r.published_at,
                   article_count: r.article_count });
   }
   // Heat still sorts, so if the run's limit binds it binds on the weakest
   // stories rather than on whichever desk happened to be queried first.
   scored.sort((a, b) => b.heat - a.heat || b.at - a.at);
-  return scored.map(({ id, article_count }) => ({ id, article_count }));
+  // One entry per cluster: the join above yields a row per fresh article, and
+  // a cluster with two of them was queued, and paid for, twice in one run.
+  const left = sourceAllowance(d);
+  const seen = new Set<string>();
+  const out: { id: string; article_count: number }[] = [];
+  for (const s of scored) {
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+    const slots = left.get(s.source_id) ?? PER_SOURCE_DAY;
+    if (slots <= 0) continue;
+    left.set(s.source_id, slots - 1);
+    out.push({ id: s.id, article_count: s.article_count });
+  }
+  return out;
 }
 
 /**

@@ -190,21 +190,7 @@ function migrate(d: DatabaseSync) {
   d.exec('CREATE INDEX IF NOT EXISTS clusters_place ON clusters(place_id, last_seen DESC)');
 }
 
-export const CATEGORIES = [
-  'Politics', 'Governance', 'Crime & Courts', 'Disasters & Accidents',
-  'Conflict & Diplomacy', 'Business', 'Technology', 'Science', 'Health',
-  'Education', 'Sports', 'Entertainment', 'Climate', 'Others',
-] as const;
-export type Category = (typeof CATEGORIES)[number];
-
-/**
- * Values the summariser no longer issues but the store still holds. 'India' and
- * 'World' were scopes wearing a subject's clothes - 187 of India's 191 clusters
- * were country=IN, which is the National tab by another name - so they were
- * replaced by subjects that describe what a story is about. Rows keep their old
- * value until the backfill reaches them; nothing may write one.
- */
-export const RETIRED_CATEGORIES = ['World', 'India'] as const;
+export { CATEGORIES, type Category } from '../../web/shared/categories';
 
 /** Record that a row differs from what D1 holds, so `sync` can push just it. */
 export function markDirty(kind: 'cluster' | 'article', ids: Iterable<string>): void {

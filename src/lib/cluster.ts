@@ -136,16 +136,6 @@ const CENTROID_FLOOR = 0.10;
 const RESIDUAL_FLOOR = 0.04;
 
 /**
- * How many names two articles must have in common before similarity alone is
- * allowed to decide. One was not enough: "medicare" appears in an Australian
- * rebate review and a US fraud indictment, and the body text of both is full of
- * the vocabulary of health payments, so the wording agreed even though the
- * stories had nothing to do with each other. Two names is the cheapest test
- * that distinguishes them — same event, same cast.
- */
-const MIN_SHARED_NAMES = 1;
-
-/**
  * What a group already holds is evidence about what it is, so the price of
  * joining rises with its size. Two articles pair on 0.16; the 30th needs 0.36,
  * and an article reaching a group of 300 would need more than any real pair of
@@ -167,12 +157,6 @@ function thresholdFor(size: number, base: number): number {
 const ALIAS_MIN_SOURCES = 3;
 /** Seen together in this many separate stories before it counts as an alias. */
 const ALIAS_MIN_CLUSTERS = 2;
-
-export type ClusterOpts = {
-  threshold?: number; entityFloor?: number;
-  /** Override the candidate window, for a one-off repair over older rows. */
-  windowMs?: number;
-};
 
 /** What counting a cluster needs; Row is a superset. */
 type Counted = {
@@ -285,7 +269,7 @@ function corpusIdf(batch: Map<string, number>[]): Map<string, number> {
  * This is the part that improves on its own. Every week of clusters widens the
  * table, and the threshold for a second source drops accordingly.
  */
-function aliasIndex(): { alias: Map<string, Set<string>>; common: Set<string> } {
+function aliasIndex(): Map<string, Set<string>> {
   const d = db();
   const rows = d.prepare(
     `SELECT a.cluster_id AS cid, a.title AS title
@@ -328,35 +312,17 @@ function aliasIndex(): { alias: Map<string, Set<string>>; common: Set<string> } 
     (alias.get(a) ?? alias.set(a, new Set()).get(a)!).add(b);
     (alias.get(b) ?? alias.set(b, new Set()).get(b)!).add(a);
   }
-  const common = new Set([...seenIn].filter(([, n]) => n > tooCommon).map(([e]) => e));
-  return { alias, common };
+  return alias;
 }
 
 /**
- * Does this article name the same thing the group is about?
- *
- * One shared name used to be enough, and a place name is a name: an Australian
- * Medicare review, a US Medicare fraud case and a piece on Social Security all
- * shared "medicare" and were written up as one story. So a name common enough
- * to appear across a fiftieth of all clusters — "delhi", "medicare",
- * "chhattisgarh" — no longer carries a match by itself; it needs a second name
- * beside it, or one specific enough to identify the story on its own.
+ * Does this article name the same thing the group is about? One name in
+ * common, or an alias of one, is enough.
  */
-function sharesName(
-  ents: Set<string>, groupEnts: Set<string>, idx: { alias: Map<string, Set<string>>; common: Set<string> },
-): boolean {
-  let shared = 0, specific = 0;
+function sharesName(ents: Set<string>, groupEnts: Set<string>, alias: Map<string, Set<string>>): boolean {
   for (const e of ents) {
-    if (groupEnts.has(e)) {
-      shared++;
-      if (!idx.common.has(e)) specific++;
-    } else {
-      const also = idx.alias.get(e);
-      // Aliases are mined only from names specific enough to be mined, so a
-      // match through one is as good as a specific name of its own.
-      if (also) for (const a of also) if (groupEnts.has(a)) { shared++; specific++; break; }
-    }
-    if (shared >= MIN_SHARED_NAMES || (specific && MIN_SHARED_NAMES <= 1)) return true;
+    if (groupEnts.has(e)) return true;
+    for (const a of alias.get(e) ?? []) if (groupEnts.has(a)) return true;
   }
   return false;
 }
@@ -380,17 +346,17 @@ function keysOf(vec: Map<string, number>, ents: Set<string>): string[] {
   return [...new Set([...top, ...ents])];
 }
 
-export function clusterRecent(opts: ClusterOpts = {}): { clusters: number; assigned: number } {
+export function clusterRecent(): { clusters: number; assigned: number } {
   // 0.16, down from 0.19: swept over a 48-hour window of ~2900 articles, the
   // looser setting turns 1760 single-source clusters into 1696 and lifts the
   // clusters two or more newsrooms cover from 146 to 162 — a sixth of the feed
   // again, at no model cost. Below 0.12 the merges stop being the same story
   // (a Swiss AI paper joined West Bengal madrassa closures on "education"),
   // so the entity floor below is what keeps this honest, not the threshold.
-  const THRESHOLD = opts.threshold ?? 0.16;
-  const ENTITY_FLOOR = opts.entityFloor ?? 0.52;
+  const THRESHOLD = 0.16;
+  const ENTITY_FLOOR = 0.52;
   const d = db();
-  const since = Date.now() - (opts.windowMs ?? CANDIDATE_MS);
+  const since = Date.now() - CANDIDATE_MS;
   // Four days of everything that has not been written up yet. Articles already
   // in a summarised cluster are excluded outright: re-reading them was what let
   // a cluster absorb whatever chained into it run after run — one id collected

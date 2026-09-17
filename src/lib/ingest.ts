@@ -3,7 +3,7 @@ import pLimit from 'p-limit';
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import { db, markDirty } from './db';
-import { SOURCES } from './sources';
+import { SOURCES } from '../../web/shared/sources';
 import { normaliseUrl, titleFingerprint } from './text';
 import { robotsVerdict } from './robots';
 

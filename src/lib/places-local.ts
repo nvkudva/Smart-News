@@ -4,13 +4,24 @@
  * It exists because summarising a cycle's clusters would otherwise be one
  * awaited D1 round trip per cluster, over HTTP, for a lookup that is a
  * microsecond against the local SQLite file the pipeline already has open.
- * The matching order is identical to places.ts on purpose — a story resolved
+ * The matching order is identical to web/worker/lib/places.ts on purpose — a story resolved
  * by the pipeline and the same string resolved by the web app must land on the
  * same row.
  */
 
 import type { DatabaseSync } from 'node:sqlite';
-import { normaliseAlias } from './places';
+
+const MARKS = /[̀-ͯ]/g;
+
+export function slugify(s: string): string {
+  return s.normalize('NFD').replace(MARKS, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+export function normaliseAlias(raw: string): string {
+  return raw.normalize('NFD').replace(MARKS, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+}
 
 type Hit = { alias: string; acc: string; place_id: string; place_country: string };
 

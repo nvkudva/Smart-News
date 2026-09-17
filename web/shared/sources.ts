@@ -12,12 +12,8 @@
  * dailies. Read a "right" blindspot as "these sources did not cover it", which
  * is the honest claim available here.
  *
- * THIS FILE IS MIRRORED at web/shared/sources.ts, byte for byte. The worker
- * bundle cannot reach outside web/, so the list exists twice; the copies had
- * drifted to 72 entries against 55 before anyone noticed, and the browser was
- * deciding which blindspots to claim from the older one. Edit src/lib and copy,
- * never the other way, and `npm run check:sources` fails the build if they
- * differ.
+ * The one copy of the list. The worker bundle cannot reach outside web/, so
+ * it lives here and the pipeline imports it from ../../web/shared.
  *
  * The centre has grown heavier still with the markets and AI additions, and
  * for a duller reason than editorial line: a central bank's press release and

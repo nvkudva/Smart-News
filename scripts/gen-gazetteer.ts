@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 /**
- * data/gazetteer.seed.json -> src/lib/gazetteer.gen.ts.
+ * data/gazetteer.seed.json -> web/worker/lib/gazetteer.gen.ts.
  *
  * The gazetteer was costing D1 roughly seven hundred row reads on every
  * homepage view, spent re-deriving which cities sit inside Karnataka from 338
@@ -11,13 +11,13 @@ import { resolve } from 'node:path';
  * changing it means a commit, which means a redeploy. So it belongs in the
  * bundle, not in a database.
  *
- * Run by `npm run gazetteer:gen`, and by prebuild so a stale file cannot ship.
+ * Run by `npm run gazetteer:gen` after editing the seed.
  * The D1 tables stay — build-gazetteer.ts still loads them, and the pipeline
  * still resolves against local SQLite — but the Worker no longer reads them.
  */
 
 const SEED = resolve(process.cwd(), 'data/gazetteer.seed.json');
-const OUT = resolve(process.cwd(), 'src/lib/gazetteer.gen.ts');
+const OUT = resolve(process.cwd(), 'web/worker/lib/gazetteer.gen.ts');
 
 type SeedPlace = {
   id: string; kind: 'city' | 'admin1' | 'country'; name: string; label: string; country: string;

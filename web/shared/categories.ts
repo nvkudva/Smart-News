@@ -1,12 +1,4 @@
-/**
- * The category list, and nothing else.
- *
- * These live in src/lib/db.ts in the Next tree, beside the pipeline's
- * node:sqlite schema. taxonomy.ts wants only the constant, so importing it
- * from there would pull node:sqlite into the Worker bundle for the sake of ten
- * strings. Keep the two lists identical: db.ts remains the source of truth
- * while the pipeline still runs on Node.
- */
+/** The category list, shared by the Worker and the pipeline (via src/lib/db.ts). */
 export const CATEGORIES = [
   'Politics', 'Governance', 'Crime & Courts', 'Disasters & Accidents',
   'Conflict & Diplomacy', 'Business', 'Technology', 'Science', 'Health',

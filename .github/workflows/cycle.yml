@@ -37,7 +37,6 @@ jobs:
       LLM_MODEL: '@cf/ibm-granite/granite-4.0-h-micro'
       LLM_RPM: '100'
       LLM_CONCURRENCY: '4'
-      SUMMARISE_MIN_SOURCES: '2'
       # Corroborated stories are never capped; this bounds only the
       # single-source queue, which otherwise takes every slot the 150 above
       # leaves - see the note in summarise.ts for where the number comes from.

@@ -38,9 +38,6 @@ export function vector(tf: Map<string, number>, idfs: Map<string, number>): Map<
   return v;
 }
 
-export function cosine(a: Map<string, number>, b: Map<string, number>): number {
-  return overlap(a, b).sim;
-}
 
 /**
  * Cosine, and what is left of it once the single largest shared term is taken

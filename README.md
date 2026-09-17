@@ -104,7 +104,7 @@ exits non-zero if the two files have drifted apart.
 
 **Gathering**
 
-- `src/lib/sources.ts` is the list — 55 feeds, hand-curated, each with a country, a category and a political lean rated against its own country's politics. A feed enters the file only after three checks: it parses, its articles yield readable text through Readability, and its `robots.txt` permits the fetch.
+- `web/shared/sources.ts` is the list — 55 feeds, hand-curated, each with a country, a category and a political lean rated against its own country's politics. A feed enters the file only after three checks: it parses, its articles yield readable text through Readability, and its `robots.txt` permits the fetch.
 - `scripts/ingest.ts` reads every feed, normalises each link (dropping tracking parameters, which is not cosmetic — Al Jazeera's `robots.txt` disallows the `?traffic_source=` variant its own feed emits), and skips URLs already stored.
 - Before fetching an article, `src/lib/robots.ts` checks that host's `robots.txt` under RFC 9309 — most specific agent group, longest matching path, `Allow` breaking ties — caching one fetch per host per run and honouring `Crawl-delay` per host.
 - Full text is extracted with jsdom and Readability. Summaries come from the article, never the RSS blurb. A body that fails is retried on later runs for an hour, so a transient error is not permanent.
@@ -162,7 +162,7 @@ What it does with other people's journalism, and what it deliberately does not:
 
 - Only public RSS feeds are read, and `src/lib/robots.ts` checks each host's
   `robots.txt` under RFC 9309 before any article is fetched, honouring
-  `Crawl-delay` per host. A feed enters `src/lib/sources.ts` only after its
+  `Crawl-delay` per host. A feed enters `web/shared/sources.ts` only after its
   `robots.txt` permits the fetch.
 - No article is ever republished. A reader sees a model-written summary of
   several independent reports of the same event, the names of the outlets that
@@ -177,7 +177,7 @@ What it does with other people's journalism, and what it deliberately does not:
   publisher; nothing here is monetised.
 
 Publishers: if you would rather not be included, open an issue. Removing a feed
-is one line in `src/lib/sources.ts` and I will take it out.
+is one line in `web/shared/sources.ts` and I will take it out.
 
 A label is not a legal position, and this note is a description of the
 implementation rather than a claim about it.
