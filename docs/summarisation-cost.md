@@ -204,6 +204,21 @@ automated retrieval. Once prominence is dense enough to fire, it becomes the
 gate in §3b: a single-source cluster whose entities match a front-page headline
 earns a slot ahead of one that matches nothing.
 
+**Measured 17 Sep, and the gating half does not hold.** 40 eligible
+single-source clusters were labelled blind by Vijay and by Claude across three
+front-page-match bands — see [labels.md](labels.md). Stories both labellers
+called noise got *more* common as the band rose (21%, 23%, 31%), not less, and
+the worth-rate trend was not significant on either labeller (p = 0.45 and
+p = 1.0). An entity match against front pages measures whether a cluster names
+what the front pages are full of, which Trump and a Test cricketer satisfy and
+a Supreme Court tax ruling does not.
+
+Widening title-tier is still worth doing — it costs no neurons and prominence
+remains a defensible *ranking* signal. Admitting or refusing clusters on band
+alone is what the sample refuses. The two labellers also agreed only 55% of the
+time (κ = 0.32), so the target itself needs defining before any gate can be
+tuned against it.
+
 This is also the answer to the scoop problem. Source reputation — the obvious
 quality proxy — structurally punishes the outlet that got there first, which is
 exactly backwards for a product about corroboration. Front-page prominence does
