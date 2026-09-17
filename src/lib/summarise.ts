@@ -187,6 +187,57 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
  */
 const CHORE = /^(how to|q&a|watch:|live updates|\d+ things)\b|\b(hints and answers|team of the week|daily quiz|horoscope)\b/i;
 
+/**
+ * Three shapes the rhythm test cannot see, from the labelled sample in
+ * docs/labels.md. All three were stories the two labellers flatly disagreed
+ * about, and all three disagreements are the same question wearing different
+ * clothes: is a package of several small items one story?
+ *
+ * Each is anchored rather than stated as a keyword, because the unanchored
+ * version of every one of them refuses real news. The survey that produced
+ * these:
+ *
+ *   BRIEF    "HT Morning Brief September 12: Xi Jinping headed to India, …"
+ *            An outlet's daily package. routineShapes should have caught it by
+ *            rhythm and cannot: `signature` keeps the whole title, and the tail
+ *            after the colon is a different set of stories every morning, so the
+ *            signature never repeats. Anchored near the start, because "CIA
+ *            releases dozens of presidential daily briefs on Bin Laden" is a
+ *            story about briefs rather than one of them.
+ *
+ *   BUNDLE   "Zomato's Latest Fee, Weekly Funding Rundown & More"
+ *            A list of unrelated items under one headline: there is no event to
+ *            summarise, so the model invents a through-line. Only the ampersand
+ *            form, because "a $110 million deal includes a school, water
+ *            reclamation, and more" is one story that happens to end that way.
+ *
+ *   POSTING  "Sonia Rovai Appointed Disney Italy VP of Original Production"
+ *            A trade appointment. The discriminator is the sentence shape, not
+ *            the word: a headline that OPENS with a person's name in title case
+ *            and goes on to name the job is written for the industry, while
+ *            "Trump-Appointed Judge Rules…", "Operator to be appointed soon"
+ *            and "Vijayan challenges CM Satheesan to release list of 787
+ *            personal staff appointed" all put the news first.
+ *
+ *            Deliberately not case-insensitive, which is the whole of how it
+ *            tells those apart — with /i the first draft took five real stories
+ *            out of nine matches. A job title has to follow the verb too, or
+ *            "Aditya Thackeray named in Disha Salian case", "Kolkata Roads
+ *            Named After Marx, Lenin" and every footballer who joins a club
+ *            come with it. Chief executives are carved out: that move is news
+ *            outside the trade press.
+ *
+ * Checked against all 9,699 titles in the store: ten, seven and two matches
+ * respectively, and nothing in any of them is a story. Run that again before
+ * widening any of these - each one is narrow because its unanchored version
+ * was measured and was not.
+ */
+const BRIEF = /^.{0,24}\b(morning|evening|daily|weekly)\s+(brief|briefing|digest|wrap|rundown|roundup)\b/i;
+const BUNDLE = /&\s*more\s*$/i;
+const POSTING = /^[A-Z][\w.'’-]+(?:\s+[A-Z][\w.'’-]+){1,3}\s+(?:Appointed|Named|Promoted [Tt]o|Elevated [Tt]o|Joins [Aa]s)\s+[^:]{0,60}?\b(?:VP|SVP|EVP|Vice President|President|Managing Director|Director|Head|Editor|Chief|Partner|Officer)\b/;
+/** A chief executive changing company is news, not a trade posting. */
+const NOT_POSTING = /\b(CEO|Chief Executive)\b/;
+
 /** Series worth keeping, as `sourceId|signature`. Nothing here is filtered. */
 const KEEP = new Set<string>([
   // e.g. 'reuters|market wrap' — a daily series a reader would miss.
@@ -234,7 +285,9 @@ function routineShapes(d: DatabaseSync): Set<string> {
 
 /** Is this article one instalment of something its outlet files on a schedule? */
 function isRoutine(routine: Set<string>, sourceId: string, title: string): boolean {
-  return CHORE.test(title) || routine.has(`${sourceId}|${signature(title)}`);
+  return CHORE.test(title) || BRIEF.test(title) || BUNDLE.test(title)
+    || (POSTING.test(title) && !NOT_POSTING.test(title))
+    || routine.has(`${sourceId}|${signature(title)}`);
 }
 
 /**
