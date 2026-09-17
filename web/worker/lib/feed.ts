@@ -351,8 +351,17 @@ export async function getFeed(limit: number, userId: string): Promise<Story[]> {
 
   let ki = 0, kci = 0, kToggle = 0, ni = 0, gi = 0, spent = 0;
   while (out.length < limit) {
+    // Every cursor advances past what is already served BEFORE anything asks
+    // whether its queue still has something. The known pair used to skip inside
+    // their own branch, after the test that let the branch run: knownMulti is a
+    // subset of known, so once the last stories went out through one queue the
+    // other skipped to the end, and the final `else` below indexed past it -
+    // `undefined.s`, thrown out of the section the home page is. A feed with
+    // nothing left to interleave is the ordinary end of the loop, not a fault.
     ni = skip(novel, ni);
     gi = skip(geo, gi);
+    ki = skip(known, ki);
+    kci = skip(knownMulti, kci);
     const wantExplore = out.length > 0 && out.length % 4 === 3 && spent < budget
                         && (ni < novel.length || gi < geo.length);
     if (wantExplore) {
@@ -362,8 +371,6 @@ export async function getFeed(limit: number, userId: string): Promise<Story[]> {
       spent++;
     }
     else if (ki < known.length || kci < knownMulti.length) {
-      ki = skip(known, ki);
-      kci = skip(knownMulti, kci);
       const wantMulti = kToggle % 2 === 1 && kci < knownMulti.length;
       if (wantMulti) take(knownMulti[kci++].s, null);
       else if (ki < known.length) take(known[ki++].s, null);
