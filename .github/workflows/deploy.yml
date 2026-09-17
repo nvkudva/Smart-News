@@ -26,9 +26,9 @@ jobs:
       CLOUDFLARE_D1_ID: 1e779125-88d9-4688-85f2-08c3c6bcecf3
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '26'
           cache: npm
