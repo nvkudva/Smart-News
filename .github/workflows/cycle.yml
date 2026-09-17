@@ -28,7 +28,7 @@ jobs:
       # and it grants nothing without the API token.
       CLOUDFLARE_D1_ID: 1e779125-88d9-4688-85f2-08c3c6bcecf3
       LLM_PROVIDER: cloudflare
-      LLM_MODEL: '@cf/meta/llama-3.2-3b-instruct'
+      LLM_MODEL: '@cf/ibm-granite/granite-4.0-h-micro'
       LLM_RPM: '100'
       LLM_CONCURRENCY: '4'
       SUMMARISE_MIN_SOURCES: '2'

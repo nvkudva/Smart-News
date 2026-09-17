@@ -45,10 +45,16 @@ export type LlmConfig = {
 };
 
 const DEFAULTS: Record<Provider, { model: string; baseUrl?: string; rpm: number; keyEnv: string }> = {
-  // Workers AI. llama-3.2-3b measured cheapest per summary on real clusters —
-  // 17.8 neurons, ~562/day inside the free allowance — at 4/4 quality. It does
-  // not reason at all, so none of the no-think handling applies to it.
-  cloudflare: { model: '@cf/meta/llama-3.2-3b-instruct', rpm: 100, keyEnv: 'CLOUDFLARE_API_TOKEN' },
+  // Workers AI. granite-4.0-h-micro replaced llama-3.2-3b, which had been the
+  // cheapest measured at 17.8 neurons a summary: granite is 3x cheaper per
+  // token on both halves AND emits ~45% fewer output tokens for the same crux,
+  // so it lands near a quarter of the cost. Neither reasons, so none of the
+  // no-think handling applies to either.
+  //
+  // The known cost of the swap is headlines: granite overran the 70-character
+  // limit in 8 of 15 clusters against llama's 4, and nothing in the code
+  // enforces that limit - it is asked for in SYSTEM and never checked.
+  cloudflare: { model: '@cf/ibm-granite/granite-4.0-h-micro', rpm: 100, keyEnv: 'CLOUDFLARE_API_TOKEN' },
   gemini:   { model: 'gemini-2.5-flash', rpm: 8,  keyEnv: 'GEMINI_API_KEY' },
   deepseek: { model: 'deepseek-v4-flash', baseUrl: 'https://api.deepseek.com/v1', rpm: 45, keyEnv: 'DEEPSEEK_API_KEY' },
   openai:   { model: 'gpt-4o-mini',   baseUrl: 'https://api.openai.com/v1',   rpm: 45, keyEnv: 'OPENAI_API_KEY' },
