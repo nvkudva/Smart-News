@@ -423,15 +423,26 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   // roughly 2% of the 7,200 slots 48 runs offer and worthWriting took the rest:
   // 20,173 neurons on 16 Sep against a 10,000 free allowance.
   //
-  // The default is set from the allowance rather than from taste. Six a run is
-  // 288 a day, which at the measured 17.8 neurons a summary is ~5,100 neurons,
-  // leaving the ~2,100 the corroborated stories cost and half the allowance
-  // spare for the days ingest runs hot.
+  // The default is set from the allowance rather than from taste, and since
+  // granite replaced llama at about a quarter of the cost it is set from supply
+  // as well - the two now answer differently, and supply answers first.
+  //
+  // Measured over four full days: ~946 single-source clusters a day clear the
+  // body floor, which is 20 a run, and ~120 corroborated ones. Writing every
+  // single one of them costs ~5,200 neurons against the 10,000 allowance. So
+  // there is no cap in the 20s or 30s that refuses work we would otherwise do;
+  // 36 is a CEILING rather than a limit, the point at which a day of unusual
+  // supply would be stopped at ~87% of the allowance instead of going past it.
+  //
+  // That is the whole change in what this constant is for. At six a run it was
+  // refusing about two thirds of the queue every run because the model made
+  // that necessary. At 36 it refuses nothing on a normal day and still cannot
+  // overspend on an abnormal one.
   //
   // It also settles what heat is for. worthWriting sorts by heat and refuses
   // nothing, which was right while nothing else bounded the work; with a cap,
   // the cap refuses the tail and heat decides which stories are in it.
-  const singleMax = Number(process.env.SUMMARISE_SINGLE_MAX ?? 6);
+  const singleMax = Number(process.env.SUMMARISE_SINGLE_MAX ?? 36);
   if (targets.length < limit) {
     targets.push(...worthWriting(d).slice(0, Math.min(singleMax, limit - targets.length)));
   }
