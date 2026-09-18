@@ -236,6 +236,7 @@ export function clearSections() {
  * for an hour looks again.
  */
 const REFRESH_MS = 15 * 60_000;
+const VISIBLE_GRACE_MS = 5 * 60_000;
 
 function refresh() {
   if (document.visibilityState !== 'visible') return;
@@ -254,9 +255,13 @@ function refresh() {
  */
 export function startWorldRefresh(): () => void {
   const timer = setInterval(refresh, REFRESH_MS);
-  document.addEventListener('visibilitychange', refresh);
+  // A tab return is a Worker request (the stamp check), and a phone comes back
+  // to the app many times an hour. Skip it while the last look is recent; the
+  // timer above still catches a new cycle on its own clock.
+  const onVisible = () => { if (Date.now() - at >= VISIBLE_GRACE_MS) refresh(); };
+  document.addEventListener('visibilitychange', onVisible);
   return () => {
     clearInterval(timer);
-    document.removeEventListener('visibilitychange', refresh);
+    document.removeEventListener('visibilitychange', onVisible);
   };
 }

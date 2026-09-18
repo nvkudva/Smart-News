@@ -189,3 +189,42 @@ test('returning to the feed does not re-ask for the world', async ({ page }) => 
   // and coming back is free. /api/saved is its own cost and not this one.
   expect(count(t.api, '/api/world'), `api: ${t.api.join(' ')}`).toBe(0);
 });
+
+test('coming back to the tab soon after costs nothing', async ({ page }) => {
+  const t = await watch(page);
+  await page.goto('/');
+  await settle(page);
+  clear(t);
+  // A tab return used to forget the stamp and ask for it again every time. A
+  // phone comes back to the app many times an hour; each was a Worker request.
+  await page.evaluate(() => {
+    const show = (state: string) => {
+      Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    };
+    show('hidden');
+    show('visible');
+  });
+  await page.waitForTimeout(1_000);
+  expect(t.api, `api: ${t.api.join(' ')}`).toEqual([]);
+});
+
+test('hovering a story the feed does not hold costs nothing', async ({ page }) => {
+  const t = await watch(page);
+  await page.goto('/');
+  await settle(page);
+  clear(t);
+  // StoryWarm preloads the story route on hover. For a story in the held feed
+  // the loader answers locally; for any other it would ask /api/story - a
+  // Worker request spent on a pointer that may never click.
+  await page.evaluate(() => {
+    const a = document.createElement('a');
+    a.href = '/story/zzz-not-in-the-feed';
+    a.textContent = 'ghost';
+    a.style.cssText = 'position:fixed;top:120px;left:20px;z-index:99999;padding:20px';
+    document.body.appendChild(a);
+  });
+  await page.hover('a[href="/story/zzz-not-in-the-feed"]');
+  await page.waitForTimeout(600);
+  expect(count(t.api, '/api/story'), `api: ${t.api.join(' ')}`).toBe(0);
+});

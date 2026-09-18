@@ -1,6 +1,8 @@
 
 import { useEffect } from 'react';
 import { useRouter } from '@tanstack/react-router';
+import { readEntry } from '../lib/store';
+import { storyFrom, type World } from '../lib/world';
 
 /** Long enough that a pointer crossing a grid on its way somewhere else does
  *  not warm every card it passes over; short enough to be finished before a
@@ -38,12 +40,18 @@ export function StoryWarm() {
 
     const go = (href: string) => {
       if (warmed.has(href) || warmed.size >= MAX_WARM) return;
-      warmed.add(href);
-      // preloadRoute runs the route's loader, so this warms the story payload
-      // itself and not merely its chunk - which is what router.prefetch could
-      // only do once the server render existed to be fetched.
       const id = decodeURIComponent(href.slice('/story/'.length));
-      void router.preloadRoute({ to: '/story/$id', params: { id } }).catch(() => {});
+      // preloadRoute runs the route's loader, so this warms the story payload
+      // itself and not merely its chunk. Only a story the held feed can answer
+      // is warmed: that is free, where one the loader would have to ask the
+      // server for is a Worker request spent on a hover that may never become
+      // a tap. A local copy from an older cycle misjudges for a few minutes
+      // around a cycle boundary, which is accepted.
+      void readEntry<World>('/api/world').then((held) => {
+        if (!held?.data || !storyFrom(held.data, id) || warmed.has(href)) return;
+        warmed.add(href);
+        void router.preloadRoute({ to: '/story/$id', params: { id } }).catch(() => {});
+      }).catch(() => {});
     };
 
     // A pointer has to settle; a finger landing on a card is already intent.
