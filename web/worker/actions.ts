@@ -1,7 +1,7 @@
 import type { ActionName, Actions } from '../shared/actions';
 import { getPrefs, savePrefs } from './lib/feed';
 import { toggleSaved } from './lib/library';
-import { nearestPlace, searchPlaces } from './lib/places';
+import { getPlaces, nearestPlace, searchPlaces } from './lib/places';
 
 /**
  * The write side, ported from src/app/actions.ts.
@@ -36,9 +36,16 @@ type Impl = {
 async function resolveLabels(labels: string[], have: string[]): Promise<string[]> {
   const ids = [...have];
   const seen = new Set(have);
+  // Labels the ids already account for. Without this, a place the picker sent
+  // with its id was looked up again by name, and searchPlaces answers by
+  // population over the whole gazetteer - so a second Richmond or Hyderabad
+  // could come back, be a new id, and appear on the page as a place the reader
+  // never ticked.
+  const covered = new Set((await getPlaces(have)).flatMap((p) =>
+    [p.name.toLowerCase(), p.label.toLowerCase()]));
   for (const label of labels) {
     const key = label.trim().toLowerCase();
-    if (key.length < 2 || ids.length >= 12) continue;
+    if (key.length < 2 || ids.length >= 12 || covered.has(key)) continue;
     const hit = (await searchPlaces(key, 4))
       .find((p) => p.name.toLowerCase() === key || p.label.toLowerCase() === key);
     if (hit && !seen.has(hit.id)) { ids.push(hit.id); seen.add(hit.id); }
@@ -81,9 +88,12 @@ export const ACTIONS: Impl = {
       ? prefs.hidden.filter((c) => c !== category)
       : [...prefs.hidden, category];
     const categories = off ? prefs.categories : prefs.categories.filter((c) => c !== category);
-    await savePrefs(
-      { ...prefs, hidden, categories: categories.length ? categories : prefs.categories },
-      userId);
+    // Hiding your last interest would leave the ranker nothing to work against,
+    // so it is refused outright rather than written half-way. Saving the old
+    // categories while answering with the empty ones told the control a thing
+    // the row did not say, and the next load took it back.
+    if (categories.length === 0) return { hidden: prefs.hidden, categories: prefs.categories };
+    await savePrefs({ ...prefs, hidden, categories }, userId);
     return { hidden, categories };
   },
 

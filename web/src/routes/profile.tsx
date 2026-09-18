@@ -14,6 +14,13 @@ import { load } from '../lib/load'
 export const Route = createFileRoute('/profile')({
   loader: ({ abortController }) =>
     load<ProfilePayload>('/api/profile', { signal: abortController.signal }),
+  // Every control below seeds its useState from this loader's data, so whatever
+  // it holds at mount is what the reader sees for the life of the visit. Kept
+  // in the router's match cache, that is the answer from the *start of the
+  // previous visit* - the background refetch lands in loaderData and no
+  // useState ever reads it again, so a tick made here came back undone. Nothing
+  // on this page is worth caching anyway: it is the reader's own row.
+  gcTime: 0,
   pendingComponent: () => <PageSkeleton title="Profile" tab="profile" />,
   component: Profile,
 })
@@ -75,7 +82,8 @@ function Profile() {
                 Under a Location heading they read as a profile field and as a
                 request for coverage, which neither of them is. */}
             <CountryPicker country={prefs.country} options={options} />
-            <PlaceChoice initial={picked} options={places} />
+            {/* Places is hidden for now, not removed; see TODO.md. */}
+            {false && <PlaceChoice initial={picked} options={places} />}
           </div>
 
           {/* Each row says what it does inside itself, where the reader is

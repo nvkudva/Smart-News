@@ -2,11 +2,12 @@
 import { useState } from 'react';
 import { NAV_KEY } from '../lib/boot';
 
-export type Placement = 'auto' | 'bottom' | 'side';
+export type Placement = 'auto' | 'bottom' | 'top' | 'side';
 
 const OPTIONS: [Placement, string][] = [
   ['auto', 'Automatic'],
   ['bottom', 'Bottom bar'],
+  ['top', 'Header bar'],
   ['side', 'Side rail'],
 ];
 
@@ -18,7 +19,7 @@ function applyPlacement(v: Placement) {
 function read(): Placement {
   try {
     const v = localStorage.getItem(NAV_KEY);
-    if (v === 'bottom' || v === 'side') return v;
+    if (v === 'bottom' || v === 'top' || v === 'side') return v;
   } catch { /* storage blocked — 'auto' is the right answer anyway */ }
   return 'auto';
 }
@@ -40,7 +41,7 @@ export function NavPlacementControl() {
     <div className="panel">
       <div className="label">Navigation</div>
       <p>Where the bar sits. Automatic puts it at the bottom on a narrow screen
-         and down the left side on a wide one.</p>
+         and in the header on a wide one.</p>
       <div className="chips" role="radiogroup" aria-label="Navigation placement">
         {OPTIONS.map(([value, label]) => (
           <button

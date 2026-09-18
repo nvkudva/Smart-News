@@ -3,13 +3,11 @@ import { useState } from 'react';
 import { paintChrome, resolveMode, MODE_KEY, THEME_KEY } from '../lib/boot';
 
 export type Theme =
-  | 'frost' | 'pastel' | 'aurora' | 'marigold' | 'broadsheet' | 'fjord';
+  | 'frost' | 'pastel' | 'broadsheet' | 'fjord';
 
 const OPTIONS: [Theme, string, string][] = [
   ['frost', 'Frosted', 'White glass over a soft wash. The default.'],
   ['pastel', 'Pastel', 'The same glass, each card tinted by its category.'],
-  ['aurora', 'Aurora', 'The same glass over a lit sky. Violet, magenta, cyan.'],
-  ['marigold', 'Marigold', 'Saffron and indigo. Warm cards, and the page glows at its edges.'],
   ['broadsheet', 'Broadsheet', 'Paper, serif headlines and hairlines instead of cards.'],
   ['fjord', 'Northlight', 'Cold daylight. Flat surfaces, one petrol accent, serif headlines.'],
 ];

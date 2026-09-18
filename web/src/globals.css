@@ -256,9 +256,12 @@ html { background: var(--ground); }
   font-weight: 600; font-style: normal; font-display: swap;
 }
 
+/* html paints --ground; body must not. A body background is opaque over the
+   z-index -1 wash, and only as tall as its content, so on a short page the wash
+   appeared below the content with a hard seam where the body stopped. */
 body {
   padding-top: var(--appbar-h);
-  background: var(--ground);
+  background: transparent;
   color: var(--ink);
   font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -667,6 +670,19 @@ body {
   width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
   color: #fff; filter: drop-shadow(0 1px 4px rgba(0,0,0,.6));
 }
+.reelnav {
+  display: none; position: fixed; z-index: 3; flex-direction: column; gap: 10px;
+  right: max(28px, calc(50% - 280px - 72px)); top: 50%; transform: translateY(-50%);
+}
+.reelnav__btn {
+  width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: var(--ink); background: color-mix(in oklab, var(--ground) 82%, transparent);
+  border: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
+  backdrop-filter: blur(8px); cursor: pointer; transition: background .18s ease, transform .18s ease;
+}
+.reelnav__btn:hover { background: var(--ground); }
+.reelnav__btn:active { transform: scale(.94); }
+.reelnav__btn:disabled { opacity: .3; cursor: default; }
 .reel {
   position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
   display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
@@ -767,59 +783,20 @@ body {
 .reel .savebtn { color: var(--ink); }
 .reel .savebtn[data-saved="true"] { color: var(--accent); }
 
-/* The side-by-side split needs real width: at 1024 the text column still lands
-   near 290px and the headline wraps to five lines, so the stacked layout holds
-   until there is room to do it properly. */
-/* Desktop is not the phone screen stretched. The photograph stops being a
-   full-bleed backdrop with the text lying on top of it and becomes a panel
-   beside the text, both inside the same --content column the feed and the header
-   use, so a reel lands on the app's own two edges rather than the window's. */
+/* Desktop keeps the phone's reel - photograph above, text below, one story a
+   screen - inside a centred column instead of stretched across the window.
+   It fills the height and no more. */
 @media (min-width: 1024px) {
-  .reel {
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr);
-    align-items: center; gap: 44px;
-    width: 100%; max-width: var(--content); margin: 0 auto;
-    /* Clears the header above and the dock below, both of which outrank the
-       stack's z-index and would otherwise sit on the text. */
-    padding: 84px 28px 108px;
-    /* min-height, not height: the unclamped summary is occasionally taller than
-       a laptop screen, and the alternative — letting the text column scroll —
-       puts a second scroll container under the cursor, which then swallows the
-       wheel and the whole stack stops snapping. A tall reel is simply tall. */
-    height: auto; min-height: 100dvh;
-  }
-  .reel__photo {
-    position: relative; inset: auto; order: 2;
-    height: min(66dvh, 580px); border-radius: var(--r-lg); overflow: hidden;
-    box-shadow: var(--shadow);
-  }
-  /* The scrim exists to give the type a ground when it is over the photograph.
-     Side by side, it has one of its own. */
-  .reel__scrim { display: none; }
-  .reel__body {
-    order: 1; padding: 0; gap: 14px; background: none;
-    max-width: none; justify-self: stretch;
-  }
-  .reel__body::before { content: none; }
-  .reel__body h2 { font-size: var(--t-9); }
-  .reel__body p { font-size: var(--t-4); max-width: 46ch; }
-  /* Twenty reels page invisibly on a desktop: there is no thumb travelling and
-     no scrollbar inside a snap container worth reading. The count is the only
-     thing that says the stack has a length and a position in it. */
+  .reel { width: 100%; max-width: 560px; margin: 0 auto; justify-content: flex-start; }
+  /* The photograph is in the flow here, not pinned under a body that hugs the
+     bottom: the text sits directly under the picture, and the empty band that
+     a short summary left between them on a tall window is gone. */
+  .reel__photo { position: relative; inset: auto; flex: 0 0 58%; }
+  .reel__body { max-width: none; padding-bottom: 28px; }
   .reel__count { display: block; }
-}
-
-/* A laptop is wide and short. The gutters are what give way, not the type. */
-@media (min-width: 1024px) and (max-height: 820px) {
-  .reel { padding-block: 72px 96px; }
-  .reel__photo { height: min(62dvh, 520px); }
-}
-
-@media (min-width: 1440px) {
-  .reel { gap: 56px; padding: 88px 28px 112px; }
-  .reel__body h2 { font-size: var(--t-10); }
-  .reel__body p { font-size: var(--t-5); max-width: 44ch; }
-  .reel__photo { height: min(70dvh, 660px); }
+  /* Previous / next beside the column: a wheel tick against mandatory snap is
+     a poor way to turn a page, so desktop gets a control that turns exactly one. */
+  .reelnav { display: flex; }
 }
 
 /* ── Story detail ──────────────────────────────────────────────────────── */
@@ -1538,6 +1515,26 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   }
 }
 
+/* Header bar. The five destinations sit in the app header and the dock goes.
+   This is what a wide screen gets by default; "top" forces it at any width and
+   "bottom" or "side" on a wide screen put the dock back. */
+.appnav { display: none; align-items: center; gap: 2px; min-width: 0; }
+.appnav__link {
+  display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 11px;
+  border-radius: var(--r-md); color: var(--ink-3); text-decoration: none;
+  font-size: var(--t-2); font-weight: 600; white-space: nowrap;
+}
+.appnav__link svg { width: 18px; height: 18px; }
+.appnav__link[aria-current="page"] { color: var(--ink); background: rgba(255,255,255,0.72); }
+:root[data-mode="dark"] .appnav__link[aria-current="page"] { background: rgba(255,255,255,0.10); }
+@media (hover: hover) { .appnav__link:hover { color: var(--ink); } }
+@media (min-width: 1024px) {
+  :root:not([data-nav]) .appnav { display: flex; }
+  :root:not([data-nav]) .tabbar { display: none; }
+}
+:root[data-nav="top"] .appnav { display: flex; }
+:root[data-nav="top"] .tabbar { display: none; }
+
 /* The placement control's own buttons: .chip was written for <label> and <a>,
    neither of which needs a font reset. */
 button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: pointer; }
@@ -1750,103 +1747,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   line-height: 1.55;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Themes E–F — the colour set
-
-   Two themes that spend their budget on colour rather than on restraint.
-   Like B, C and D they take A's geometry and A's grid; unlike them, the
-   palette is the point, so each one names a ground with real chroma in it
-   instead of a near-white that could belong to any of the others.
-
-   Each is one token block per mode plus at most four component rules. The
-   rules are there because a colour alone cannot say "printed" or "drawn" —
-   an offset block shadow, a grid, a hard duotone split are geometry, and
-   geometry is the half of a theme's character that tokens cannot carry.
-   ───────────────────────────────────────────────────────────────────────── */
-
-/* Theme E — Aurora. Frosted Stack with the colour turned up: the same white
-   glass over the same blurred wash, except the wash is now lit rather than
-   suggested. A is a photograph of a cloudy day; this is the same photograph
-   at sunrise. The cards stay translucent, which is the whole reason the
-   colour works — the hue a headline sits on is the sky behind it, not a fill
-   the card was given, so it changes as the reader scrolls past a blob. */
-:root[data-theme="aurora"] {
-  --ground:        oklch(0.942 0.052 285);
-  --ink:           oklch(0.235 0.045 290);
-  --ink-2:         oklch(0.470 0.040 288);
-  --ink-3:         oklch(0.565 0.035 288);
-  --kicker:        oklch(0.520 0.130 300);
-  --kicker-near:   oklch(0.545 0.140 175);
-  --kicker-new:    oklch(0.575 0.180 25);
-  --accent:        oklch(0.550 0.230 300);
-  --reels-accent:  oklch(0.550 0.230 300);
-  --glass:         rgba(255, 255, 255, 0.50);
-  --glass-edge:    rgba(255, 255, 255, 0.82);
-  --glass-warm:    linear-gradient(140deg, rgba(255,255,255,0.74), rgba(252,240,255,0.46));
-  --plate:         linear-gradient(150deg, oklch(0.78 0.160 300), oklch(0.84 0.140 205));
-  /* The lift is tinted, not grey. A neutral shadow under a violet card reads
-     as dirt on the glass; the same shadow in the accent's hue reads as the
-     card floating above something coloured, which is what it is doing. */
-  --shadow:        0 1px 2px oklch(0.45 0.12 300 / 0.10),
-                   0 16px 40px -16px oklch(0.45 0.20 300 / 0.30);
-  --rule:          oklch(0.885 0.030 290);
-  --ring:          oklch(0.550 0.230 300);
-  --bar:           oklch(0.800 0.110 300 / 0.72);
-  --bar-edge:      oklch(0.700 0.150 300 / 0.85);
-  --track:         oklch(0.880 0.040 290);
-}
-/* Bigger, hotter and softer than A's three: at A's 0.06 chroma the wash is a
-   tint you notice only when it is gone, and this theme needs it to be the
-   first thing seen. */
-/* body paints --ground opaquely and .wash sits at z-index -1, so the wash has
-   never actually been on screen. html carries the same ground, so dropping
-   body's fill costs nothing and lets the layer beneath it through. Scoped to
-   the themes that use it rather than fixed globally: the themes above were
-   drawn against a flat ground and are not asking for a sky. */
-:root[data-theme="aurora"] body { background: transparent; }
-:root[data-theme="aurora"] .wash i { width: 560px; height: 560px; filter: blur(96px); }
-:root[data-theme="aurora"] .wash i:nth-child(1) { background: oklch(0.70 0.220 300); opacity: .62; }
-:root[data-theme="aurora"] .wash i:nth-child(2) { background: oklch(0.72 0.215 350); opacity: .58; }
-:root[data-theme="aurora"] .wash i:nth-child(3) { background: oklch(0.76 0.180 200); opacity: .60; }
-
-/* Theme F — Marigold. Heat, and the oldest colour pairing the app's largest
-   readership owns: saffron against indigo. The ground is the dyed cloth and
-   the ink is what was printed on it, which is the reverse of every other
-   theme here, where the ground is paper or night and the colour is applied.
-   Cards are opaque cream, so the wash behind them shows only in the gutters
-   — the page glows at its edges rather than under the words. */
-:root[data-theme="marigold"] {
-  --ground:        oklch(0.922 0.085 82);
-  --ink:           oklch(0.245 0.065 288);
-  --ink-2:         oklch(0.460 0.060 290);
-  --ink-3:         oklch(0.570 0.050 290);
-  --kicker:        oklch(0.530 0.180 35);
-  --kicker-near:   oklch(0.500 0.130 150);
-  --kicker-new:    oklch(0.520 0.230 355);
-  --accent:        oklch(0.500 0.215 15);
-  --reels-accent:  oklch(0.500 0.215 15);
-  --glass:         oklch(0.985 0.022 85);
-  --glass-edge:    oklch(0.860 0.060 60);
-  --glass-warm:    none;
-  --plate:         linear-gradient(150deg, oklch(0.74 0.180 55), oklch(0.68 0.200 10));
-  --shadow:        0 1px 2px oklch(0.50 0.12 40 / 0.10),
-                   0 12px 30px -14px oklch(0.45 0.18 30 / 0.30);
-  --rule:          oklch(0.870 0.045 65);
-  --ring:          oklch(0.500 0.215 15);
-  --bar:           oklch(0.880 0.105 68 / 0.92);
-  --bar-edge:      oklch(0.800 0.110 55);
-  --track:         oklch(0.885 0.055 70);
-}
-:root[data-theme="marigold"] .card {
-  border-radius: 16px;
-  -webkit-backdrop-filter: none; backdrop-filter: none;
-}
-:root[data-theme="marigold"] body { background: transparent; }
-:root[data-theme="marigold"] .wash i { width: 520px; height: 520px; filter: blur(92px); }
-:root[data-theme="marigold"] .wash i:nth-child(1) { background: oklch(0.80 0.180 70); opacity: .72; }
-:root[data-theme="marigold"] .wash i:nth-child(2) { background: oklch(0.68 0.210 22); opacity: .52; }
-:root[data-theme="marigold"] .wash i:nth-child(3) { background: oklch(0.70 0.200 350); opacity: .44; }
-
 
 /* ─────────────────────────────────────────────────────────────────────────
    Dark mode
@@ -1973,69 +1873,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* A card is a surface here, not a sheet of lit glass, in either mode. */
 :root[data-theme="fjord"][data-mode="dark"] .card { background: var(--glass); }
 
-/* Aurora after dark: the wash is no longer light coming through cloud, it is
-   the only light in the room. The glass goes to a tenth of white and its edge
-   takes the accent's hue, so a card is a pane with a lit rim rather than a
-   grey rectangle. */
-:root[data-theme="aurora"][data-mode="dark"] {
-  --ground:        oklch(0.155 0.045 290);
-  --ink:           oklch(0.970 0.010 290);
-  --ink-2:         oklch(0.760 0.030 290);
-  --ink-3:         oklch(0.660 0.030 290);
-  --kicker:        oklch(0.800 0.140 305);
-  --kicker-near:   oklch(0.840 0.150 175);
-  --kicker-new:    oklch(0.850 0.150 35);
-  --accent:        oklch(0.800 0.180 305);
-  --on-accent:     oklch(0.160 0.050 300);
-  --ring:          oklch(0.800 0.180 305);
-  --glass:         rgba(255, 255, 255, 0.08);
-  --glass-edge:    oklch(0.70 0.160 300 / 0.32);
-  --glass-warm:    linear-gradient(140deg, oklch(0.80 0.14 300 / 0.16), rgba(255,255,255,0.05));
-  --plate:         linear-gradient(150deg, oklch(0.42 0.160 300), oklch(0.36 0.130 210));
-  --shadow:        0 20px 50px -24px oklch(0.30 0.200 300 / 0.85);
-  --rule:          oklch(0.60 0.100 300 / 0.22);
-  --bar:           oklch(0.220 0.070 295 / 0.78);
-  --bar-edge:      oklch(0.500 0.130 300 / 0.55);
-  --track:         oklch(0.45 0.090 300 / 0.35);
-}
-:root[data-theme="aurora"][data-mode="dark"] .card {
-  background: linear-gradient(155deg, oklch(0.75 0.14 300 / 0.13), oklch(0.70 0.12 200 / 0.05));
-}
-:root[data-theme="aurora"][data-mode="dark"] .wash i:nth-child(1) { background: oklch(0.62 0.230 300); opacity: .34; }
-:root[data-theme="aurora"][data-mode="dark"] .wash i:nth-child(2) { background: oklch(0.60 0.230 350); opacity: .30; }
-:root[data-theme="aurora"][data-mode="dark"] .wash i:nth-child(3) { background: oklch(0.66 0.180 200); opacity: .30; }
-
-/* Marigold at night keeps the pairing and swaps which half is the ground:
-   indigo takes the page and saffron becomes the light on it. */
-:root[data-theme="marigold"][data-mode="dark"] {
-  --ground:        oklch(0.165 0.050 295);
-  --ink:           oklch(0.965 0.020 85);
-  --ink-2:         oklch(0.760 0.035 80);
-  --ink-3:         oklch(0.650 0.035 80);
-  --kicker:        oklch(0.800 0.160 65);
-  --kicker-near:   oklch(0.820 0.140 150);
-  --kicker-new:    oklch(0.750 0.200 355);
-  --accent:        oklch(0.800 0.170 60);
-  --on-accent:     oklch(0.200 0.050 40);
-  --ring:          oklch(0.800 0.170 60);
-  --glass:         oklch(0.225 0.055 295);
-  --glass-edge:    oklch(0.360 0.080 300);
-  --glass-warm:    none;
-  --plate:         linear-gradient(150deg, oklch(0.50 0.160 50), oklch(0.42 0.170 10));
-  --shadow:        0 18px 44px -22px oklch(0.10 0.060 300 / 0.80);
-  --rule:          oklch(0.340 0.060 298);
-  --bar:           oklch(0.205 0.050 295 / 0.92);
-  --bar-edge:      oklch(0.380 0.080 300);
-  --track:         oklch(0.330 0.060 298);
-}
-:root[data-theme="marigold"][data-mode="dark"] .card { background: var(--glass); }
-:root[data-theme="marigold"][data-mode="dark"] .panel {
-  background: oklch(0.215 0.050 295); border-color: oklch(0.340 0.065 298);
-}
-:root[data-theme="marigold"][data-mode="dark"] .wash { opacity: 1; }
-:root[data-theme="marigold"][data-mode="dark"] .wash i:nth-child(1) { background: oklch(0.68 0.190 72); opacity: .42; }
-:root[data-theme="marigold"][data-mode="dark"] .wash i:nth-child(2) { background: oklch(0.58 0.210 22); opacity: .34; }
-:root[data-theme="marigold"][data-mode="dark"] .wash i:nth-child(3) { background: oklch(0.56 0.200 350); opacity: .28; }
 :root[data-mode="dark"] .wash i:nth-child(1) { background: oklch(0.62 0.14 62); opacity: .30; }
 :root[data-mode="dark"] .wash i:nth-child(2) { background: oklch(0.50 0.16 18); opacity: .30; }
 :root[data-mode="dark"] .wash i:nth-child(3) { background: oklch(0.52 0.09 108); opacity: .26; }
@@ -2133,25 +1970,27 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* Places keep the tiles' grid and tokens but drop the fill and the shadow: a
    place is a filter over the same stories, not another subject, and a hairline
    row says that without a second vocabulary of shapes. */
-.exploreplaces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-@media (min-width: 600px) { .exploreplaces { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
+.exploreplaces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+@media (min-width: 600px) { .exploreplaces { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
 .exploreplace {
-  display: flex; align-items: center; gap: 9px; min-height: 52px;
-  padding: 8px 12px; border-radius: var(--r-md); text-decoration: none;
+  display: flex; align-items: center; gap: 6px; min-height: 36px;
+  padding: 4px 9px; border-radius: var(--r-md); text-decoration: none;
   background: var(--glass); border: 1px solid var(--rule); color: var(--ink);
 }
+/* Subjects share the place row and take the topic's hue as a left rule. */
+.exploresub { border-left: 3px solid oklch(0.62 0.15 var(--cat-h) / 0.75); }
 .exploreplace__pin  { flex: none; color: var(--accent); }
 .exploreplace__name { display: flex; flex-direction: column; min-width: 0; }
 .exploreplace__name b {
-  font-size: var(--t-3); font-weight: 650; letter-spacing: -0.012em;
+  font-size: var(--t-2); font-weight: 650; letter-spacing: -0.012em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .exploreplace__name small {
-  font-size: var(--t-1); font-weight: 500; color: var(--ink-3);
+  font-size: 0.625rem; font-weight: 500; color: var(--ink-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .exploreplace__n {
-  margin-left: auto; font-size: var(--t-2); font-weight: 650;
+  margin-left: auto; font-size: var(--t-1); font-weight: 650;
   font-variant-numeric: tabular-nums; color: var(--ink-3);
 }
 
@@ -2164,7 +2003,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .exploretile:focus-visible, .exploreplace:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
-@media (pointer: coarse) { .exploreplace { min-height: 56px; } }
+@media (pointer: coarse) { .exploreplace { min-height: 44px; } }
 
 /* ── Settings ──────────────────────────────────────────────────────────────
    A grouped inset list. Rows share one surface and are parted by a hairline
@@ -2252,7 +2091,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   }
 }
 .setgroup > .panel > .chips > .chip {
-  flex: 1 1 auto; justify-content: center;
+  flex: 1 1 auto; justify-content: center; font-size: var(--t-1);
   height: 34px; padding: 0 10px; border-radius: calc(var(--r-md) - 3px);
   background: transparent; border-color: transparent; color: var(--ink-2);
 }
@@ -2304,9 +2143,24 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .setchips--wide .chip { white-space: nowrap; }
 .setchips--wide .chip span { overflow: hidden; text-overflow: ellipsis; }
 
-.setchips .chip { justify-content: flex-start; }
-.setchips .chip { cursor: pointer; font: inherit; font-size: var(--t-2); font-weight: 600; }
-.setchips .chip input { margin: 0; accent-color: var(--accent); }
+.setchips .chip { position: relative; justify-content: flex-start; }
+.setchips .chip { cursor: pointer; font: inherit; font-size: var(--t-1); font-weight: 600; }
+/* The native box is gone, not merely restyled: the chip itself is the tick, and
+   a square sitting inside a pill said the same thing twice. Taken out of layout
+   rather than `display: none` - the input still has to be focusable, reachable
+   by keyboard and visible to a screen reader, which display:none ends. The ring
+   it would have worn moves to the chip through :has(). */
+.setchips .chip input {
+  position: absolute; width: 1px; height: 1px; margin: 0;
+  opacity: 0; pointer-events: none;
+}
+.setchips .chip:has(input:focus-visible) {
+  outline: 2px solid var(--ring); outline-offset: 2px;
+}
+/* A greyed native box was what said "not this one" while the save was in
+   flight, or once twelve places were picked. With the box gone the chip has to
+   say it. */
+.setchips .chip:has(input:disabled) { opacity: .55; cursor: default; }
 /* Hiding is the destructive half of the pair, so its on-state is not the accent
    the interests use — an accent here would read as "chosen", which is the
    opposite of what it says. */
@@ -2314,16 +2168,28 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   background: color-mix(in oklab, var(--ink) 82%, transparent);
   border-color: transparent; color: var(--ground);
 }
-.setselect {
-  margin-left: auto; min-width: 180px; max-width: 260px;
-  cursor: pointer; appearance: none;
-  padding-right: 30px;
-  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
-                    linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-size: 5px 5px, 5px 5px;
-  background-position: right 15px center, right 10px center;
-  background-repeat: no-repeat;
+/* A row whose value is a native select: closed, it reads like the .setdrop
+   rows beside it - title, value on the right, the same chevron - and a click
+   anywhere on the value or the chevron opens the platform's own picker.
+   The chevron is the one .setdrop > summary::after draws, to the pixel; it is
+   positioned rather than a flex item, and takes no pointer events, so the
+   select's own box runs underneath it and the arrow opens the list. */
+.setrow--select { position: relative; cursor: pointer; }
+.setrow__select {
+  flex: 1 1 auto; min-width: 0;
+  appearance: none; border: 0; background: none; cursor: pointer;
+  padding: 0 23px 0 0; font: inherit; font-size: var(--t-2); color: var(--ink-3);
+  text-align: right; text-align-last: right;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.setrow--select::after {
+  content: ''; position: absolute; right: 14px; top: calc(50% - 3.5px);
+  width: 7px; height: 7px; pointer-events: none;
+  border-right: 1.8px solid var(--ink-3); border-bottom: 1.8px solid var(--ink-3);
+  transform: rotate(45deg) translate(-2px, -2px);
+}
+.setrow__select option { text-align: left; color: var(--ink); }
+.setrow__select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 3px; }
 
 .setinput {
   height: 36px; padding: 0 11px; border-radius: var(--r-sm);
@@ -2414,8 +2280,10 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .story__topbar { display: flex; align-items: center; gap: 4px; padding: 4px 0 6px; }
 .story__back {
   display: flex; align-items: center; justify-content: center;
-  width: 44px; height: 44px; margin-left: -12px; color: var(--accent);
+  width: 40px; height: 40px; margin-left: -10px; border-radius: 50%; color: var(--ink);
+  transition: background .18s ease;
 }
+.story__back:hover { background: color-mix(in oklab, var(--ink) 8%, transparent); }
 /* One line, and it must stay one line: the dateline gives up characters from
    its end before the bookmark is pushed off the row. */
 .story__meta {
@@ -2427,6 +2295,18 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .story__meta > span { overflow: hidden; text-overflow: ellipsis; }
 .story__meta span.sep { opacity: .4; flex: 0 0 auto; }
 .story__save { margin-left: auto; flex: 0 0 auto; }
+/* Next through the story's own section, beside the bookmark. Desktop only:
+   the phone has back and a swipe, and the row has no room. */
+.story__nav { display: none; margin-left: auto; flex: 0 0 auto; gap: 2px; }
+.story__nav + .story__save { margin-left: 4px; }
+.story__nav__btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%; color: var(--ink);
+  transition: background .18s ease;
+}
+.story__nav__btn--next { transform: scaleX(-1); }
+a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transparent); }
+@media (min-width: 1024px) { .story__nav { display: flex; } }
 
 /* The summary is the story, so it is set on the page rather than in a box.
    Glass, a 20px radius and a shadow gave it the same chrome as the coverage
@@ -2532,21 +2412,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 @media (min-width: 1024px) {
   .story__rail { flex-direction: row; align-items: baseline; gap: 18px; flex-wrap: wrap; }
 }
-
-/* --- Reported by one outlet -------------------------------------------- */
-/* Deliberately quieter than a StoryCard: nothing here is corroborated, and it
-   must not compete with the feed for attention. Text only, no image, hairline
-   rules instead of a card, and the outlet's name kept with the text. */
-.singlenote { margin: -2px 0 12px; color: var(--ink-3); font-size: var(--t-3, 13px); }
-.singlelist { border-top: 1px solid var(--rule); }
-.single { display: block; padding: 12px 2px; color: inherit; text-decoration: none;
-          border-bottom: 1px solid var(--rule); }
-.single:hover .singlehead { text-decoration: underline; }
-.singlehead { color: var(--ink); font-weight: 600; line-height: 1.3; }
-.singlelead { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.45;
-              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.singlemeta { margin-top: 6px; color: var(--ink-3); font-size: 12px;
-              text-transform: uppercase; letter-spacing: .04em; }
 
 /* Build and data stamps, at the foot of the profile. Small and quiet: it is a
    diagnostic, not something a reader needs, but it has to be readable when

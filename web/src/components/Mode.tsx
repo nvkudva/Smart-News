@@ -5,25 +5,24 @@ import { MODE_KEY, paintChrome, resolveMode, type Mode } from '../lib/boot';
 type Stored = Mode | 'auto';
 
 /**
- * Light and dark are a second axis over the four themes, not a fifth theme: a
+ * Light and dark are a second axis over the themes, not a theme of their own: a
  * reader picks a palette and, separately, whether it is read off paper or off a
- * lit screen. BOOT resolves the pair before first paint; everything here is for
- * changing it afterwards.
+ * lit screen. Dark is what they get until they say otherwise. BOOT resolves the
+ * pair before first paint; everything here is for changing it afterwards.
  */
 function read(): Stored {
   try {
     const v = localStorage.getItem(MODE_KEY);
-    return v === 'light' || v === 'dark' ? v : 'auto';
-  } catch { return 'auto'; }
+    return v === 'light' || v === 'dark' || v === 'auto' ? v : 'dark';
+  } catch { return 'dark'; }
 }
 
 function apply(stored: Stored) {
-  const mode = resolveMode(stored === 'auto' ? null : stored);
+  const mode = resolveMode(stored);
   document.documentElement.dataset.mode = mode;
   paintChrome(document.documentElement.dataset.theme ?? 'frost', mode);
   try {
-    if (stored === 'auto') localStorage.removeItem(MODE_KEY);
-    else localStorage.setItem(MODE_KEY, stored);
+    localStorage.setItem(MODE_KEY, stored);
   } catch { /* the mode still applies for this page's lifetime */ }
 }
 
@@ -92,7 +91,7 @@ export function ModeToggle() {
   // ways to say what resolveMode already answers, and the reason the icon was
   // briefly wrong on first paint. 'auto' has to go through resolveMode because
   // the stored value alone does not say which way it resolved.
-  const dark = resolveMode(stored === 'auto' ? null : stored) === 'dark';
+  const dark = resolveMode(stored) === 'dark';
 
   return (
     <button
@@ -120,7 +119,7 @@ export function ModeControl() {
   return (
     <div className="panel">
       <div className="label">Appearance</div>
-      <p>Every theme reads both ways. Automatic follows the device.</p>
+      <p>Every theme reads both ways. Dark unless you say otherwise; automatic follows the device.</p>
       <div className="chips" role="radiogroup" aria-label="Appearance">
         {OPTIONS.map(([value, label]) => (
           <button

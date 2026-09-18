@@ -27,6 +27,24 @@ export function CategoryTile({ name, stories, lead }: {
   );
 }
 
+/** One subject inside a topic - Cricket, AI, Elections. The place tile's
+ *  shape, with the topic's hue on the pin's side, opening that section
+ *  already filtered to it. */
+export function SubTile({ cat, category, name, slug: sub, count }: {
+  cat: string; category: string; name: string; slug: string; count: number;
+}) {
+  return (
+    <Link to="/c/$cat" params={{ cat }} search={{ sub }}
+          className="exploreplace exploresub exploretint" data-cat={cat} title={`${name} · ${category}`}>
+      <span className="exploreplace__name">
+        <b>{name}</b>
+        <small>{category}</small>
+      </span>
+      <span className="exploreplace__n">{count}</span>
+    </Link>
+  );
+}
+
 const KIND: Record<string, string> = { city: 'City', admin1: 'Region', country: 'Country' };
 
 /* Gazetteer labels are already qualified — "New Delhi, Delhi, India" — and at

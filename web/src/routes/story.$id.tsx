@@ -16,6 +16,8 @@ import { heldWorld, sectionFrom, storyFrom } from '../lib/world'
 /** What the page renders, whichever of the two sources answered. */
 type StoryView = {
   cluster: Story; outlets: Outlet[]; related: Story[]; coverage: Coverage; saved: boolean;
+  /** The story after this one in its own section, when the world holds it. */
+  next: string | null;
 }
 
 /**
@@ -33,12 +35,15 @@ function fromWorld(id: string): Promise<StoryView | null> {
   return Promise.all([heldWorld(), savedIds()]).then(([w, saved]) => {
     const s = w && storyFrom(w, id)
     if (!s) return null
-    const related = sectionFrom(w, s.cslug).stories
+    const section = sectionFrom(w, s.cslug).stories
+    const related = section
       .filter((r) => r.id !== id)
       .sort((a, b) => b.last_seen - a.last_seen)
       .slice(0, 6)
+    const at = section.findIndex((r) => r.id === id)
     return { cluster: s, outlets: s.outlets, related, coverage: coverageOf(s.outlets),
-             saved: saved.has(id) }
+             saved: saved.has(id),
+             next: at >= 0 && at < section.length - 1 ? section[at + 1]!.id : null }
   })
 }
 
@@ -48,7 +53,8 @@ async function fromServer(id: string, signal: AbortSignal): Promise<StoryView> {
   const p = await load<StoryPayload>(`/api/story/${encodeURIComponent(id)}`, { signal })
   const outlets = [...new Map(p.articles.map((a) => [a.source, a])).values()]
     .map((a) => ({ source: a.source, url: a.url, bias: a.bias }))
-  return { cluster: p.cluster, outlets, related: p.related, coverage: p.coverage, saved: p.saved }
+  return { cluster: p.cluster, outlets, related: p.related, coverage: p.coverage, saved: p.saved,
+           next: null }
 }
 
 /**
@@ -97,7 +103,7 @@ export const Route = createFileRoute('/story/$id')({
 })
 
 function StoryPage() {
-  const { cluster, outlets, related, coverage, saved } = Route.useLoaderData()
+  const { cluster, outlets, related, coverage, saved, next } = Route.useLoaderData()
   // Two sentences per paragraph reads better than one wall of prose.
   const paragraphs = cluster.crux.split(/(?<=\.)\s+(?=[A-Z])/)
     .reduce<string[][]>((acc, s, i) => { (acc[Math.floor(i / 2)] ??= []).push(s); return acc }, [])
@@ -128,6 +134,11 @@ function StoryPage() {
             <span className="sep">·</span>
             <span>{outlets.length} outlet{outlets.length === 1 ? '' : 's'}</span>
           </div>
+          {next && (
+            <nav className="story__nav" aria-label="Next story">
+              <Link to="/story/$id" params={{ id: next }} className="story__nav__btn story__nav__btn--next" aria-label="Next story"><Back /></Link>
+            </nav>
+          )}
           <div className="story__save">
             <SaveButton clusterId={cluster.id} initial={saved} iconOnly />
           </div>

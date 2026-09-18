@@ -12,6 +12,7 @@
     ".claude": true
   },
   "secondaryExplorer.paths": [
-    "${userHome}"
+    "${userHome}",
+    "${workspaceFolders[0]}"
   ]
 }

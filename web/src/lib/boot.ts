@@ -15,11 +15,12 @@ export { NAV_KEY, HIDDEN_KEY, THEME_KEY, MODE_KEY } from '../../shared/boot';
 
 import { THEME_CHROME } from '../../shared/boot';
 
-/** 'light' | 'dark' | null, where null means follow the system. */
+/** 'light' | 'dark' | 'auto', where anything else means the default, dark. */
 export type Mode = 'light' | 'dark';
 
 export function resolveMode(stored: string | null): Mode {
   if (stored === 'light' || stored === 'dark') return stored;
+  if (stored !== 'auto') return 'dark';
   return typeof matchMedia === 'function'
     && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }

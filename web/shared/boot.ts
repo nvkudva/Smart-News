@@ -39,34 +39,32 @@ export const MODE_KEY = 'sn_mode';
 export const THEME_CHROME: Record<string, string> = {
   frost: '#f7f7fa',
   pastel: '#f8f8fa',
-  aurora: '#e7e8ff',
-  marigold: '#ffe0a4',
   broadsheet: '#f9f6f0',
   fjord: '#e9efef',
   'frost-dark': '#15171c',
   'pastel-dark': '#08090e',
-  'aurora-dark': '#0c081e',
-  'marigold-dark': '#100921',
   'broadsheet-dark': '#141310',
   'fjord-dark': '#0d1618',
 };
 
 /**
  * The mode is resolved to a literal 'light' or 'dark' here rather than left to
- * a media query in the stylesheet. Six themes times two modes would otherwise
+ * a media query in the stylesheet. Four themes times two modes would otherwise
  * need every dark token set written twice — once under [data-mode="dark"] and
  * again under the auto case's @media — and the two copies would drift.
  */
 export const BOOT =
   `try{var d=document.documentElement,n=localStorage.getItem('${NAV_KEY}');` +
-  `if(n==='bottom'||n==='side')d.dataset.nav=n;` +
+  `if(n==='bottom'||n==='top'||n==='side')d.dataset.nav=n;` +
   `var t=localStorage.getItem('${THEME_KEY}')||'frost';` +
   // A theme that has since been removed would otherwise be stamped onto <html>
   // with no stylesheet behind it. Checked against the one list that knows.
   `if(!${JSON.stringify(THEME_CHROME)}[t])t='frost';` +
   `if(t!=='frost')d.dataset.theme=t;` +
   `var s=localStorage.getItem('${MODE_KEY}');` +
-  `var k=(s==='light'||s==='dark')?s:` +
+  // Dark is the default. The reader following the device is a stored choice of
+  // its own ('auto'), not the absence of one.
+  `var k=(s==='light'||s==='dark')?s:s!=='auto'?'dark':` +
   `(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');` +
   `d.dataset.mode=k;` +
   `var h=localStorage.getItem('${HIDDEN_KEY}');if(h)d.dataset.hidden=h;` +

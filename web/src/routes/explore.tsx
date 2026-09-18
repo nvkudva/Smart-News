@@ -1,10 +1,16 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import type { ExplorePayload } from '../../shared/types'
 import { PageSkeleton } from '../components/PageSkeleton'
-import { PlaceTile } from '../components/ExploreTiles'
+import { PlaceTile, SubTile } from '../components/ExploreTiles'
 import { StoryCard, variantFor } from '../components/StoryCard'
 import { TabBar } from '../components/TabBar'
 import { load } from '../lib/load'
+import { loadWorld } from '../lib/world'
+import { SCOPE_SUBS } from '../../shared/taxonomy'
+
+/** Local / National / International / Others ride along in every topic's
+ *  subs as scope filters; they are places to the reader, not subjects. */
+const SCOPES = new Set(SCOPE_SUBS.map((s) => s.slug))
 
 /**
  * Two pages behind one path, as the Next version had it: the facet index when
@@ -23,22 +29,35 @@ export const Route = createFileRoute('/explore')({
     place: typeof search.place === 'string' ? search.place : undefined,
   }),
   loaderDeps: ({ search }) => search,
-  loader: ({ deps, abortController }) => {
+  loader: async ({ deps, abortController }) => {
     const q = new URLSearchParams()
     if (deps.category) q.set('category', deps.category)
     if (deps.country) q.set('country', deps.country)
     if (deps.place) q.set('place', deps.place)
     const qs = q.toString()
-    return load<ExplorePayload>(qs ? `/api/explore?${qs}` : '/api/explore', {
+    const data = await load<ExplorePayload>(qs ? `/api/explore?${qs}` : '/api/explore', {
       persist: true, signal: abortController.signal,
     })
+    if ('stories' in data) return { data, subs: [] as SubTileData[] }
+    // The subjects inside each topic, with today's counts, come from the world
+    // the feed already holds: a keyword bucket with nothing in it is not a way in.
+    const w = await loadWorld()
+    const subs: SubTileData[] = Object.entries(w.sections)
+      .filter(([, sec]) => sec.kind === 'topic')
+      .flatMap(([cat, sec]) => sec.subs
+        .filter((sub) => sub.count > 0 && !SCOPES.has(sub.slug))
+        .map((sub) => ({ cat, category: sec.name, name: sub.name, slug: sub.slug, count: sub.count })))
+      .sort((a, b) => b.count - a.count)
+    return { data, subs }
   },
   pendingComponent: () => <PageSkeleton title="Explore" tab="explore" />,
   component: Explore,
 })
 
+type SubTileData = { cat: string; category: string; name: string; slug: string; count: number }
+
 function Explore() {
-  const data = Route.useLoaderData()
+  const { data, subs } = Route.useLoaderData()
 
   // The filtered shape carries `stories`; the index carries the two facet
   // lists. Narrowing on the field rather than on the search params means the
@@ -62,14 +81,14 @@ function Explore() {
     )
   }
 
-  const { places, single = [] } = data
+  const { places } = data
 
   return (
     <>
       <main className="shell">
         <div className="pagehead">
           <h1>Explore</h1>
-          <p>Where the news happened, and what only one outlet ran.</p>
+          <p>What the news is about, and where it happened.</p>
         </div>
 
         <div className="explorestack">
@@ -85,21 +104,11 @@ function Explore() {
             </section>
           )}
 
-          {single.length > 0 && (
+          {subs.length > 0 && (
             <section className="exploresec">
-              <div className="label">Reported by one outlet</div>
-              <p className="singlenote">
-                Nobody else has run these yet, so they are not on the feed. Shown
-                as the outlet wrote them.
-              </p>
-              <div className="singlelist">
-                {single.map((r) => (
-                  <a key={r.id} className="single" href={r.url} target="_blank" rel="noreferrer">
-                    <div className="singlehead">{r.title}</div>
-                    {r.lead && <p className="singlelead">{r.lead}</p>}
-                    <div className="singlemeta">{r.source} · {r.category}</div>
-                  </a>
-                ))}
+              <div className="label">Subjects</div>
+              <div className="exploreplaces">
+                {subs.map((t) => <SubTile key={`${t.cat}/${t.slug}`} {...t} />)}
               </div>
             </section>
           )}

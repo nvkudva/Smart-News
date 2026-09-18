@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { HeaderAside } from './HeaderAside';
 import { Logo } from './Logo';
+import { Bookmark, Compass, Home, Person } from './icons';
 
 /**
  * The wordmark used to live in the desktop rail. With the rail gone and the bar
@@ -21,8 +22,31 @@ export function AppHeader() {
           <Logo size={31} tone="ink" />
           <span>smartnews</span>
         </Link>
+        <HeaderNav />
         <HeaderAside />
       </div>
     </header>
+  );
+}
+
+/**
+ * The same five destinations as the dock, in the header. Shown on a wide screen
+ * by default and wherever the reader picks "Header bar"; the dock hides in step
+ * (see the data-nav block in globals.css). Each Link marks itself current, so
+ * the header needs no active prop from the route the way TabBar does.
+ */
+function HeaderNav() {
+  const item = (to: string, label: string, icon: React.ReactNode, exact = false) => (
+    <Link to={to} className="appnav__link" activeOptions={{ exact }}
+          activeProps={{ 'aria-current': 'page' }}>{icon}<span>{label}</span></Link>
+  );
+  return (
+    <nav className="appnav" aria-label="Primary">
+      {item('/', 'Home', <Home />, true)}
+      {item('/explore', 'Explore', <Compass />)}
+      {item('/reels', 'Reels', <Logo size={18} tone="ink" tight />)}
+      {item('/saved', 'Saved', <Bookmark />)}
+      {item('/profile', 'Profile', <Person />)}
+    </nav>
   );
 }
