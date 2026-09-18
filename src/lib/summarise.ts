@@ -105,6 +105,25 @@ const FRAMING_SCHEMA: JsonSchema = {
   },
 };
 
+/**
+ * A framing is only kept for a lean that has an outlet on the story. Small
+ * models fill every framing_<lean> they are shown, and file a sentence under
+ * the wrong one: a story carried by two right-leaning papers came back with a
+ * "left" line, and one outlet's single account came back as three near-identical
+ * sides. On a story with exactly one lean the sentence is that lean's, whatever
+ * key it arrived under, so it is filed there.
+ */
+export function keepPresent(f: Record<Bias, string | null>, present: Set<Bias>): Record<Bias, string | null> {
+  const out: Record<Bias, string | null> = { left: null, centre: null, right: null };
+  if (present.size === 1) {
+    const [only] = present;
+    out[only] = f[only] ?? f.centre ?? f.left ?? f.right;
+  } else {
+    for (const b of present) out[b] = f[b];
+  }
+  return out;
+}
+
 export async function summariseCluster(members: Member[], signal?: AbortSignal): Promise<LlmOutcome<Summary>> {
   // One article per source, longest body first: diverse and substantive.
   const bySource = new Map<string, Member>();
@@ -634,9 +653,13 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
     // A one-sentence field the model padded to a paragraph is still useful, but
     // an empty string is not — it renders as a side that said nothing.
     const framing = (v: unknown) => (typeof v === 'string' && v.trim().length > 15 ? v.trim() : null);
+    const framed = keepPresent(
+      { left: framing(s.framing_left), centre: framing(s.framing_centre), right: framing(s.framing_right) },
+      new Set(members.map((m) => m.bias).filter((b): b is Bias => !!b)),
+    );
     save.run(s.headline, s.crux, category, place, resolved.country, resolved.place_id,
              Math.max(1, Math.min(5, Math.round(s.importance) || 3)),
-             framing(s.framing_left), framing(s.framing_centre), framing(s.framing_right),
+             framed.left, framed.centre, framed.right,
              Date.now(), t.article_count, t.id);
     resetAttempts.run(t.id);
     markDirty('cluster', [t.id]);
