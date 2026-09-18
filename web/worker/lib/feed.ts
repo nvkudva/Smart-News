@@ -444,29 +444,16 @@ export async function getStory(id: string) {
   const cluster = withPlaceLabels(await d.all<Story>('SELECT * FROM clusters WHERE id = ?', [id]))[0];
   if (!cluster) return null;
 
-  // Issued together. Neither needs the other's answer — related needs only the
-  // category, which the cluster row already gave us — and each is a round trip
-  // to a database on the far side of the network, so awaiting them in turn was
-  // paying that distance twice to learn two unrelated facts.
-  const [articles, related] = await Promise.all([
-    d.all<Article>(
-      // Title-tier outlets are left out: we read their front page, never their
-      // article, so listing them would credit reporting we never saw and would
-      // put them into the bias split coverageOf derives from this very list.
-      `SELECT a.title, a.url, a.published_at, s.name AS source, s.homepage, s.bias
-         FROM articles a JOIN sources s ON s.id = a.source_id
-        WHERE a.cluster_id = ? AND COALESCE(s.tier, 'full') <> 'title'
-        ORDER BY a.published_at ASC`, [id]),
-    // The whole row, not four columns: the related list renders real cards now,
-    // so it needs the crux, the photograph and the place the card foot reads.
-    // Six of them on one indexed category filter is not worth economising on.
-    d.all<Story>(
-      `SELECT * FROM clusters
-        WHERE category = ? AND id != ? AND headline IS NOT NULL
-        ORDER BY last_seen DESC LIMIT 6`, [cluster.category, id]),
-  ]);
+  // Related is not asked for here any more: the story's topic section is
+  // already memoised on the cycle stamp, and read.ts takes six from it.
+  const articles = await d.all<Article>(
+    // Title-tier outlets are left out: we read their front page, never their
+    // article, so listing them would credit reporting we never saw and would
+    // put them into the bias split coverageOf derives from this very list.
+    `SELECT a.title, a.url, a.published_at, s.name AS source, s.homepage, s.bias
+       FROM articles a JOIN sources s ON s.id = a.source_id
+      WHERE a.cluster_id = ? AND COALESCE(s.tier, 'full') <> 'title'
+      ORDER BY a.published_at ASC`, [id]);
 
-  return {
-    cluster, articles, related: withPlaceLabels(related), coverage: coverageOf(articles),
-  };
+  return { cluster, articles, coverage: coverageOf(articles) };
 }

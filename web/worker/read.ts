@@ -10,7 +10,7 @@ import {
   getReels, getSaved, getSavedIds, getSingleReports, getStats, isSaved,
 } from './lib/library';
 import { getPlaces } from './lib/places';
-import { countriesWithNews } from './lib/sections';
+import { countriesWithNews, getSection } from './lib/sections';
 import { getWorld } from './lib/world';
 
 /**
@@ -226,6 +226,12 @@ export async function story(
   // because loading.tsx had already flushed a 200 before notFound() ran.
   if (!found) return new Response(null, { status: 404, headers: PRIVATE });
 
-  const payload: StoryPayload = { ...found, saved: marked };
+  // Six neighbours from the story's own topic section, which is memoised on
+  // the cycle stamp - the same six the client derives when it holds the world,
+  // where getStory used to run a query of its own for them on every open.
+  const section = await getSection(slug(found.cluster.category), userId);
+  const related = section.filter((s) => s.id !== id)
+    .sort((a, b) => b.last_seen - a.last_seen).slice(0, 6);
+  const payload: StoryPayload = { ...found, related, saved: marked };
   return Response.json(payload, { headers: PRIVATE });
 }

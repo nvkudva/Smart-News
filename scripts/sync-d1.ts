@@ -172,38 +172,53 @@ async function reap(d: D1, local: DatabaseSync, since: number) {
  * it would strand a headline over an empty source list.
  */
 async function prune(d: D1, since: number) {
-  const stale: string[] = [];
-  let after = '';
+  // Ordered by the column the filter is on, so articles_published answers it
+  // and the walk reads the rows it deletes and no others. It used to order by
+  // id with an id cursor, which walked the primary key past every row in the
+  // window to find the few behind it: ten thousand rows read a cycle for a
+  // dozen returned. Each page is deleted before the next is asked for, so
+  // there is no cursor - what was read is gone.
+  let pruned = 0;
+  const touched = new Set<string>();
   for (;;) {
-    const page = await d.all<{ id: string }>(
-      `SELECT id FROM articles WHERE published_at < ? AND id > ? ORDER BY id LIMIT 400`,
-      [since, after]);
-    stale.push(...page.map((r) => r.id));
-    if (page.length < 400) break;
-    after = page[page.length - 1].id;
+    const page = await d.all<{ id: string; cluster_id: string | null }>(
+      `SELECT id, cluster_id FROM articles WHERE published_at < ?
+        ORDER BY published_at LIMIT 400`, [since]);
+    if (!page.length) break;
+    for (const r of page) if (r.cluster_id) touched.add(r.cluster_id);
+    const ids = page.map((r) => r.id);
+    for (let i = 0; i < ids.length; i += MAX_PARAMS) {
+      const batch = ids.slice(i, i + MAX_PARAMS);
+      await d.run(`DELETE FROM articles WHERE id IN (${batch.map(() => '?').join(',')})`, batch);
+    }
+    pruned += page.length;
     // One prune is a cycle step with fourteen minutes of company. Anything this
     // run does not reach, the next one does, and the window only moves forward.
-    if (stale.length >= 20_000) break;
+    if (page.length < 400 || pruned >= 20_000) break;
   }
-  if (!stale.length) return;
+  if (!pruned) return;
 
-  for (let i = 0; i < stale.length; i += MAX_PARAMS) {
-    const batch = stale.slice(i, i + MAX_PARAMS);
-    const marks = batch.map(() => '?').join(',');
-    await d.run(`DELETE FROM articles WHERE id IN (${marks})`, batch);
+  // Only a cluster that just lost an article can have been emptied, so those
+  // are the only ones asked about - each through articles_cluster, one probe a
+  // candidate. The sweep used to ask every cluster in the table against every
+  // article's cluster_id: twenty thousand rows read to find a handful. A run
+  // that dies between the delete above and this leaves empty clusters behind
+  // that nothing revisits; they are outside the window, so no reader sees them.
+  const orphans: string[] = [];
+  const candidates = [...touched];
+  for (let i = 0; i < candidates.length; i += MAX_PARAMS - 1) {
+    const batch = candidates.slice(i, i + MAX_PARAMS - 1);
+    const rows = await d.all<{ id: string }>(
+      `SELECT id FROM clusters WHERE id IN (${batch.map(() => '?').join(',')}) AND last_seen < ?
+         AND NOT EXISTS (SELECT 1 FROM articles WHERE articles.cluster_id = clusters.id)`,
+      [...batch, since]);
+    orphans.push(...rows.map((r) => r.id));
   }
-
-  // Clusters the prune just emptied. Counted rather than joined: D1 has no
-  // foreign-key cascade here, and article_count is the column the site reads.
-  const orphans = await d.all<{ id: string }>(
-    `SELECT id FROM clusters WHERE last_seen < ?
-       AND id NOT IN (SELECT cluster_id FROM articles WHERE cluster_id IS NOT NULL)`,
-    [since]);
   for (let i = 0; i < orphans.length; i += MAX_PARAMS) {
-    const batch = orphans.slice(i, i + MAX_PARAMS).map((r) => r.id);
+    const batch = orphans.slice(i, i + MAX_PARAMS);
     await d.run(`DELETE FROM clusters WHERE id IN (${batch.map(() => '?').join(',')})`, batch);
   }
-  console.log(`  pruned: ${stale.length} articles, ${orphans.length} emptied clusters`);
+  console.log(`  pruned: ${pruned} articles, ${orphans.length} emptied clusters`);
 }
 
 /**
@@ -365,11 +380,14 @@ async function main() {
   // pushed nothing leaves it alone, and every client keeps its cache.
   //
   // MAX(last_seen) alone would miss a ghost merge, which deletes a cluster
-  // without moving the maximum; the count catches that. Both read the partial
-  // index rather than the table.
-  const state = await d.get<{ n: number; m: number }>(
+  // without moving the maximum; the count catches that.
+  //
+  // Read from the local file, not D1. After the pushes, reap and both prunes
+  // above the two hold the same clusters, and D1 was billing three thousand
+  // index rows a cycle to be told what the open file already knows.
+  const state = local.prepare(
     `SELECT COUNT(*) AS n, COALESCE(MAX(last_seen), 0) AS m
-       FROM clusters WHERE headline IS NOT NULL`);
+       FROM clusters WHERE headline IS NOT NULL`).get() as { n: number; m: number };
 
   // The profile counters, computed here rather than on every profile render.
   // getStats used to COUNT(*) two whole tables per page view, and D1 bills rows

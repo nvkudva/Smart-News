@@ -37,8 +37,21 @@ async function dispatch(env: Env): Promise<Response> {
   return res;
 }
 
+const IST_OFFSET_MS = 5.5 * 3_600_000;
+
+/**
+ * Between midnight and six in India the half-hour firing is skipped, so the
+ * pipeline runs hourly overnight. Little is published then, and every cycle
+ * spends the same D1 reads and writes whether or not it finds anything.
+ */
+function quietHalfHour(at: number): boolean {
+  const ist = new Date(at + IST_OFFSET_MS);
+  return ist.getUTCHours() < 6 && ist.getUTCMinutes() >= 30;
+}
+
 export default {
-  async scheduled(_event: ScheduledController, env: Env) {
+  async scheduled(event: ScheduledController, env: Env) {
+    if (quietHalfHour(event.scheduledTime)) return;
     await dispatch(env);
   },
   /**

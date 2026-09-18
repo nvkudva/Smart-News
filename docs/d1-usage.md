@@ -64,20 +64,23 @@ neurons.
 Each is one function or one constant, no schema change, no new index, no behaviour change
 readers can see.
 
-- [ ] **Prune: page on `published_at`, delete as you go.** `WHERE published_at < ? ORDER BY
-  published_at LIMIT 400`, delete each page before fetching the next — the rows vanish, so no
-  cursor. Uses `articles_published`. ~15 rows a cycle instead of 9,913. −525k/day.
-- [ ] **Prune: sweep only the candidates.** Take `SELECT DISTINCT cluster_id FROM articles WHERE
-  published_at < ?` before the delete, then `NOT EXISTS (SELECT 1 FROM articles WHERE
-  cluster_id = ?)` per candidate via `articles_cluster`. Same thing `pruneLocal`'s `losing`
-  already does locally. −790k/day.
-- [ ] **Checkpoint count → `sync_meta`.** Sync knows the live count and newest `last_seen`;
-  write them, stop counting. −130k/day.
-- [ ] **Overnight cadence.** The 30-minute clock lives in `deploy/cron-worker` (it fires
-  `workflow_dispatch`). 60 minutes between 00:00 and 06:00 local. −25% of every pipeline
-  number, reads and writes both.
-- [ ] **`related` in `getStory` from the warmed section.** The third query fetches 6 rows the
-  category section already holds. One statement fewer per story open.
+- [x] **Prune: page on `published_at`, delete as you go.** `WHERE published_at < ? ORDER BY
+  published_at LIMIT 400`, each page deleted before the next is asked for — no cursor. Plan:
+  `SEARCH articles USING INDEX articles_published`. ~15 rows a cycle instead of 9,913.
+  −525k/day.
+- [x] **Prune: sweep only the candidates.** The `cluster_id`s of the articles just deleted,
+  checked in batches with `NOT EXISTS` — plan: `SEARCH clusters (id=?)` + covering
+  `articles_cluster` probe. −790k/day. Known edge: a run that dies between the article delete
+  and the sweep leaves empty out-of-window clusters that nothing revisits.
+- [x] **Checkpoint count from the local file.** The cycle stamp's `COUNT(*)`/`MAX(last_seen)`
+  now reads the open SQLite store, which holds the same clusters after the pushes and both
+  prunes. −130k/day.
+- [x] **Overnight cadence.** `deploy/cron-worker` skips the half-hour firing between 00:00 and
+  06:00 IST, so the pipeline runs hourly overnight. −25% of every pipeline number, reads and
+  writes both. Needs its own `wrangler deploy` from `deploy/cron-worker`.
+- [x] **`related` from the memoised topic section.** `read.ts` takes six neighbours from
+  `getSection`, the same six the client derives from the held world; `getStory` no longer
+  runs a query for them. A story older than the 48-hour window now gets no related list.
 - [x] **Rate-limit the visibility refresh.** A tab return within 5 minutes of the last look no
   longer forgets the stamp and asks for it again (`startWorldRefresh` in
   `web/src/lib/world.ts`). The 15-minute timer is untouched.
