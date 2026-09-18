@@ -100,14 +100,47 @@ self.addEventListener('activate', (e) => {
  */
 self.addEventListener('message', (e) => {
   if (e.data === 'sn:skip-waiting') void self.skipWaiting();
+  if (e.data?.type === 'sn:warm' && Array.isArray(e.data.urls)) e.waitUntil(warm(e.data.urls));
 });
+
+/**
+ * Fetch the feed's photographs ahead of the reader scrolling to them.
+ *
+ * swr only stores what an <img> actually requested, which offline is exactly
+ * the cards that were on screen and nothing below them. The client sends the
+ * current world's image URLs once it has stored the world; anything already
+ * held is skipped, so a repeat costs nothing.
+ *
+ * no-cors, because the hosts are publishers and few send CORS headers; the
+ * stored response is opaque, which is all an <img> needs back. Chrome accounts
+ * an opaque entry against quota with padding well above its real size, which
+ * is why the batch is capped rather than being the whole world.
+ */
+const WARM_MAX = 96;
+async function warm(urls) {
+  const cache = await caches.open(MEDIA);
+  let fetched = 0;
+  for (const url of urls.slice(0, WARM_MAX)) {
+    if (await cache.match(url)) continue;
+    try {
+      const res = await fetch(url, { mode: 'no-cors' });
+      if (res.ok || res.type === 'opaque') { await cache.put(url, res); fetched++; }
+    } catch { /* a host that will not answer is a plate that stays tinted */ }
+  }
+  if (fetched) await trim(MEDIA, MEDIA_MAX);
+}
 
 async function swr(e, req, cacheName, maxAgeMs) {
   const cache = await caches.open(cacheName);
   const hit = await cache.match(req);
 
   const network = fetch(req).then(async (res) => {
-    if (res.ok) {
+    // A publisher photograph arrives opaque: an <img> is a no-cors request, so
+    // the response has status 0 and ok is false whatever the host answered.
+    // Requiring ok meant no story photo was ever stored, and offline every
+    // plate fell back to its tint. Opaque is accepted for MEDIA only; a
+    // same-origin miss still carries a real status and is still refused.
+    if (res.ok || (cacheName === MEDIA && res.type === 'opaque')) {
       await cache.put(req, res.clone());
       if (cacheName === MEDIA) await trim(MEDIA, MEDIA_MAX);
     }
@@ -170,7 +203,13 @@ self.addEventListener('fetch', (e) => {
   // Northlight in their own type offline rather than falling back to Georgia.
   if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/fonts/')) {
     e.respondWith(caches.open(SHELL).then(async (c) => {
-      const hit = await c.match(request);
+      // ignoreVary, because the stored copy says `Vary: Origin` and a module
+      // script is fetched in cors mode, which carries an Origin header that
+      // the install-time fetch did not. Honouring Vary made every route chunk
+      // a miss offline: the story page went blank, and /local's in-app open
+      // fell to the router's error boundary. The name is content-hashed, so
+      // the same URL is the same bytes whatever headers asked for it.
+      const hit = await c.match(request, { ignoreVary: true });
       if (hit) return hit;
       const res = await fetch(request);
       // An asset that is gone answers with index.html, because

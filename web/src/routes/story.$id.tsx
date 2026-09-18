@@ -32,7 +32,9 @@ type StoryView = {
  * not download the feed to show one story.
  */
 function fromWorld(id: string): Promise<StoryView | null> {
-  return Promise.all([heldWorld(), savedIds()]).then(([w, saved]) => {
+  // The saved list is one more request; offline, with it never fetched, it
+  // must not take a story the browser is holding down with it.
+  return Promise.all([heldWorld(), savedIds().catch(() => new Set<string>())]).then(([w, saved]) => {
     const s = w && storyFrom(w, id)
     if (!s) return null
     const section = sectionFrom(w, s.cslug).stories
@@ -47,14 +49,24 @@ function fromWorld(id: string): Promise<StoryView | null> {
   })
 }
 
-/** The server's answer, for a story outside the window: a shared link, a
- *  saved story from last week. */
+/**
+ * The server's answer, for a story outside the window: a shared link, a
+ * saved story from last week.
+ *
+ * Kept against the cycle stamp like a section is, so a story read once stays
+ * readable offline for as long as the feed it came from does. `saved` is the
+ * one field in the payload that is the reader's rather than the story's, so
+ * it is read locally rather than trusted from a stored copy.
+ */
 async function fromServer(id: string, signal: AbortSignal): Promise<StoryView> {
-  const p = await load<StoryPayload>(`/api/story/${encodeURIComponent(id)}`, { signal })
+  const [p, saved] = await Promise.all([
+    load<StoryPayload>(`/api/story/${encodeURIComponent(id)}`, { persist: true, signal }),
+    savedIds().catch(() => new Set<string>()),
+  ])
   const outlets = [...new Map(p.articles.map((a) => [a.source, a])).values()]
     .map((a) => ({ source: a.source, url: a.url, bias: a.bias }))
-  return { cluster: p.cluster, outlets, related: p.related, coverage: p.coverage, saved: p.saved,
-           next: null }
+  return { cluster: p.cluster, outlets, related: p.related, coverage: p.coverage,
+           saved: saved.has(id), next: null }
 }
 
 /**
@@ -99,8 +111,44 @@ export const Route = createFileRoute('/story/$id')({
     (await fromWorld(params.id)) ?? fromServer(params.id, abortController.signal),
   pendingComponent: LoadingStory,
   notFoundComponent: StoryNotFound,
+  errorComponent: StoryUnavailable,
   component: StoryPage,
 })
+
+/**
+ * A story the browser does not hold and cannot fetch. Offline that is the
+ * ordinary case for anything outside the stored feed, and the router's own
+ * boundary said "Something went wrong" for it, which it is not.
+ */
+function StoryUnavailable({ reset }: { reset: () => void }) {
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine
+  return (
+    <>
+      <main className="shell">
+        <div className="pagehead">
+          <h1>{offline ? 'Not stored for offline' : 'Could not load this story'}</h1>
+          <p>{offline
+            ? 'You are offline, and this story is not one the feed is holding.'
+            : 'The story did not come back. It may have dropped out of the feed.'}</p>
+        </div>
+        <div className="panel">
+          <div className="label">{offline ? 'Offline' : 'Error'}</div>
+          <p>{offline
+            ? 'Stories on the feed and category pages open offline, along with their pictures. Others need a connection once, and stay readable after that.'
+            : 'Try again, or go back to the feed.'}</p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button type="button" className="btn" onClick={reset}>Try again</button>
+            <Link className="btn" to="/"
+                  style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+              Back to the feed
+            </Link>
+          </div>
+        </div>
+      </main>
+      <TabBar />
+    </>
+  )
+}
 
 function StoryPage() {
   const { cluster, outlets, related, coverage, saved, next } = Route.useLoaderData()

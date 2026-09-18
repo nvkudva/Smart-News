@@ -95,3 +95,63 @@ test('a section already stored is served offline rather than failing', async ({ 
   // errorComponent on this route the router's own boundary answered.
   await expect(page.getByText('Something went wrong')).toHaveCount(0);
 });
+
+/**
+ * A story on the feed opens offline with its picture.
+ *
+ * The page is answered from the stored world, so the body needs no request.
+ * The photograph is a publisher's, fetched by an <img> as no-cors: the worker
+ * used to refuse the opaque response it got back, and offline every plate
+ * showed its tint. Now it stores opaque responses for MEDIA and warms the
+ * feed's pictures ahead of the scroll, so the story below is deliberately not
+ * the first card - one the reader has not scrolled to yet.
+ */
+test('a story on the feed opens offline, picture included', async ({ page, context }) => {
+  await page.goto('/');
+  await controlled(page);
+  await page.waitForSelector('a[href^="/story/"]', { timeout: 30_000 });
+
+  // The worker's warm runs after the world is stored; give it a moment, then
+  // pick a card further down whose image an <img> has not necessarily fetched.
+  const cards = page.locator('a[href^="/story/"]:has(img[src^="http"])');
+  await expect.poll(() => cards.count(), { timeout: 20_000 }).toBeGreaterThan(3);
+  const card = cards.nth(3);
+  const href = (await card.getAttribute('href'))!;
+  const src = (await card.locator('img').first().getAttribute('src'))!;
+  await expect.poll(async () => page.evaluate(async (u) => {
+    const c = await caches.open('media-v1');
+    return !!(await c.match(u));
+  }, src), { timeout: 30_000 }).toBe(true);
+
+  await forgetApiCache(page);
+  await context.setOffline(true);
+
+  await card.click();
+  await expect(page).toHaveURL(new RegExp(href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'));
+  await expect(page.locator('h1.story__title')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('Something went wrong')).toHaveCount(0);
+  await expect(page.getByText('Not stored for offline')).toHaveCount(0);
+
+  const plate = page.locator('.plate--detail img');
+  await expect(plate).toHaveAttribute('src', src);
+  await expect.poll(() => plate.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0),
+                    { timeout: 20_000 }).toBe(true);
+});
+
+/**
+ * A story the feed does not hold, offline, says so rather than "Something went
+ * wrong": the router's own boundary was answering a state the app understands.
+ */
+test('a story outside the stored feed, offline, says it is not stored', async ({ page, context }) => {
+  await page.goto('/');
+  await controlled(page);
+  await page.waitForSelector('a[href^="/story/"]', { timeout: 30_000 });
+  await forgetApiCache(page);
+  await context.setOffline(true);
+
+  // A document navigation, which the worker answers with the shell; the
+  // router then runs the loader, which has nothing held and nothing to fetch.
+  await page.goto('/story/not-a-story-the-feed-holds');
+  await expect(page.getByText('Not stored for offline')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('Something went wrong')).toHaveCount(0);
+});

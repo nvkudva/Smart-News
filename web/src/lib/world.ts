@@ -84,7 +84,7 @@ async function resolve(): Promise<World> {
   if (force) await force;
   else {
     const { data: current } = await readFresh<World>(WORLD);
-    if (current) return current;
+    if (current) return warmed(current);
   }
 
   const stale = await readEntry<World>(WORLD);
@@ -107,10 +107,30 @@ async function resolve(): Promise<World> {
   if (short) {
     const whole = await ask(0);
     keep(WORLD, whole.stamp, whole);
-    return whole;
+    return warmed(whole);
   }
   keep(WORLD, merged.stamp, merged);
-  return merged;
+  return warmed(merged);
+}
+
+/**
+ * Hand the worker the photographs to fetch ahead of the scroll, so a story
+ * opened offline has its picture and not just its tint. Newest first, because
+ * that is the order the feed shows them in and the worker caps the batch. The
+ * worker skips what it already holds, so this is cheap to send on every load.
+ */
+function warmed(w: World): World {
+  // `ready`, not `controller`: on the very first load the world resolves
+  // before the worker has claimed the page, and a message to nobody is lost.
+  const urls = [...w.stories]
+    .sort((a, b) => b.last_seen - a.last_seen)
+    .flatMap((s) => (s.image_url ? [s.image_url] : []));
+  if (urls.length && typeof navigator !== 'undefined' && navigator.serviceWorker) {
+    navigator.serviceWorker.ready
+      .then((reg) => reg.active?.postMessage({ type: 'sn:warm', urls: [...new Set(urls)] }))
+      .catch(() => {});
+  }
+  return w;
 }
 
 /**
