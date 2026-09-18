@@ -104,15 +104,21 @@ readers can see.
 
 ### Medium
 
-- [ ] **Split `/api/story` into public + `saved`.** Cluster, articles and related are the same
-  for everyone: `public`, ETag on the stamp, stored in `caches.default`. `saved` from the
-  client's own local `savedIds()` (already there for offline) or a one-row endpoint. Story
-  opens → ~0 D1 rows on a colo hit.
-- [ ] **`caches.default` for every stamp-keyed shared answer** (sections, explore, reels,
-  facets), not just isolate memory. Per-colo sharing, survives isolate eviction. Cloudflare's
-  docs confirm the Cache API works on `*.workers.dev`, scoped per data centre.
-- [ ] **Reap by tombstone.** Record merged and emptied cluster ids in `dirty`, push explicit
-  `DELETE`s, stop paging 9.8k ids a cycle to diff them. −430k/day.
+- [x] **`/api/story` is public and shared.** `saved` left the payload (the client already lit
+  the bookmark from its own `savedIds()`); the answer is `public`, ETag on the stamp, and
+  served from `caches.default` on a colo hit — `x-sn-cache: hit|miss` says which. A story
+  whose category has no section falls back to the old 7-row query, once per colo per cycle.
+- [x] **`caches.default` under `warm()`.** An isolate miss looks in the colo cache before D1,
+  keyed on `key + stamp`, write-through after the query; fails open to the query. Covers the
+  sections, explore, reels, facets and countries with no handler changes. Verified live:
+  miss on a colo's first request, hit after (MRS/SIN/HKG/NRT).
+- [x] **Reap by tombstone.** `clusterRecent` and `pruneLocal` mark each cluster they empty as
+  `gone` in `dirty`; sync buries them by name after the pushes and clears the marks, refusing
+  (like reap) if they exceed a tenth of the live window; the id-diff in `reap` runs only on a
+  full push (`SYNC_FULL=1` is the repair run). Scratch run: 11 `gone` marks, 0 empty clusters
+  left. −430k/day. Check after the first pushed cycle: `SELECT COUNT(*) FROM clusters WHERE
+  headline IS NOT NULL AND last_seen >= <now-48h> AND id NOT IN (SELECT cluster_id FROM
+  articles WHERE cluster_id IS NOT NULL)` must be 0.
 
 ### Architectural
 

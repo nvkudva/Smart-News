@@ -563,6 +563,14 @@ export function clusterRecent(): { clusters: number; assigned: number } {
   markDirty('article', movedArticles);
   markDirty('cluster', changed);
 
+  // The clusters this pass emptied, recorded before they go. D1 holds each of
+  // them, and without this record sync could only learn which by listing
+  // every remote id each cycle and diffing - ten thousand rows read to find
+  // the two or three a merge folded away.
+  const emptied = (d.prepare(
+    'SELECT id FROM clusters WHERE id NOT IN (SELECT DISTINCT cluster_id FROM articles WHERE cluster_id IS NOT NULL)',
+  ).all() as unknown as { id: string }[]).map((r) => r.id);
+  markDirty('gone', emptied);
   d.exec('DELETE FROM clusters WHERE id NOT IN (SELECT DISTINCT cluster_id FROM articles WHERE cluster_id IS NOT NULL)');
   return { clusters: live.length, assigned };
 }

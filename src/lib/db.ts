@@ -192,8 +192,9 @@ function migrate(d: DatabaseSync) {
 
 export { CATEGORIES, type Category } from '../../web/shared/categories';
 
-/** Record that a row differs from what D1 holds, so `sync` can push just it. */
-export function markDirty(kind: 'cluster' | 'article', ids: Iterable<string>): void {
+/** Record that a row differs from what D1 holds, so `sync` can push just it.
+ *  `gone` is a cluster this file no longer has and D1 still does. */
+export function markDirty(kind: 'cluster' | 'article' | 'gone', ids: Iterable<string>): void {
   const stmt = db().prepare('INSERT OR IGNORE INTO dirty (kind, id) VALUES (?, ?)');
   for (const id of ids) stmt.run(kind, id);
 }

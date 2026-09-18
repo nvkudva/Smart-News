@@ -246,6 +246,13 @@ function pruneLocal(local: DatabaseSync, since: number): void {
     { id: string }[]).map((r) => r.id);
   local.exec('BEGIN');
   local.prepare('DELETE FROM articles WHERE published_at < ?').run(since);
+  // Marked gone before they go. D1's own sweep keeps a cluster whose last_seen
+  // is still recent even when every article it had was published before the
+  // window, and inside the 48 hours the site reads that is a headline over an
+  // empty source list - the ghost reap used to catch. Buried next cycle.
+  local.exec(`INSERT OR IGNORE INTO dirty (kind, id)
+               SELECT 'gone', id FROM clusters
+                WHERE id NOT IN (SELECT DISTINCT cluster_id FROM articles WHERE cluster_id IS NOT NULL)`);
   // A cluster with nothing left to show is a headline over an empty source list.
   local.exec(`DELETE FROM clusters
                WHERE id NOT IN (SELECT DISTINCT cluster_id FROM articles WHERE cluster_id IS NOT NULL)`);
@@ -267,6 +274,22 @@ function pruneLocal(local: DatabaseSync, since: number): void {
 }
 
 /** Cluster ids D1 holds inside the window, paged because D1 caps a result set. */
+/**
+ * The clusters a merge folded away, deleted by name. Children first, for the
+ * reason reap gives: D1 does not enforce the foreign key, and a null
+ * cluster_id is the truth that puts the article back in front of the
+ * clusterer.
+ */
+async function bury(d: D1, ids: string[]): Promise<void> {
+  for (let i = 0; i < ids.length; i += MAX_PARAMS) {
+    const batch = ids.slice(i, i + MAX_PARAMS);
+    const marks = batch.map(() => '?').join(',');
+    await d.run(`UPDATE articles SET cluster_id = NULL WHERE cluster_id IN (${marks})`, batch);
+    await d.run(`DELETE FROM clusters WHERE id IN (${marks})`, batch);
+  }
+  if (ids.length) console.log(`  clusters: ${ids.length} merged away, deleted`);
+}
+
 async function remoteClusterIds(d: D1, since: number): Promise<string[]> {
   const out: string[] = [];
   let after = '';
@@ -348,7 +371,16 @@ async function main() {
   const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,image_source,
             framing_left,framing_centre,framing_right,
             article_count,source_count,prominence,first_seen,last_seen,summarised_at,summarised_n,attempts`;
-  const dirtyClusters = full ? [] : dirtyIds('cluster');
+  // Clusters a merge folded away since the last push. D1 still holds each;
+  // the marks say which, so nothing is listed and diffed to find out. One
+  // re-created under the same id since is alive here, and is pushed, not
+  // buried. A gone cluster is dropped from the push: upserting it only to
+  // delete it below would be two writes for nothing.
+  const goneMarks = full ? [] : dirtyIds('gone');
+  const alive = local.prepare('SELECT 1 FROM clusters WHERE id = ?');
+  const gone = goneMarks.filter((id) => !alive.get(id));
+  const buried = new Set(gone);
+  const dirtyClusters = full ? [] : dirtyIds('cluster').filter((id) => !buried.has(id));
   const clusters = full
     ? all<Record<string, unknown>>(`SELECT ${clusterCols} FROM clusters WHERE last_seen >= ?`, since)
     : inChunks(dirtyClusters, (ids) => all<Record<string, unknown>>(
@@ -356,7 +388,24 @@ async function main() {
           WHERE last_seen >= ? AND id IN (${ids.map(() => '?').join(',')})`, since, ...ids));
   await push('clusters', colList(clusterCols), clusters);
 
-  await reap(d, local, since);
+  // After the pushes, so an article that moved to a surviving cluster already
+  // carries its new home before its old one is taken away. The same tenth
+  // that reap refuses at: a merge that folded away that much of the window is
+  // a runaway, not a cycle, and the marks stay for a repair run to look at.
+  const live = (local.prepare('SELECT COUNT(*) AS n FROM clusters WHERE last_seen >= ?')
+    .get(since) as { n: number }).n;
+  if (gone.length > live / 10) {
+    throw new Error(
+      `${gone.length} clusters marked gone against ${live} live — refusing to delete. ` +
+      `Inspect the store; SYNC_FULL=1 repairs from the full window.`);
+  }
+  await bury(d, gone);
+
+  // Only a full push diffs D1's ids against the file's: that run has no marks
+  // for what went before it. Every other cycle knows what it buried, and the
+  // listing was ten thousand rows read to find the two or three a merge
+  // folded away. SYNC_FULL=1 is the repair run if ghosts ever appear.
+  if (full) await reap(d, local, since);
 
   // Cleared only once both pushes have landed: anything that threw above stays
   // on the list and goes up next cycle. Ids the window no longer covers are
@@ -365,6 +414,7 @@ async function main() {
     const forget = local.prepare('DELETE FROM dirty WHERE kind = ? AND id = ?');
     for (const id of dirtyClusters) forget.run('cluster', id);
     for (const id of dirtyArticles) forget.run('article', id);
+    for (const id of goneMarks) forget.run('gone', id);
   }
 
   await prune(d, since);
