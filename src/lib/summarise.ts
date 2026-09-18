@@ -62,11 +62,11 @@ country:    ISO 3166-1 alpha-2 code for that place, else null.
 importance: 5 for a story a world newspaper leads its front page with, 1 for routine.`;
 
 /**
- * Asked for only when the cluster holds more than one lean. With one outlet,
- * or several of the same lean, there is no "rest" for a framing sentence to
- * contrast against - it was describing one article and the story page was
- * rendering it as a split. Leaving it out is also a quarter of the output
- * tokens on the single-source clusters that are 84% of what gets written.
+ * Asked for whenever any picked article carries a lean. A single-lean story
+ * still gets its one sentence: the page shows each side that spoke, and
+ * "how the left-leaning outlets framed it" reads as a description of the
+ * coverage, not a claim that another side disagreed. Only a cluster with no
+ * rated outlet at all skips it, since there is nothing to write.
  */
 const FRAMING = `
 
@@ -120,7 +120,7 @@ export async function summariseCluster(members: Member[], signal?: AbortSignal):
   const picked = distinct.slice(0, MAX_ARTICLES);
   if (!picked.length) return { ok: false, reason: 'content' };
 
-  const framed = new Set(picked.map((m) => m.bias).filter(Boolean)).size > 1;
+  const framed = picked.some((m) => m.bias);
   const corpus = picked.map((m, i) =>
     `<article n="${i + 1}" source="${m.name}"${framed && m.bias ? ` lean="${m.bias}"` : ''}>\n<title>${m.title}</title>\n` +
     `${(m.body ?? m.lead ?? '').slice(0, MAX_CHARS_EACH)}\n</article>`).join('\n\n');
