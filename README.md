@@ -12,42 +12,37 @@ The npm package and the deployed Worker are both named `smartnews`; the repo is 
 
 ## What it looks like
 
-Shown in the Pastel theme, where each card takes a quiet tint from its category.
-Five others ship with it; three of them are below, and the picker is under
-Profile.
+Dark is the default and a phone is where news is read, so this is where most
+readers meet it: the Frosted theme, after dark.
 
-<img src="docs/screenshots/mobile-home.jpg" alt="The feed on a phone, in the Pastel theme" width="300">
+<img src="docs/screenshots/mobile-dark-home.jpg" alt="The feed on a phone, in the Frosted theme after dark" width="300">
 
-A phone is where news is read, so it is the size the design is drawn at and the
-one these shots lead with. The bar sits at the bottom at every width — thumb
-first, and unchanged on a desktop rather than relegated to a corner — and the
-category strip is one horizontal row that holds the selected category against
-the left edge.
+A phone is the size the design is drawn at. The bar sits at the bottom, thumb
+first, and the category strip is one horizontal row that holds the selected
+category against the left edge.
 
-The same screen with room to spread out:
+### The four themes, on a phone
 
-![The feed on a desktop, in the Pastel theme](docs/screenshots/desktop-home.jpg)
+| Frosted — the default | Pastel | Broadsheet | Northlight |
+|---|---|---|---|
+| <img src="docs/screenshots/mobile-frost.jpg" alt="The feed on a phone, in the Frosted theme" width="200"> | <img src="docs/screenshots/mobile-pastel.jpg" alt="The feed on a phone, in the Pastel theme" width="200"> | <img src="docs/screenshots/mobile-broadsheet.jpg" alt="The feed on a phone, in the Broadsheet theme" width="200"> | <img src="docs/screenshots/mobile-northlight.jpg" alt="The feed on a phone, in the Northlight theme" width="200"> |
+| White glass over a soft wash. | The same glass, each card tinted by its category. | Paper, serif headlines and hairlines instead of cards. | Cold daylight. Flat surfaces, one petrol accent, serif headlines. |
 
-### The others
+Frosted is the shipped design and the other three were drawn beside it on the
+same canvas, carrying its geometry with their own colour and type. Each reads
+both ways: every theme has a dark palette of its own rather than one grey laid
+over the set. Theme and mode are both kept per device, not in the account, and
+both are set under Profile.
 
-| Frosted — the default | Broadsheet |
+### The same screen, with room to spread out
+
+| After dark | In the light |
 |---|---|
-| <img src="docs/screenshots/mobile-frost.jpg" alt="The feed on a phone, in the Frosted theme" width="260"> | <img src="docs/screenshots/mobile-broadsheet.jpg" alt="The feed on a phone, in the Broadsheet theme" width="260"> |
-| White glass over a soft wash. | Paper, serif headlines, hairlines instead of cards. |
+| <img src="docs/screenshots/desktop-dark-home.jpg" alt="The feed on a desktop, in the Frosted theme after dark" width="440"> | <img src="docs/screenshots/desktop-light-home.jpg" alt="The feed on a desktop, in the Frosted theme in the light" width="440"> |
 
-Frosted is the shipped design; Broadsheet was drawn beside it on the same
-canvas and carries its geometry with its own colour and type. The choice is
-kept per device, not in the account.
-
-### In the dark
-
-<img src="docs/screenshots/mobile-dark-home.jpg" alt="The feed on a phone, in the Frosted theme in dark mode" width="300">
-
-Every theme reads both ways, each with a dark palette of its own rather than
-one grey laid over the set; Frosted is the one shown here. Dark is the default
-— light, and following the device, are choices made from the toggle in the
-header or the three-way control under Profile — and is kept per device like the
-theme.
+At desktop width the bar leaves the bottom for the header and the categories
+unfold down the left edge, but the cards keep the proportions they were drawn
+at rather than stretching to the window.
 
 ## Requirements
 
