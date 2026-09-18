@@ -12,10 +12,10 @@ The npm package and the deployed Worker are both named `smartnews`; the repo is 
 
 ## What it looks like
 
-Dark is the default and a phone is where news is read, so this is where most
-readers meet it: the Frosted theme, after dark.
+Dark is the default and a phone is where news is read, so the left one is where
+most readers meet it. Both are the Frosted theme, after dark and in the light.
 
-<img src="docs/screenshots/mobile-dark-home.jpg" alt="The feed on a phone, in the Frosted theme after dark" width="300">
+<img src="docs/screenshots/mobile-dark-home.jpg" alt="The feed on a phone, in the Frosted theme after dark" width="300"> <img src="docs/screenshots/mobile-frost.jpg" alt="The feed on a phone, in the Frosted theme in the light" width="300">
 
 A phone is the size the design is drawn at. The bar sits at the bottom, thumb
 first, and the category strip is one horizontal row that holds the selected
