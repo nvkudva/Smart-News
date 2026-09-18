@@ -23,10 +23,14 @@ category against the left edge.
 
 ### The four themes, on a phone
 
-| Frosted — the default | Pastel | Broadsheet | Northlight |
-|---|---|---|---|
-| <img src="docs/screenshots/mobile-frost.jpg" alt="The feed on a phone, in the Frosted theme" width="200"> | <img src="docs/screenshots/mobile-pastel.jpg" alt="The feed on a phone, in the Pastel theme" width="200"> | <img src="docs/screenshots/mobile-broadsheet.jpg" alt="The feed on a phone, in the Broadsheet theme" width="200"> | <img src="docs/screenshots/mobile-northlight.jpg" alt="The feed on a phone, in the Northlight theme" width="200"> |
-| White glass over a soft wash. | The same glass, each card tinted by its category. | Paper, serif headlines and hairlines instead of cards. | Cold daylight. Flat surfaces, one petrol accent, serif headlines. |
+Left to right: Frosted, Pastel, Broadsheet, Northlight.
+
+<img src="docs/screenshots/mobile-frost.jpg" alt="The feed on a phone, in the Frosted theme" width="200"> <img src="docs/screenshots/mobile-pastel.jpg" alt="The feed on a phone, in the Pastel theme" width="200"> <img src="docs/screenshots/mobile-broadsheet.jpg" alt="The feed on a phone, in the Broadsheet theme" width="200"> <img src="docs/screenshots/mobile-northlight.jpg" alt="The feed on a phone, in the Northlight theme" width="200">
+
+- **Frosted** — white glass over a soft wash. The default.
+- **Pastel** — the same glass, each card tinted by its category.
+- **Broadsheet** — paper, serif headlines and hairlines instead of cards.
+- **Northlight** — cold daylight. Flat surfaces, one petrol accent, serif headlines.
 
 Frosted is the shipped design and the other three were drawn beside it on the
 same canvas, carrying its geometry with their own colour and type. Each reads
@@ -36,9 +40,9 @@ both are set under Profile.
 
 ### The same screen, with room to spread out
 
-| After dark | In the light |
-|---|---|
-| <img src="docs/screenshots/desktop-dark-home.jpg" alt="The feed on a desktop, in the Frosted theme after dark" width="440"> | <img src="docs/screenshots/desktop-light-home.jpg" alt="The feed on a desktop, in the Frosted theme in the light" width="440"> |
+Frosted after dark, then the same screen in the light.
+
+<img src="docs/screenshots/desktop-dark-home.jpg" alt="The feed on a desktop, in the Frosted theme after dark" width="440"> <img src="docs/screenshots/desktop-light-home.jpg" alt="The feed on a desktop, in the Frosted theme in the light" width="440">
 
 At desktop width the bar leaves the bottom for the header and the categories
 unfold down the left edge, but the cards keep the proportions they were drawn
