@@ -36,15 +36,15 @@ export function AppHeader() {
  * the header needs no active prop from the route the way TabBar does.
  */
 function HeaderNav() {
-  const item = (to: string, label: string, icon: React.ReactNode, exact = false) => (
-    <Link to={to} className="appnav__link" activeOptions={{ exact }}
+  const item = (to: string, label: string, icon: React.ReactNode, exact = false, extra = '') => (
+    <Link to={to} className={`appnav__link ${extra}`.trimEnd()} activeOptions={{ exact }}
           activeProps={{ 'aria-current': 'page' }}>{icon}<span>{label}</span></Link>
   );
   return (
     <nav className="appnav" aria-label="Primary">
       {item('/', 'Home', <Home />, true)}
       {item('/explore', 'Explore', <Compass />)}
-      {item('/reels', 'Reels', <Logo size={18} tone="ink" tight />)}
+      {item('/reels', 'Reels', <Logo size={18} tone="ink" tight />, false, 'appnav__link--reels')}
       {item('/saved', 'Saved', <Bookmark />)}
       {item('/profile', 'Profile', <Person />)}
     </nav>

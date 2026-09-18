@@ -1531,6 +1531,10 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 @media (min-width: 1024px) {
   :root:not([data-nav]) .appnav { display: flex; }
   :root:not([data-nav]) .tabbar { display: none; }
+  /* Reels is a full-bleed vertical stack built for a thumb; on a wide screen it
+     has no shape worth a header slot. Hidden by width rather than dropped from
+     the nav, so a phone forced to "top" still has its way in. */
+  .appnav__link--reels { display: none; }
 }
 :root[data-nav="top"] .appnav { display: flex; }
 :root[data-nav="top"] .tabbar { display: none; }
