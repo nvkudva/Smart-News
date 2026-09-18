@@ -40,6 +40,7 @@ export function ServiceWorker() {
     }
 
     const announce = () => window.dispatchEvent(new Event(UPDATE_READY));
+    let onVisible: (() => void) | null = null;
 
     const register = async () => {
       try {
@@ -60,16 +61,29 @@ export function ServiceWorker() {
             if (next.state === 'installed' && navigator.serviceWorker.controller) announce();
           });
         });
+
+        // The browser checks sw.js on a navigation, and an installed app or a
+        // tab left open can go days without one. Asking again each time the
+        // reader comes back to it is what lets a deploy reach them; the
+        // script is served must-revalidate, so an unchanged one costs a 304.
+        onVisible = () => {
+          if (document.visibilityState === 'visible') reg.update().catch(() => {});
+        };
+        document.addEventListener('visibilitychange', onVisible);
       } catch { /* no worker is a slower app, not a broken one */ }
     };
 
+    const onLoad = () => void register();
+    const cleanup = () => {
+      window.removeEventListener('load', onLoad);
+      if (onVisible) document.removeEventListener('visibilitychange', onVisible);
+    };
     if (document.readyState === 'complete') {
       void register();
-      return;
+      return cleanup;
     }
-    const onLoad = () => void register();
     window.addEventListener('load', onLoad, { once: true });
-    return () => window.removeEventListener('load', onLoad);
+    return cleanup;
   }, []);
 
   return null;
