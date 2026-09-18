@@ -4,7 +4,9 @@ import type {
 } from '../shared/types';
 import { slug } from '../shared/taxonomy';
 import { cacheHeaders, conditional, cycleStamp, notModified } from './lib/cycle';
-import { effectivePlaceIds, getLocalFeed, getPrefs, getStory, prefsFingerprint } from './lib/feed';
+import {
+  effectivePlaceIds, getLocalFeed, getPrefs, getStory, prefsFingerprint, relatedTo,
+} from './lib/feed';
 import {
   getByColumn, getByPlace, getPlaceFacets,
   getReels, getSaved, getSavedIds, getSingleReports, getStats,
@@ -243,8 +245,9 @@ export async function story(
   // the cycle stamp - the same six the client derives when it holds the world,
   // where getStory used to run a query of its own for them on every open.
   const section = await getSection(slug(found.cluster.category), userId);
-  const related = section.filter((s) => s.id !== id)
-    .sort((a, b) => b.last_seen - a.last_seen).slice(0, 6);
+  const related = section.length
+    ? section.filter((s) => s.id !== id).sort((a, b) => b.last_seen - a.last_seen).slice(0, 6)
+    : await relatedTo(found.cluster.category, id);
   const payload: StoryPayload = { ...found, related };
   if (version.stamp) await edgeWrite(key, version.stamp, payload);
   return Response.json(payload, { headers: { ...headers, 'x-sn-cache': 'miss' } });

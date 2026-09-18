@@ -457,3 +457,17 @@ export async function getStory(id: string) {
 
   return { cluster, articles, coverage: coverageOf(articles) };
 }
+
+/**
+ * The related list by query, for a story whose category has no section of
+ * its own ("Crime & Courts" is a category on the row and nowhere in the
+ * taxonomy), so the memoised section cannot answer it. Seven rows on the
+ * live-category index, and the story answer it goes into is shared by the
+ * colo cache afterwards.
+ */
+export async function relatedTo(category: string, id: string): Promise<Story[]> {
+  return withPlaceLabels(await d1().all<Story>(
+    `SELECT * FROM clusters
+      WHERE category = ? AND id != ? AND headline IS NOT NULL
+      ORDER BY last_seen DESC LIMIT 6`, [category, id]));
+}
