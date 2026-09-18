@@ -57,6 +57,45 @@ export function cache<A extends unknown[], R>(fn: (...args: A) => R): (...args: 
  * query instead of racing. A failed query is forgotten rather than remembered
  * as this cycle's answer.
  */
+/**
+ * The colo cache, under the isolate memo.
+ *
+ * Isolate memory is per isolate and gone when Cloudflare recycles it; the
+ * Cache API is shared by every isolate in a data centre and survives them.
+ * The key carries the stamp, so nothing is ever invalidated - an old cycle's
+ * entries simply stop being asked for and age out. The stored copy is given a
+ * day, which is its own lifetime and not the browser's: what the reader is
+ * told to keep is decided by the handler that answers them.
+ *
+ * Both halves fail open. No `caches` (a script, a test runner) or a cache
+ * error means the query runs as it always did.
+ */
+const EDGE = 'https://warm.smartnews.internal/';
+const EDGE_TTL = 'public, max-age=86400';
+
+function edgeKey(key: string, stamp: string): string {
+  return `${EDGE}${encodeURIComponent(stamp)}/${encodeURIComponent(key)}`;
+}
+
+export async function edgeRead<T>(key: string, stamp: string): Promise<T | undefined> {
+  try {
+    const hit = await caches.default.match(edgeKey(key, stamp));
+    return hit ? ((await hit.json()) as T) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function edgeWrite(key: string, stamp: string, value: unknown): Promise<void> {
+  try {
+    await caches.default.put(edgeKey(key, stamp), new Response(JSON.stringify(value), {
+      headers: { 'content-type': 'application/json', 'cache-control': EDGE_TTL },
+    }));
+  } catch {
+    // The isolate memo still holds it; the next isolate pays one query.
+  }
+}
+
 const NO_STAMP_TTL_MS = 60_000;
 const warmed = new Map<string, { stamp: string; at: number; value: Promise<unknown> }>();
 
@@ -67,7 +106,16 @@ export function warm<T>(key: string, stamp: string | null, run: () => Promise<T>
     return hit.value as Promise<T>;
   }
 
-  const value = run();
+  // An isolate miss looks in the colo cache before D1: the answer is keyed on
+  // the stamp, so it is either exactly right or not there. Every isolate in a
+  // data centre then shares one query per cycle instead of one each.
+  const value = stamp === null ? run() : (async () => {
+    const held = await edgeRead<T>(key, stamp);
+    if (held !== undefined) return held;
+    const fresh = await run();
+    await edgeWrite(key, stamp, fresh);
+    return fresh;
+  })();
   warmed.set(key, { stamp: version, at: Date.now(), value });
   value.catch(() => { if (warmed.get(key)?.value === value) warmed.delete(key); });
 

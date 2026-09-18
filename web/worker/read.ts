@@ -7,8 +7,9 @@ import { cacheHeaders, conditional, cycleStamp, notModified } from './lib/cycle'
 import { effectivePlaceIds, getLocalFeed, getPrefs, getStory, prefsFingerprint } from './lib/feed';
 import {
   getByColumn, getByPlace, getPlaceFacets,
-  getReels, getSaved, getSavedIds, getSingleReports, getStats, isSaved,
+  getReels, getSaved, getSavedIds, getSingleReports, getStats,
 } from './lib/library';
+import { edgeRead, edgeWrite } from './lib/cache';
 import { getPlaces } from './lib/places';
 import { countriesWithNews, getSection } from './lib/sections';
 import { getWorld } from './lib/world';
@@ -212,15 +213,27 @@ export async function profile(_request: Request, userId: string): Promise<Respon
 }
 
 export async function story(
-  _request: Request, url: URL, userId: string,
+  request: Request, url: URL, userId: string,
 ): Promise<Response> {
   // /api/story/<id>, and the id may hold anything a cluster id can.
   const id = decodeURIComponent(url.pathname.slice('/api/story/'.length));
   if (!id) return Response.json({ error: 'No story id' }, { status: 400, headers: PRIVATE });
 
-  // Started together, not one after the other: whether this reader saved the
-  // story has nothing to do with what the story is.
-  const [found, marked] = await Promise.all([getStory(id), isSaved(id, userId)]);
+  // Nothing of the reader is in this answer any more - the bookmark is lit from
+  // the client's own saved set - so it is the same for everyone: validated
+  // against the stamp, held by the browser like the sections are, and shared
+  // through the colo cache so a story read once in a data centre costs D1
+  // nothing on the next open there.
+  const version = await conditional(request, `story.${id}`);
+  const headers = cacheHeaders(version, 15, 300, 'public');
+  if (version.fresh) return notModified(headers);
+
+  const key = `story:${id}`;
+  const held = version.stamp ? await edgeRead<StoryPayload>(key, version.stamp) : undefined;
+  // Which path answered, so the colo cache can be seen working from outside.
+  if (held) return Response.json(held, { headers: { ...headers, 'x-sn-cache': 'hit' } });
+
+  const found = await getStory(id);
   // A 404 here is the real thing, not a rendered not-found screen: the route's
   // loader turns it into one. That is what the Next version could not do,
   // because loading.tsx had already flushed a 200 before notFound() ran.
@@ -232,6 +245,7 @@ export async function story(
   const section = await getSection(slug(found.cluster.category), userId);
   const related = section.filter((s) => s.id !== id)
     .sort((a, b) => b.last_seen - a.last_seen).slice(0, 6);
-  const payload: StoryPayload = { ...found, related, saved: marked };
-  return Response.json(payload, { headers: PRIVATE });
+  const payload: StoryPayload = { ...found, related };
+  if (version.stamp) await edgeWrite(key, version.stamp, payload);
+  return Response.json(payload, { headers: { ...headers, 'x-sn-cache': 'miss' } });
 }

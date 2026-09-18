@@ -154,5 +154,4 @@ export type StoryPayload = {
   articles: Article[];
   related: Story[];
   coverage: Coverage;
-  saved: boolean;
 };
