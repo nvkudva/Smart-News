@@ -213,7 +213,7 @@
   border-color: oklch(0.50 0.135 var(--cat-h));
 }
 
-html { background: var(--ground); }
+html { background: var(--ground); height: 100%; overflow: hidden; }
 /* ── Faces ────────────────────────────────────────────────────────────────
    Self-hosted, latin subset, straight from Google Fonts.
 
@@ -260,12 +260,24 @@ html { background: var(--ground); }
    z-index -1 wash, and only as tall as its content, so on a short page the wash
    appeared below the content with a hard seam where the body stopped. */
 body {
-  padding-top: var(--appbar-h);
+  height: 100%; overflow: hidden;
   background: transparent;
   color: var(--ink);
   font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+}
+
+/* The app scrolls, the document does not. Chrome animates its browser
+   controls only against document scroll, and every fixed bar rides that
+   animation: the header and the dock moved a few pixels on each reversal on a
+   phone, ahead of any offset a script could write back. A scroller inside the
+   document leaves the controls where they are, so fixed means fixed. The
+   header's clearance moves in here from body, since this is now the box the
+   content starts in. */
+#root {
+  height: 100%; overflow-y: auto; overscroll-behavior-y: none;
+  box-sizing: border-box; padding-top: var(--appbar-h);
 }
 
 /* the soft ambient wash the glass reads against */
