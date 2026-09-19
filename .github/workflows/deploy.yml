@@ -28,12 +28,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
+      # One bun for both halves: the migrate scripts at the root and the web
+      # build below, which already installed its own.
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '26'
-          cache: npm
+          bun-version: latest
 
-      - run: npm ci
+      - run: bun install --frozen-lockfile
 
       # Asked before it is answered: most releases change no schema at all, and
       # those should not issue DDL against a live database. --check reports what
@@ -42,18 +43,14 @@ jobs:
       # deploy over.
       - name: Does D1 need migrating?
         id: schema
-        run: npm run migrate:d1 -- --check
+        run: bun run migrate:d1 --check
 
       # Only when it does, and always before the build: a release that reads a
       # new column is live the instant it deploys, and until the next cycle
       # every request in the gap throws "no such column".
       - name: Migrate D1
         if: steps.schema.outputs.needed == 'true'
-        run: npm run migrate:d1
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+        run: bun run migrate:d1
 
       # Frozen: a deploy installs what the lockfile says and nothing else. The
       # lockfile is v2, so it needs the bun that wrote it — an older bun rewrites

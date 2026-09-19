@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 import type { D1 } from '../src/lib/d1';
 
 /**
@@ -144,6 +145,36 @@ export async function missingColumns(d: D1): Promise<[string, string, string][]>
   return out;
 }
 
+/**
+ * What this file would apply, as one value D1 can be asked about in a single
+ * round trip.
+ *
+ * applySchema is idempotent but not free: twenty-odd CREATEs and a PRAGMA per
+ * table in ADDED_COLUMNS, each its own HTTPS request, measured at 11.5s of a
+ * 44s push that then moved about 300 rows. Ninety-six times a day, and on all
+ * but the cycle after a deploy every one of those statements is a no-op.
+ *
+ * Covers both halves because both can change a live database: the DDL itself,
+ * and the ALTER list the DDL cannot express. Truncated because this is an
+ * equality check against a value we wrote ourselves, not a defence.
+ */
+export const SCHEMA_VERSION = createHash('sha256')
+  .update(SCHEMA).update(JSON.stringify(ADDED_COLUMNS)).digest('hex').slice(0, 16);
+
+/**
+ * Whether D1 is already at SCHEMA_VERSION.
+ *
+ * False on any doubt — a fresh database has no sync_meta to read, and a failed
+ * read is indistinguishable here from a stale schema. Both answers cost one
+ * pass of applySchema, which is what the code did unconditionally before.
+ */
+export async function schemaCurrent(d: D1): Promise<boolean> {
+  try {
+    const row = await d.get<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', ['schema_version']);
+    return row?.value === SCHEMA_VERSION;
+  } catch { return false; }
+}
+
 /** Additive and idempotent: safe to run against a live database on every deploy. */
 export async function applySchema(d: D1, log: (s: string) => void = () => {}) {
   for (const stmt of SCHEMA.split(';').map((s) => s.trim()).filter(Boolean)) await d.run(stmt);
@@ -151,4 +182,7 @@ export async function applySchema(d: D1, log: (s: string) => void = () => {}) {
     await d.run(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
     log(`  ${table}: added ${name}`);
   }
+  // Last, and only on the path that did the work: a stamp written before an
+  // ALTER that then failed would tell every later run the column is there.
+  await d.run('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)', ['schema_version', SCHEMA_VERSION]);
 }

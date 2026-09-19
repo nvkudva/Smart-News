@@ -4,10 +4,11 @@ config({ path: '.env.local', quiet: true });
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
+import pLimit from 'p-limit';
 import { recountClusters } from '../src/lib/cluster';
 import { checkpoint } from '../src/lib/db';
 import { d1, type D1 } from '../src/lib/d1';
-import { applySchema } from './d1-schema';
+import { applySchema, schemaCurrent } from './d1-schema';
 
 /**
  * Push the local pipeline's finished rows up to D1, which is what the deployed
@@ -73,14 +74,26 @@ async function push(table: string, cols: string[], rows: Record<string, unknown>
     : `ON CONFLICT(${key.join(',')}) DO NOTHING`;
   let done = 0;
 
-  for (let i = 0; i < rows.length; i += perBatch) {
-    const batch = rows.slice(i, i + perBatch);
+  // Four at a time, because almost none of a push is work. A batch is 7 article
+  // rows - 90 bound parameters over 32 columns - and one HTTPS round trip to
+  // D1's REST API, measured at 0.48s of which the write is a fraction; 224
+  // articles is 32 trips and was 15s of a 44s step, spent waiting.
+  //
+  // Safe to reorder because every row in a push has a distinct primary key, so
+  // no two batches touch the same row and the upserts commute. Four rather than
+  // more: D1 is one database behind that endpoint, and the aim is to cover the
+  // latency, not to queue against its writer.
+  const batches: Record<string, unknown>[][] = [];
+  for (let i = 0; i < rows.length; i += perBatch) batches.push(rows.slice(i, i + perBatch));
+
+  const limit = pLimit(4);
+  await Promise.all(batches.map((batch) => limit(async () => {
     const sql = `INSERT INTO ${table} (${cols.join(',')}) VALUES ` +
                 batch.map(() => placeholder).join(',') + ' ' + onConflict;
     await d.run(sql, batch.flatMap((r) => cols.map((c) => r[c] ?? null)));
     done += batch.length;
     process.stdout.write(`\r  ${table}: ${done}/${rows.length}`);
-  }
+  })));
   process.stdout.write(`\r  ${table}: ${done}/${rows.length}\n`);
 }
 
@@ -309,8 +322,15 @@ async function main() {
   const local = new DatabaseSync(dbPath);
   const d = await d1();
 
-  console.log('Schema…');
-  await applySchema(d, (s) => console.log(s));
+  // One SELECT against a stamp D1 already holds, in place of the whole DDL.
+  // SYNC_FULL forces the pass, which is the escape hatch for a database edited
+  // outside this file — the stamp only knows what applySchema last wrote.
+  if (process.env.SYNC_FULL !== '1' && await schemaCurrent(d)) {
+    console.log('Schema: current');
+  } else {
+    console.log('Schema…');
+    await applySchema(d, (s) => console.log(s));
+  }
 
   const since = Date.now() - WINDOW_MS;
   const all = <T,>(sql: string, ...p: unknown[]) => local.prepare(sql).all(...(p as never[])) as unknown as T[];

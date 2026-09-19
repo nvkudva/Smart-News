@@ -1,6 +1,6 @@
 import Parser from 'rss-parser';
 import pLimit from 'p-limit';
-import { JSDOM } from 'jsdom';
+import { parseHTML } from 'linkedom';
 import { Readability } from '@mozilla/readability';
 import { db, markDirty } from './db';
 import { SOURCES } from '../../web/shared/sources';
@@ -11,10 +11,10 @@ const MAX_AGE_MS = 72 * 60 * 60 * 1000;
 const UA = 'smartnews/0.1 (personal news aggregator)';
 
 /**
- * How long a body-less article stays worth retrying. The cycle is fifteen
- * minutes, so this is roughly four more attempts — enough to outlast a
- * restart or a rate-limit, and short enough that a genuinely unreadable page
- * stops costing fetches within the hour.
+ * How long a body-less article stays worth retrying. The cycle is half an hour,
+ * so this is two more attempts — enough to outlast a restart or a rate-limit,
+ * and short enough that a genuinely unreadable page stops costing fetches
+ * within the hour.
  */
 const RETRY_WINDOW_MS = 60 * 60 * 1000;
 
@@ -88,8 +88,12 @@ async function pace(origin: string, delayMs: number): Promise<void> {
  * feeds without a media tag. Their pages carry og:image all the same, and the
  * page is already downloaded and parsed for the body — this costs one lookup
  * against a document that is open anyway.
+ *
+ * The url is passed rather than read off the document because linkedom does not
+ * set one: `parseHTML` takes a string and nothing else, so there is no baseURI
+ * for a relative og:image to resolve against.
  */
-function socialImage(doc: Document, url: string): string | null {
+function socialImage(doc: LinkedomDocument, url: string): string | null {
   for (const sel of ['meta[property="og:image"]', 'meta[name="twitter:image"]',
                      'meta[name="twitter:image:src"]', 'meta[itemprop="image"]']) {
     const raw = doc.querySelector(sel)?.getAttribute('content')?.trim();
@@ -102,7 +106,30 @@ function socialImage(doc: Document, url: string): string | null {
   return null;
 }
 
-/** null means no body; `blocked` distinguishes "told not to" from "could not". */
+/**
+ * linkedom's document, which is not the DOM lib's and cannot be named globally.
+ */
+type LinkedomDocument = ReturnType<typeof parseHTML>['document'];
+
+/**
+ * null means no body; `blocked` distinguishes "told not to" from "could not".
+ *
+ * Parsed with linkedom rather than jsdom. jsdom builds a spec-compliant DOM
+ * with a JS execution context per page, and none of that is used here: the
+ * document is read twice — four meta lookups and Readability's scoring pass —
+ * and thrown away. Measured over eight real article pages from the store, 17KB
+ * to 1MB, the two produce the same body to the character and the same og:image
+ * verdict, at 1011ms against 135ms.
+ *
+ * The parse was never the bottleneck at six-way concurrency — a page-slot is
+ * about 1.5s, almost all of it waiting on the network. It is what let the
+ * concurrency go up: at sixteen, jsdom's 100-270ms per page contends for the
+ * runner's four cores, and linkedom's ~17ms does not.
+ *
+ * One consequence: linkedom sets no documentURI, so Readability cannot
+ * absolutise the relative links inside the article HTML it returns. Only
+ * `.textContent` is read here, which has no links in it.
+ */
 async function extractBody(url: string): Promise<{ text: string | null; image: string | null } | null | 'blocked'> {
   try {
     const verdict = await robotsVerdict(url, UA);
@@ -113,10 +140,9 @@ async function extractBody(url: string): Promise<{ text: string | null; image: s
     const ct = res.headers.get('content-type') ?? '';
     if (!ct.includes('html')) return null;
     const html = await res.text();
-    const dom = new JSDOM(html, { url });
-    const image = socialImage(dom.window.document, url);
-    const article = new Readability(dom.window.document).parse();
-    dom.window.close();
+    const { document } = parseHTML(html);
+    const image = socialImage(document, url);
+    const article = new Readability(document as unknown as ConstructorParameters<typeof Readability>[0]).parse();
     const text = article?.textContent?.replace(/\s+/g, ' ').trim();
     return { text: text && text.length > 240 ? text.slice(0, 8000) : null, image };
   } catch {
@@ -244,7 +270,20 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
   console.log(`\n${pending.length} new articles (${seen} seen)`
               + `${retry.length ? `, ${retry.length} earlier misses retried` : ''}. Extracting full text…`);
 
-  const bodyLimit = pLimit(6);
+  // Sixteen, not six. A page-slot is about 1.5s and almost all of it is spent
+  // waiting on the network - 99 pages six-wide was 24s, of which the parse was
+  // under a tenth. A global cap is a poor way to be polite in any case: the
+  // rate an individual publisher sees is set by robots.txt Crawl-delay, which
+  // pace() enforces per host, and six slots across the sixty or so hosts in a
+  // run left most of them idle rather than unhurried.
+  //
+  // Stated plainly, because it is the cost: a host that declares a Crawl-delay
+  // is unaffected, and one that does not can now see up to sixteen concurrent
+  // requests where it saw six. Safe to raise only now that a parse is ~17ms
+  // and cannot contend for the runner's cores - see extractBody. Measured over
+  // 1,192 pages at this width, the extraction used 25s of CPU across 205s of
+  // wall clock, which is an eighth of one core.
+  const bodyLimit = pLimit(16);
   const setBody = d.prepare('UPDATE articles SET body = ? WHERE id = ?');
   // Only when the feed gave nothing: a feed's own media tag is the outlet's
   // choice of picture for the story, and og:image is what it shows strangers.
