@@ -270,20 +270,23 @@ export async function ingest(): Promise<{ added: number; withBody: number }> {
   console.log(`\n${pending.length} new articles (${seen} seen)`
               + `${retry.length ? `, ${retry.length} earlier misses retried` : ''}. Extracting full text…`);
 
-  // Sixteen, not six. A page-slot is about 1.5s and almost all of it is spent
-  // waiting on the network - 99 pages six-wide was 24s, of which the parse was
-  // under a tenth. A global cap is a poor way to be polite in any case: the
-  // rate an individual publisher sees is set by robots.txt Crawl-delay, which
-  // pace() enforces per host, and six slots across the sixty or so hosts in a
-  // run left most of them idle rather than unhurried.
+  // Six, and the reasoning against raising it is worth keeping because it was
+  // tried. A page-slot is about 1.5s and almost all of it is the network, the
+  // parse is ~17ms since linkedom, and Crawl-delay is enforced per host by
+  // pace() - so six slots across sixty hosts looks like idleness rather than
+  // politeness, and sixteen looks free.
   //
-  // Stated plainly, because it is the cost: a host that declares a Crawl-delay
-  // is unaffected, and one that does not can now see up to sixteen concurrent
-  // requests where it saw six. Safe to raise only now that a parse is ~17ms
-  // and cannot contend for the runner's cores - see extractBody. Measured over
-  // 1,192 pages at this width, the extraction used 25s of CPU across 205s of
-  // wall clock, which is an eighth of one core.
-  const bodyLimit = pLimit(16);
+  // It is not. Two cycles at sixteen returned 66/83 and 53/65 bodies, 79% and
+  // 82%, against a band of 89-94% over the seven runs before them; the step
+  // got no faster. The same code at the same width from a residential address
+  // returned 1,100/1,192, which is inside the band - so what the runner hits
+  // is not the width itself but a burst of sixteen from a datacenter IP, and
+  // no amount of local CPU headroom answers that.
+  //
+  // A middle value may exist. Whoever looks for one should read the body rate,
+  // not the clock: the cost lands as articles summarised from their headline
+  // alone, and an hour of retries hides it from the run that caused it.
+  const bodyLimit = pLimit(6);
   const setBody = d.prepare('UPDATE articles SET body = ? WHERE id = ?');
   // Only when the feed gave nothing: a feed's own media tag is the outlet's
   // choice of picture for the story, and og:image is what it shows strangers.
