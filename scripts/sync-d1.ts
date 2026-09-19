@@ -329,6 +329,22 @@ async function main() {
     (local.prepare('SELECT id FROM dirty WHERE kind = ?').all(kind) as unknown as { id: string }[])
       .map((r) => r.id);
 
+  // Which push of D1 this file is, so `hydrate` can tell the file that wrote
+  // D1's current state from an older one the Actions cache happened to hand
+  // back. A token rather than the cycle stamp: that stamp is derived from the
+  // data and deliberately does not move when a cycle pushed nothing, so two
+  // different files can carry it.
+  //
+  // Written to D1 before anything is pushed and to the file only at the very
+  // end. A run that dies anywhere between has changed D1 under a token the
+  // file never recorded, so the next hydrate sees a mismatch and rebuilds
+  // from D1 - correct, merely expensive, and once. Written after the pushes,
+  // as it was, a dead run left D1 holding rows under the old token, which the
+  // file still matched, and hydrate had to scan the whole articles table every
+  // cycle in case that had happened.
+  const token = `${Date.now()}-${randomUUID().slice(0, 8)}`;
+  await d.run('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)', ['store', token]);
+
   console.log(full ? 'Pushing the full window…' : 'Pushing what the cycle recorded as changed…');
   // One list, read and written. Holding the SELECT and the column list apart
   // let `tier` be added to the second and not the first, which pushed a null
@@ -460,21 +476,10 @@ async function main() {
     console.log(`\nCycle stamp: ${cycle} (unchanged)`);
   }
 
-  // Which push of D1 this file is, so `hydrate` can tell the file that wrote
-  // D1's current state from an older one the Actions cache happened to hand
-  // back. A token rather than the cycle stamp above: that stamp is derived from
-  // the data and deliberately does not move when a cycle pushed nothing, so two
-  // different files can carry it.
-  //
-  // D1 first and the local copy second. Then the only way the two can disagree
-  // is a file that never recorded a push D1 took, which reads as a stale file
-  // and costs a full rebuild - correct, merely expensive. The reverse ordering
-  // would let a file claim a push D1 never received.
-  // `local` is a raw handle, not db(), so the migration that declares this
-  // table has not necessarily run against this file.
+  // The file's half of the store token, last of all: everything D1 was given
+  // under it has landed. `local` is a raw handle, not db(), so the migration
+  // that declares this table has not necessarily run against this file.
   local.exec('CREATE TABLE IF NOT EXISTS local_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
-  const token = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-  await d.run('INSERT OR REPLACE INTO sync_meta (key, value) VALUES (?, ?)', ['store', token]);
   local.prepare('INSERT OR REPLACE INTO local_meta (key, value) VALUES (?, ?)').run('store', token);
 
   // The dirty list was cleared above and the prune ran; both are writes, and

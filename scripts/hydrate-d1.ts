@@ -184,43 +184,34 @@ async function usableLocalStore(path: string, since: number): Promise<boolean> {
 }
 
 /**
- * Top up a cached store: the small tables whole, and anything published since
- * the newest article it already holds. A few hundred rows rather than 14,000.
+ * Top up a cached store: the two small tables the web app or the seed can
+ * change on their own, and nothing else.
+ *
+ * Articles are not looked at. A matching token means the run that wrote this
+ * file also wrote D1's current state and finished doing so - sync puts the
+ * token into D1 before it pushes and into the file only after - so there is
+ * nothing in D1's articles this file lacks. The pull that used to guard the
+ * other case was a scan of the whole table, every cycle, for rows that could
+ * not be there.
  */
-async function topUp(path: string): Promise<void> {
-  const local = new DatabaseSync(path);
-  const newest = (local.prepare('SELECT COALESCE(MAX(fetched_at), 0) AS t FROM articles').get() as
-    { t: number }).t;
-  local.close();
-
+async function topUp(): Promise<void> {
   const sources = await pull<Record<string, unknown>>('sources',
     'id,name,feed_url,homepage,country,category,bias,tier', '', []);
   const prefsCols = ['user_id','country','categories','places','place_ids','geo_consent','geo_place_id'];
   const prefs = await pull<Record<string, unknown>>('prefs',
     (await columns('prefs', prefsCols)).join(','), '', []);
-  // Anything another runner pushed while this file sat in the cache. Normally
-  // empty: one cycle runs at a time, and it is the one that wrote this file.
-  const articleCols = ['id','source_id','url','title','lead','body','image_url','published_at','fetched_at',
-    'content_hash','cluster_id','prominent'];
-  const fresh = await pull<Record<string, unknown>>('articles', articleCols.join(','),
-    'WHERE fetched_at > ?', [newest]);
 
   const d = db();
   insertAll(d, 'sources', ['id','name','feed_url','homepage','country','category','bias','tier'], sources);
   insertAll(d, 'prefs', prefsCols, prefs);
-  if (fresh.length) {
-    // Their parents may not be here; the clusterer will file them either way.
-    for (const a of fresh) a.cluster_id = null;
-    insertAll(d, 'articles', articleCols, fresh);
-  }
-  console.log(`Cached store reused: +${fresh.length} articles, ${sources.length} sources, ${prefs.length} prefs`);
+  console.log(`Cached store reused: ${sources.length} sources, ${prefs.length} prefs`);
 }
 
 async function main() {
   const path = process.env.SMARTNEWS_DB ?? 'data/smartnews.db';
   const since = Date.now() - WINDOW_MS;
 
-  if (await usableLocalStore(path, since)) return topUp(path);
+  if (await usableLocalStore(path, since)) return topUp();
 
   console.log('Pulling from D1…');
 

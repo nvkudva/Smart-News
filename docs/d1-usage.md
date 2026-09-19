@@ -91,13 +91,11 @@ readers can see.
 
 ### Needs a little care
 
-- [ ] **Hydrate topUp: order, then delete.** The `fetched_at` pull is the recovery path for a
-  push that died between the article push and the token write (`sync-d1.ts`, reap can throw
-  after articles are up, and `cycle.yml` saves the store with `if: always()`). Move the
-  `sync_meta` token write *before* the article push; a dead run then mismatches and forces a
-  full rebuild (0.3% of the daily limit, already priced in TODO.md). Only then delete the pull.
-  −490k/day. Do not add an index on `fetched_at` instead — that spends write rows on every
-  upsert to fix a read that should not happen.
+- [x] **Hydrate topUp: order, then delete.** Sync now writes the store token to D1 *before*
+  it pushes and to the file only at the end, so a run that dies in between leaves a mismatch
+  and the next hydrate rebuilds once (~16k rows, 0.3% of the limit). With that, the
+  `fetched_at` pull could not find anything and is gone. −490k/day. No index on `fetched_at`
+  — that would spend write rows on every upsert to fix a read that should not happen.
 - [ ] **Hygiene: check `conditional()` before `getPrefs()`** in `world()`, `local()` and
   `place()` (`worker/read.ts`). A 304 there still reads one prefs row. The client's stamp
   gate means it rarely happens, so this is tidiness, not a number.
