@@ -20,43 +20,111 @@ import type { D1 } from './d1';
 
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS places (
-  id TEXT PRIMARY KEY, kind TEXT NOT NULL, name TEXT NOT NULL, label TEXT NOT NULL,
-  country TEXT NOT NULL, admin1_id TEXT, parent_id TEXT, lat REAL, lon REAL,
-  population INTEGER, updated_at INTEGER NOT NULL);
+  id         TEXT PRIMARY KEY,
+  kind       TEXT NOT NULL,
+  name       TEXT NOT NULL,
+  label      TEXT NOT NULL,
+  country    TEXT NOT NULL,
+  admin1_id  TEXT,
+  parent_id  TEXT,
+  lat        REAL,
+  lon        REAL,
+  population INTEGER,
+  updated_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS place_aliases (
-  alias TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', place_id TEXT NOT NULL,
-  source TEXT NOT NULL, confidence REAL NOT NULL DEFAULT 1, updated_at INTEGER NOT NULL,
-  PRIMARY KEY (alias, country));
+  alias      TEXT NOT NULL,
+  country    TEXT NOT NULL DEFAULT '',
+  place_id   TEXT NOT NULL,
+  source     TEXT NOT NULL,
+  confidence REAL NOT NULL DEFAULT 1,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (alias, country)
+);
+
 CREATE TABLE IF NOT EXISTS sources (
-  id TEXT PRIMARY KEY, name TEXT NOT NULL, feed_url TEXT NOT NULL,
-  homepage TEXT, country TEXT, category TEXT, bias TEXT,
-  tier TEXT NOT NULL DEFAULT 'full');
+  id       TEXT PRIMARY KEY,
+  name     TEXT NOT NULL,
+  feed_url TEXT NOT NULL,
+  homepage TEXT,
+  country  TEXT,
+  category TEXT,
+  bias     TEXT,
+  tier     TEXT NOT NULL DEFAULT 'full'
+);
+
 CREATE TABLE IF NOT EXISTS clusters (
-  id TEXT PRIMARY KEY, headline TEXT, crux TEXT, category TEXT, place TEXT,
-  country TEXT, importance INTEGER DEFAULT 3, image_url TEXT, image_source TEXT,
-  article_count INTEGER NOT NULL DEFAULT 0, source_count INTEGER NOT NULL DEFAULT 0,
-  prominence INTEGER NOT NULL DEFAULT 0,
-  first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
-  summarised_at INTEGER, summarised_n INTEGER DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0,
-  place_id TEXT,
-  framing_left TEXT, framing_centre TEXT, framing_right TEXT);
+  id             TEXT PRIMARY KEY,
+  headline       TEXT,
+  crux           TEXT,
+  category       TEXT,
+  place          TEXT,
+  country        TEXT,
+  importance     INTEGER DEFAULT 3,
+  image_url      TEXT,
+  image_source   TEXT,
+  article_count  INTEGER NOT NULL DEFAULT 0,
+  source_count   INTEGER NOT NULL DEFAULT 0,
+  prominence     INTEGER NOT NULL DEFAULT 0,
+  first_seen     INTEGER NOT NULL,
+  last_seen      INTEGER NOT NULL,
+  summarised_at  INTEGER,
+  summarised_n   INTEGER DEFAULT 0,
+  attempts       INTEGER NOT NULL DEFAULT 0,
+  place_id       TEXT,
+  framing_left   TEXT,
+  framing_centre TEXT,
+  framing_right  TEXT
+);
+
 CREATE TABLE IF NOT EXISTS articles (
-  id TEXT PRIMARY KEY, source_id TEXT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL,
-  lead TEXT, body TEXT, image_url TEXT, published_at INTEGER NOT NULL,
-  fetched_at INTEGER, content_hash TEXT, cluster_id TEXT,
-  prominent INTEGER NOT NULL DEFAULT 0);
+  id           TEXT PRIMARY KEY,
+  source_id    TEXT NOT NULL,
+  url          TEXT NOT NULL,
+  title        TEXT NOT NULL,
+  lead         TEXT,
+  body         TEXT,
+  image_url    TEXT,
+  published_at INTEGER NOT NULL,
+  fetched_at   INTEGER,
+  content_hash TEXT,
+  cluster_id   TEXT,
+  prominent    INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS prefs (
-  user_id TEXT PRIMARY KEY, country TEXT, categories TEXT, places TEXT,
-  place_ids TEXT, geo_consent INTEGER NOT NULL DEFAULT 0, geo_place_id TEXT,
-  hidden TEXT);
+  user_id      TEXT PRIMARY KEY,
+  country      TEXT,
+  categories   TEXT,
+  places       TEXT,
+  place_ids    TEXT,
+  geo_consent  INTEGER NOT NULL DEFAULT 0,
+  geo_place_id TEXT,
+  hidden       TEXT
+);
+
 CREATE TABLE IF NOT EXISTS saved (
-  user_id TEXT NOT NULL, cluster_id TEXT NOT NULL, saved_at INTEGER NOT NULL,
-  PRIMARY KEY (user_id, cluster_id));
+  user_id    TEXT NOT NULL,
+  cluster_id TEXT NOT NULL,
+  saved_at   INTEGER NOT NULL,
+  PRIMARY KEY (user_id, cluster_id)
+);
+
 CREATE TABLE IF NOT EXISTS events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, cluster_id TEXT NOT NULL,
-  kind TEXT NOT NULL, dwell_ms INTEGER, ts INTEGER NOT NULL);
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    TEXT NOT NULL,
+  cluster_id TEXT NOT NULL,
+  kind       TEXT NOT NULL,
+  dwell_ms   INTEGER,
+  ts         INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sync_meta (
-  key TEXT PRIMARY KEY, value TEXT NOT NULL);
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 -- Only a quarter of clusters are ever summarised, and every query that orders
 -- by last_seen also filters headline IS NOT NULL, so the index walk was
 -- stepping over three unsummarised rows for each one it could use. New names
@@ -70,6 +138,7 @@ CREATE INDEX IF NOT EXISTS clusters_live_category ON clusters(category, last_see
 CREATE INDEX IF NOT EXISTS clusters_live_country ON clusters(country, last_seen DESC) WHERE headline IS NOT NULL;
 CREATE INDEX IF NOT EXISTS articles_cluster ON articles(cluster_id);
 CREATE INDEX IF NOT EXISTS articles_published ON articles(published_at DESC);
+
 -- Missing from D1 until now, though the local schema has had it since place_id existed.
 -- getLocalFeed and getByPlace both filter on c.place_id, so the Local
 -- tab and every Explore place tile were falling back to the last_seen index
@@ -96,12 +165,8 @@ export const ADDED_COLUMNS: Record<string, [string, string][]> = {
     ['image_source', 'image_source TEXT'],
     ['prominence', 'prominence INTEGER NOT NULL DEFAULT 0'],
   ],
-  articles: [
-    ['prominent', 'prominent INTEGER NOT NULL DEFAULT 0'],
-  ],
-  sources: [
-    ['tier', `tier TEXT NOT NULL DEFAULT 'full'`],
-  ],
+  articles: [['prominent', 'prominent INTEGER NOT NULL DEFAULT 0']],
+  sources: [['tier', `tier TEXT NOT NULL DEFAULT 'full'`]],
   prefs: [
     ['place_ids', 'place_ids TEXT'],
     ['geo_consent', 'geo_consent INTEGER NOT NULL DEFAULT 0'],
@@ -158,8 +223,7 @@ export async function missingColumns(d: D1): Promise<[string, string, string][]>
  * and the ALTER list the DDL cannot express. Truncated because this is an
  * equality check against a value we wrote ourselves, not a defence.
  */
-export const SCHEMA_VERSION = createHash('sha256')
-  .update(SCHEMA).update(JSON.stringify(ADDED_COLUMNS)).digest('hex').slice(0, 16);
+export const SCHEMA_VERSION = createHash('sha256').update(SCHEMA).update(JSON.stringify(ADDED_COLUMNS)).digest('hex').slice(0, 16);
 
 /**
  * Whether D1 is already at SCHEMA_VERSION.
@@ -172,12 +236,17 @@ export async function schemaCurrent(d: D1): Promise<boolean> {
   try {
     const row = await d.get<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', ['schema_version']);
     return row?.value === SCHEMA_VERSION;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /** Additive and idempotent: safe to run against a live database on every deploy. */
 export async function applySchema(d: D1, log: (s: string) => void = () => {}) {
-  for (const stmt of SCHEMA.split(';').map((s) => s.trim()).filter(Boolean)) await d.run(stmt);
+  for (const stmt of SCHEMA.split(';')
+    .map((s) => s.trim())
+    .filter(Boolean))
+    await d.run(stmt);
   for (const [table, name, ddl] of await missingColumns(d)) {
     await d.run(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
     log(`  ${table}: added ${name}`);
