@@ -1,9 +1,9 @@
-import { indexDrift } from './d1-schema';
+import { indexDrift } from '../../src/lib/schema-d1';
 
 /**
- * Fails the build when db.ts declares an index d1-schema.ts does not.
+ * Fails the build when schema-local.ts declares an index schema-d1.ts does not.
  *
- * d1-schema.ts has always said it mirrors migrate() in db.ts. Nothing checked,
+ * src/lib/schema-d1.ts has always said it mirrors the local schema. Nothing checked,
  * and three indexes drifted out of it — one of them clusters_place, which the
  * Local tab and every Explore place tile read through. Deliberate omissions go
  * in LOCAL_ONLY with a reason; everything else is a bug.
@@ -13,7 +13,7 @@ import { indexDrift } from './d1-schema';
  */
 const drift = indexDrift();
 if (drift.length) {
-  console.error(`schema drift — in src/lib/db.ts but not in scripts/d1-schema.ts: ${drift.join(', ')}`);
+  console.error(`schema drift — in src/lib/schema-local.ts but not in src/lib/schema-d1.ts: ${drift.join(', ')}`);
   console.error('Add them to SCHEMA, or to LOCAL_ONLY with the reason they stay local.');
   process.exit(1);
 }

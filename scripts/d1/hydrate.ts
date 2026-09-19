@@ -4,8 +4,8 @@ config({ path: '.env.local', quiet: true });
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { d1 } from '../src/lib/d1';
-import { checkpoint, db } from '../src/lib/db';
+import { d1 } from '../../src/lib/d1';
+import { checkpoint, db } from '../../src/lib/db';
 
 /**
  * Rebuild the local SQLite working store from D1.
@@ -239,7 +239,7 @@ async function main() {
     // in D1 yet" and rebuilt as zero. The place resolver runs off that table,
     // so it fails quietly and forever rather than loudly and once.
     if (!/no such table|no such column/i.test((e as Error).message)) throw e;
-    console.warn(`\n  ! gazetteer not in D1 yet (${(e as Error).message}) — run \`npm run gazetteer && npm run sync\``);
+    console.warn(`\n  ! gazetteer not in D1 yet (${(e as Error).message}) — run \`npm run places && npm run sync\``);
   }
 
   const clusterCols = ['id','headline','crux','category','place','country','place_id','importance','image_url','image_source',

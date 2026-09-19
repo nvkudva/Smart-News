@@ -174,7 +174,7 @@ export async function getReels(limit = 20): Promise<Story[]> {
 export async function getStats() {
   const d = d1();
   const [meta, saved] = await Promise.all([
-    // sync_meta is written on D1 by sync-d1.ts, so the local SQLite stand-in —
+    // sync_meta is written on D1 by scripts/d1/sync.ts, so the local SQLite stand-in —
     // the pipeline's own file — has no such table. A missing row and a missing
     // table mean the same thing here, the same way cycleStamp() reads them.
     d.get<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', ['stats'])

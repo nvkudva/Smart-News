@@ -2,7 +2,7 @@
 
 Read-only review of the deployed read path (`src/app`, `src/lib`), the pipeline
 (`scripts/`, `src/lib/{ingest,cluster,summarise}.ts`), the sync boundary
-(`scripts/sync-d1.ts`, `scripts/d1-schema.ts`) and the schedule
+(`scripts/d1/sync.ts`, `src/lib/schema-d1.ts`) and the schedule
 (`.github/workflows/cycle.yml`, `deploy/cron-worker`).
 
 Everything stated as fact was read in the files cited. Where a claim depends on
@@ -17,7 +17,7 @@ take them as given.
 ## What is good
 
 **The two-store split, and the fact that the reason is written down.**
-`src/lib/d1.ts:8-11` and `scripts/sync-d1.ts:10-18` both state the constraint that
+`src/lib/d1.ts:8-11` and `scripts/d1/sync.ts:10-18` both state the constraint that
 forces it: a cluster run issues thousands of statements, and over D1's HTTP API each
 would be a round trip. Most projects discover this after shipping the wrong thing.
 The split also gives the pipeline real transactions and real foreign keys
@@ -32,20 +32,20 @@ correctly identifies that an exhausted D1 read budget otherwise takes local
 development down with production.
 
 **The cycle stamp is derived from data, not from the clock.**
-`scripts/sync-d1.ts:196-206` computes `COUNT(*)-MAX(last_seen)` over the summarised
+`scripts/d1/sync.ts:196-206` computes `COUNT(*)-MAX(last_seen)` over the summarised
 set and leaves `sync_meta` untouched when it has not moved. The comment at
-`sync-d1.ts:193-195` explains why the count is needed alongside the max — a ghost
+`scripts/d1/sync.ts:193-195` explains why the count is needed alongside the max — a ghost
 merge deletes a row without moving the maximum. That is the kind of detail that
 usually gets found in production six months later.
 
-**Seed-table fingerprinting.** `scripts/sync-d1.ts:62-74`. `INSERT OR REPLACE`
+**Seed-table fingerprinting.** `scripts/d1/sync.ts:62-74`. `INSERT OR REPLACE`
 bills a write whether or not the value changed; hashing the rows and keeping the
 hash *in D1* (because the runner is stateless) is the correct fix, and it is the
 difference between fitting the 100k/day write budget and not.
 
-**`reap()` is properly paranoid.** `scripts/sync-d1.ts:87-112` releases child
+**`reap()` is properly paranoid.** `scripts/d1/sync.ts:87-112` releases child
 articles before deleting a cluster, explicitly because D1 does not enforce the
-foreign key that the local store does (`sync-d1.ts:102-106`), and refuses to delete
+foreign key that the local store does (`scripts/d1/sync.ts:102-106`), and refuses to delete
 at all when more than 10% of remote clusters are locally absent — which is exactly
 what a failed hydrate looks like. This is the single best piece of defensive design
 in the repo.
@@ -80,8 +80,8 @@ on rejection so a failure is not remembered as the answer for a minute
 (`sections.ts:82-83`, `SectionFeed.tsx:38`). Adequate rather than excellent — see
 the staleness stacking in *Improvement 6*.
 
-**Keyset paging in hydrate.** `scripts/hydrate-d1.ts:28-43`, with the cost of the
-`OFFSET` version written down at `hydrate-d1.ts:30-32`.
+**Keyset paging in hydrate.** `scripts/d1/hydrate.ts:28-43`, with the cost of the
+`OFFSET` version written down at `scripts/d1/hydrate.ts:30-32`.
 
 **`BOOT` is deliberately not a client module.** `src/lib/boot.ts:1-11` explains that
 a string exported from a `'use client'` module becomes a client reference by the time
@@ -106,7 +106,7 @@ Every read and write defaults to `userId = 'local'`: `getPrefs`/`savePrefs`
 (`src/lib/library.ts:12`, `library.ts:17`, `library.ts:28`), `logEvent`
 (`feed.ts:403`). No caller ever passes anything else — `src/app/actions.ts:53-73`,
 `actions.ts:86-124` and every page call it with no argument. The `prefs` and `saved`
-tables are keyed on `user_id` (`scripts/d1-schema.ts:39-44`) but only ever hold the
+tables are keyed on `user_id` (`src/lib/schema-d1.ts:39-44`) but only ever hold the
 row `'local'`.
 
 The server actions in `src/app/actions.ts` are publicly reachable POST endpoints.
@@ -167,19 +167,19 @@ interface while you are there; `profile` (`src/app/profile/page.tsx:17-21`) and 
 a filtered count, plus `MAX(last_seen)`. D1 bills rows read, and an unindexed
 `COUNT(*)` reads every row **(inferred from SQLite's planner: there is no covering
 count shortcut, and no index on `articles` that the planner can count from)**. The
-article bodies are synced (`scripts/sync-d1.ts:17`, `sync-d1.ts:171-182`) and
+article bodies are synced (`scripts/d1/sync.ts:17`, `scripts/d1/sync.ts:171-182`) and
 nothing ever deletes them (see *Improvement 11*), so this cost grows monotonically
 for the life of the database. `src/app/profile/page.tsx:14` is `force-dynamic`, so
 there is no cache in front of it.
 
-**Fix:** have `sync-d1.ts` write the six counts into `sync_meta` beside the cycle
+**Fix:** have `scripts/d1/sync.ts` write the six counts into `sync_meta` beside the cycle
 stamp — it already holds the local SQLite file open and can count there for free —
 and make `getStats` one `SELECT ... FROM sync_meta WHERE key IN (...)`.
 
 ### 5. The D1 schema has silently drifted from the local schema it claims to mirror
 
-`scripts/d1-schema.ts:12` states "Mirrors migrate() in src/lib/db.ts. Both must
-change together." Comparing `d1-schema.ts:55-64` against `src/lib/db.ts:70-72`,
+`src/lib/schema-d1.ts:12` states "Mirrors migrate() in src/lib/db.ts. Both must
+change together." Comparing `src/lib/schema-d1.ts:55-64` against `src/lib/db.ts:70-72`,
 `db.ts:121` and `db.ts:154`, D1 is missing:
 
 - `clusters_place ON clusters(place_id, last_seen DESC)` (`db.ts:154`)
@@ -304,11 +304,11 @@ whole request tree assumes.
 
 ### 11. Nothing ever deletes an article from D1
 
-`scripts/sync-d1.ts:23` pushes a 5-day window and `scripts/hydrate-d1.ts:19` reads
+`scripts/d1/sync.ts:23` pushes a 5-day window and `scripts/d1/hydrate.ts:19` reads
 the same window back, but the only `DELETE` against D1 anywhere is `reap`'s cluster
-deletion (`sync-d1.ts:109`). Article rows — including full bodies, up to 8000
+deletion (`scripts/d1/sync.ts:109`). Article rows — including full bodies, up to 8000
 characters each (`src/lib/ingest.ts:83`) — accumulate permanently. At the stated
-~5.5k articles per working set (`hydrate-d1.ts:32`) this is roughly a 5-day window of
+~5.5k articles per working set (`scripts/d1/hydrate.ts:32`) this is roughly a 5-day window of
 live data sitting inside an ever-growing table.
 
 Consequences: `getStats` gets slower and more expensive forever (*Improvement 4*);
@@ -317,7 +317,7 @@ cycle notices; and D1's free storage ceiling is eventually the wall.
 
 **Fix:** a prune step at the end of `sync`, deleting `articles WHERE published_at <
 ?` in `MAX_PARAMS`-sized batches outside the window, and clearing `cluster_id`
-references first for the same reason `reap` does (`sync-d1.ts:102-106`).
+references first for the same reason `reap` does (`scripts/d1/sync.ts:102-106`).
 
 ### 12. The clusterer is quadratic in articles and cubic-ish in group size
 
@@ -349,9 +349,9 @@ nothing that surfaces a dead cycle to the site — the only signal a reader gets
 
 The failure mode that actually loses work: `hydrate` → `cycle` → `sync` are three
 separate steps (`cycle.yml:43-50`) and the runner's disk is scratch
-(`hydrate-d1.ts:14-16`). If `sync` fails, everything `cycle` just paid Workers AI
+(`scripts/d1/hydrate.ts:14-16`). If `sync` fails, everything `cycle` just paid Workers AI
 neurons for is gone, and the next run re-summarises from D1's older state. The `.t0`
-stamp (`scripts/cycle.ts:29`) is written to that same scratch disk, so it cannot
+stamp (`scripts/pipeline/cycle.ts:29`) is written to that same scratch disk, so it cannot
 carry a retry across runs either.
 
 **Fix:** add a retry on the `sync` step, and a cheap liveness signal — the cycle
@@ -366,18 +366,18 @@ unlikely.
 
 **Module boundaries are mostly right, and the rules are written down where they
 matter.** `src/lib/places.ts:14-16` states that the module may import only `./d1`
-and web globals, with the pipeline's synchronous twin in `places-local.ts` — that is
+and web globals, with the pipeline's synchronous twin in `src/lib/places.ts` — that is
 the correct seam for a codebase where half the files run on Node and half in a
 Worker. `src/lib/d1.ts:8-11` draws the same line for the pipeline.
 
 **Dead code, all of it verified by grep across `src` and `scripts`:**
 
 - `src/lib/cycle.ts` — no importer. `cycleStamp`, `etagFor` and `matches` are
-  unreferenced, so the stamp `sync-d1.ts:196-206` computes is currently written and
+  unreferenced, so the stamp `scripts/d1/sync.ts:196-206` computes is currently written and
   never read. Groundwork for planned work, but it is untested dead code until the
   routes use it.
 - `logEvent` (`src/lib/feed.ts:403-407`) — no caller. The `events` table and its
-  index exist in both schemas (`src/lib/db.ts:113-121`, `scripts/d1-schema.ts:45-47`)
+  index exist in both schemas (`src/lib/db.ts:113-121`, `src/lib/schema-d1.ts:45-47`)
   for a feature that does not exist.
 - `src/app/api/feed/route.ts` — no caller anywhere in `src` or `public`. It is a
   public endpoint that costs a 150-row query and a Worker invocation per hit
@@ -407,7 +407,7 @@ Worker. `src/lib/d1.ts:8-11` draws the same line for the pipeline.
 documented as if distinct, and are used in the same two expressions
 (`feed.ts:392`, `feed.ts:396-398`). One of them is redundant or the two should differ.
 
-The schema duplication between `src/lib/db.ts:19-155` and `scripts/d1-schema.ts:15-65`
+The schema duplication between `src/lib/db.ts:19-155` and `src/lib/schema-d1.ts:15-65`
 is intentional (different dialects, different lifetimes) but has already drifted —
 see *Improvement 5*.
 
@@ -433,7 +433,7 @@ read budget allows ~25k section requests. The unbounded `COUNT(*)`s in `getStats
 
 **A sort the indexes cannot serve.** `sections.ts:38` orders by
 `c.importance DESC, c.last_seen DESC`, but the partial indexes are
-`(last_seen DESC)` and `(category, last_seen DESC)` (`d1-schema.ts:58-60`). Leading
+`(last_seen DESC)` and `(category, last_seen DESC)` (`src/lib/schema-d1.ts:58-60`). Leading
 with `importance` means the filtered set must be materialised and sorted rather than
 walked in index order **(inferred from SQLite's planner; not measured)** — 200 rows
 is small, so this is a minor cost, but it is the one query whose ordering does not
@@ -441,7 +441,7 @@ match the indexes that were added for it. A
 `(category, importance DESC, last_seen DESC) WHERE headline IS NOT NULL` index would
 serve `getTopicSection` directly.
 
-**Cold start.** `src/lib/gazetteer.gen.ts` is 76KB of source, and `places.ts:42-51`
+**Cold start.** `web/worker/lib/places.gen.ts` is 76KB of source, and `places.ts:42-51`
 eagerly parses it into five structures at module load — `ALL`, `BY_ID`, `BY_ADMIN1`,
 `BY_COUNTRY`, `BY_ALIAS`. Because `feed.ts:3` imports `places.ts`, and
 `library.ts`/`sections.ts` import `feed.ts`, every route in the app pays this on
@@ -478,21 +478,21 @@ can produce on a free tier. The gap is that `/` does not use it (*Improvement 8*
    concurrent saves lose edits; and any visitor can reshape every other visitor's
    feed. This is the highest-severity item in the review.
 
-2. **`INSERT OR REPLACE` is a delete-and-insert.** `sync-d1.ts:45` uses it for
-   `clusters` and `articles`. Today the column lists at `sync-d1.ts:163-167` and
-   `sync-d1.ts:180-182` are complete, so nothing is lost. The risk is structural: the
+2. **`INSERT OR REPLACE` is a delete-and-insert.** `scripts/d1/sync.ts:45` uses it for
+   `clusters` and `articles`. Today the column lists at `scripts/d1/sync.ts:163-167` and
+   `scripts/d1/sync.ts:180-182` are complete, so nothing is lost. The risk is structural: the
    day a column is added to `clusters` and not added to that list, every synced row
    silently reverts it to the default. `ON CONFLICT DO UPDATE` with named columns
    would fail loudly instead.
 
 3. **D1 enforces neither of the foreign keys the local store does** (`db.ts:59-68`
-   versus `d1-schema.ts:35-38`). `reap` compensates for the one path that was found
-   to matter (`sync-d1.ts:102-108`); any future delete path has to remember the same
+   versus `src/lib/schema-d1.ts:35-38`). `reap` compensates for the one path that was found
+   to matter (`scripts/d1/sync.ts:102-108`); any future delete path has to remember the same
    discipline unaided.
 
-4. **A partial sync leaves D1 internally inconsistent.** `sync-d1.ts:128-207` is a
+4. **A partial sync leaves D1 internally inconsistent.** `scripts/d1/sync.ts:128-207` is a
    sequence of independent `run` calls with no transaction — D1's HTTP API cannot
-   give one across statements. Clusters are pushed at `sync-d1.ts:163`, `reap` runs
+   give one across statements. Clusters are pushed at `scripts/d1/sync.ts:163`, `reap` runs
    at `169`, articles at `180`, and the cycle stamp last at `202`. A failure between
    163 and 180 leaves clusters whose `article_count` describes articles D1 does not
    have, and the story page renders a headline with an empty "Summarised from" list
@@ -508,7 +508,7 @@ can produce on a free tier. The gap is that `/` does not use it (*Improvement 8*
 **Single points of failure**
 
 6. **The GitHub Actions runner is the whole pipeline, and it is unmonitored**
-   (*Improvement 13*). D1 is the only durable copy (`hydrate-d1.ts:14-16`); if a
+   (*Improvement 13*). D1 is the only durable copy (`scripts/d1/hydrate.ts:14-16`); if a
    `sync` fails, the neurons spent that cycle are gone.
 
 7. **The cron worker is the only clock** (`cron-worker/src/index.ts:29-32`), and

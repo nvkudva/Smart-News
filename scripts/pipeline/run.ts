@@ -1,9 +1,9 @@
 import { config } from 'dotenv';
 config({ path: '.env.local', quiet: true });
 
-import { clusterRecent } from '../src/lib/cluster';
-import { errorTally } from '../src/lib/llm';
-import { summarisePending } from '../src/lib/summarise';
+import { clusterRecent } from '../../src/lib/cluster';
+import { errorTally } from '../../src/lib/llm';
+import { summarisePending } from '../../src/lib/summarise';
 
 async function main() {
   const t0 = Date.now();

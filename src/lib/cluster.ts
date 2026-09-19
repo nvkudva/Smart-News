@@ -50,7 +50,7 @@ const articleCountOf = (members: Counted[]) =>
  *
  * Exported because membership changes in two places and only one of them used
  * to recount. Re-clustering moves articles between clusters and recounts what
- * it touched; the prune in sync-d1.ts DELETES articles out from under clusters
+ * it touched; the prune in scripts/d1/sync.ts DELETES articles out from under clusters
  * it never looks at again, and deletes only the clusters it empties completely.
  * A cluster that lost some of its articles kept the counts it had when they
  * were there — measured on 16 Sep, 83 of 754 written-up stories overstated

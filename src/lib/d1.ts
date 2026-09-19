@@ -1,11 +1,11 @@
 /**
- * D1 access for the web app.
+ * D1 access from Node — the sync, migrate and hydrate scripts in scripts/d1/.
  *
  * Two backends, one interface: D1's REST API, or the pipeline's own SQLite file
  * when SMARTNEWS_LOCAL_D1 is set. Same SQL either way.
  *
- * There is no binding backend here. This client is Node-only - scripts/ on a
- * GitHub Actions runner - and the Worker that serves the site has its own in
+ * There is no binding backend here. This client is Node-only - scripts/d1/ on
+ * a GitHub Actions runner - and the Worker that serves the site has its own in
  * web/worker/lib/d1.ts, where the binding is the only backend there is.
  *
  * The ingest/cluster/summarise pipeline deliberately does NOT go through here.

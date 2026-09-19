@@ -37,7 +37,7 @@ export const STORY_FROM = 'FROM clusters c';
 /**
  * The label the LEFT JOIN used to supply. It was one indexed lookup per
  * candidate row — 87 of the 237 rows a feed query billed — for a string that
- * has been in the bundle since gazetteer.gen.ts existed. Every query built from
+ * has been in the bundle since places.gen.ts existed. Every query built from
  * storyCols passes its rows through here instead.
  */
 export function withPlaceLabels<T extends { place_id: string | null; place_label: string | null }>(

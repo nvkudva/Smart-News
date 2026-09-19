@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { writeFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { SCHEMA } from './d1-schema';
+import { SCHEMA } from '../../src/lib/schema-d1';
 
 /**
  * Fill miniflare's local D1 from the pipeline's SQLite file.
@@ -14,7 +14,7 @@ import { SCHEMA } from './d1-schema';
  * Worker only has the `DB` binding, so the binding has to point at a database
  * that actually holds rows.
  *
- * This runs the opposite way to hydrate-d1.ts. That one pulls D1 down into the
+ * This runs the opposite way to scripts/d1/hydrate.ts. That one pulls D1 down into the
  * local file for the pipeline to work against; this one pushes the local file
  * up into local D1 for the Worker to read. Neither touches the deployed
  * database: --local is hard-coded below and there is no flag to override it.
@@ -32,7 +32,7 @@ const TABLES = ['sources', 'places', 'place_aliases', 'clusters', 'articles',
 /**
  * D1's column order, learned by applying SCHEMA to a throwaway file.
  *
- * The two schemas hold the same columns in different orders: d1-schema.ts
+ * The two schemas hold the same columns in different orders: src/lib/schema-d1.ts
  * appends what db.ts has ALTERed in over time. Positional `INSERT INTO t
  * VALUES (...)` therefore lands values in the wrong columns — it fails on
  * clusters.attempts if you are lucky, and silently transposes framing_left
@@ -100,13 +100,13 @@ function main() {
   /**
    * The cycle stamp, derived here rather than copied.
    *
-   * sync-d1.ts computes it against D1 at the end of a real run and nothing
+   * scripts/d1/sync.ts computes it against D1 at the end of a real run and nothing
    * else writes it, so the sync_meta row in the local file is whatever the
    * last sync left there - or, on a machine that has never synced, a
    * hand-written test value. Copying that gives local D1 a stamp that does not
    * describe its own rows, and every 304 in the app keys off it.
    *
-   * Same expression as sync-d1.ts, evaluated over the rows just inserted, so
+   * Same expression as scripts/d1/sync.ts, evaluated over the rows just inserted, so
    * the stamp and the data cannot disagree.
    */
   sql.push("INSERT OR REPLACE INTO sync_meta (key, value) " +

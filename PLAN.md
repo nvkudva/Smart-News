@@ -25,7 +25,7 @@ answer is not "make the queries faster" — it is "do not make the call".
 `src/lib/cycle.ts` already holds the mechanism and nothing calls it:
 
 - `cycleStamp()` — `COUNT(*)`–`MAX(last_seen)` over summarised clusters,
-  written by `sync-d1.ts` at the end of each run, memoised 60s per isolate.
+  written by `scripts/d1/sync.ts` at the end of each run, memoised 60s per isolate.
 - `etagFor(stamp, scope)` — a weak validator, correct because two renders of
   one cycle are equivalent rather than byte-identical.
 - `matches(request, etag)` — the conditional-request half.

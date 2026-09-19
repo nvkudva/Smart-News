@@ -3,7 +3,7 @@ name: news cycle
 # Every 30 minutes: fetch and summarise what is new, push the results back. D1
 # is the durable copy; the local SQLite file is the working set, carried between
 # runs in the Actions cache and topped up from D1 rather than rebuilt from it —
-# see scripts/hydrate-d1.ts. A cache miss falls back to the full rebuild.
+# see scripts/d1/hydrate.ts. A cache miss falls back to the full rebuild.
 # GitHub drops most firings of a */30 schedule, so the 30-minute clock lives in
 # a Cloudflare Worker (deploy/cron-worker) that calls workflow_dispatch instead.
 on:

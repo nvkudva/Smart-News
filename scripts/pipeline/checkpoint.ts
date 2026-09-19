@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 config({ path: '.env.local', quiet: true });
 
-import { checkpoint, db } from '../src/lib/db';
+import { checkpoint, db } from '../../src/lib/db';
 
 /**
  * Fold the WAL into the database file, as a step of its own.

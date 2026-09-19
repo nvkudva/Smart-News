@@ -13,10 +13,10 @@
  *
  * This module runs inside the deployed Worker, so it may import only ./d1 and
  * standard web globals — no Node builtins, and nothing out of db.ts. The
- * pipeline's synchronous equivalent lives in places-local.ts.
+ * pipeline's synchronous equivalent lives in src/lib/places.ts.
  *
  * None of the gazetteer reads touch D1 any more. The 338 places and their
- * aliases are compiled into gazetteer.gen.ts and indexed here at module load,
+ * aliases are compiled into places.gen.ts and indexed here at module load,
  * because they answered the same questions on every request from rows that only
  * change when someone edits the seed and redeploys. What is left of d1 here is
  * placesReady, which asks about columns on OTHER tables.
@@ -26,7 +26,7 @@ import { d1 } from './d1';
 import { logWarn } from './log';
 import type { Place, PlaceKind } from '../../shared/types';
 export type { Place, PlaceKind };
-import { ALIASES, PLACES, type PlaceRow } from './gazetteer.gen';
+import { ALIASES, PLACES, type PlaceRow } from './places.gen';
 
 const fromRow = (r: PlaceRow): Place => ({
   id: r[0], kind: r[1], name: r[2], label: r[3], country: r[4],

@@ -4,7 +4,7 @@ import { logWarn } from './log';
 /**
  * The version of the readable world, as one string.
  *
- * sync-d1.ts writes it at the end of every pipeline run, derived from the data
+ * scripts/d1/sync.ts writes it at the end of every pipeline run, derived from the data
  * rather than the clock, so it moves only when the feed could actually have
  * changed. The pipeline runs every fifteen minutes and usually adds nothing a
  * given reader would notice, which is what makes it worth asking: a client

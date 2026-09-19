@@ -91,13 +91,13 @@ calls `getPrefs()` twice per render. Invisible at current volume, embarrassing a
 any other.
 
 ### 8. hydrate pages without ORDER BY
-`scripts/hydrate-d1.ts` pages with `LIMIT 400 OFFSET n` and no `ORDER BY`.
+`scripts/d1/hydrate.ts` pages with `LIMIT 400 OFFSET n` and no `ORDER BY`.
 SQLite gives no stable ordering across separate statements, so a row can be
 skipped or fetched twice. It has not bitten yet because the working set is small
 enough to fit in few pages — that is luck, not correctness.
 
 ### 9. sync still pushes prefs, reverting the reader's own choices
-`scripts/sync-d1.ts` pushes the `prefs` table up from the local scratch store.
+`scripts/d1/sync.ts` pushes the `prefs` table up from the local scratch store.
 The web app is the only legitimate writer of that table, so every cycle can
 overwrite a preference the reader just set. Delete the prefs push.
 
@@ -153,7 +153,7 @@ Every card renders the full 4-6 sentence `crux` and the CSS clamps it to 3-5
 lines, so the feed is thirty summaries cut off mid-sentence. Ask the model for a
 one-sentence `lede` alongside the crux — roughly 20 more output tokens on a call
 that already writes 100-830 — and keep `crux` for the story page and reels.
-`src/lib/summarise.ts`, `src/components/StoryCard.tsx`, `scripts/d1-schema.ts`.
+`src/lib/summarise.ts`, `src/components/StoryCard.tsx`, `src/lib/schema-d1.ts`.
 
 ### 15. "Related" is just the category's three newest
 `getStory` selects `WHERE category = ? ORDER BY last_seen DESC LIMIT 3`, so a

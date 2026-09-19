@@ -1,5 +1,5 @@
 {
-  "note": "Source of truth for the gazetteer. Edit by hand, then run `npm run gazetteer`. See docs/PLACES.md.",
+  "note": "Source of truth for the gazetteer. Edit by hand, then run `npm run places`. See docs/PLACES.md.",
   "places": [
     {
       "id": "a:au.australian-capital-territory",

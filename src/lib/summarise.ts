@@ -2,7 +2,7 @@ import pLimit from 'p-limit';
 import { CATEGORIES, db, markDirty } from './db';
 import type { Bias } from '../../web/shared/sources';
 import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } from './llm';
-import { isoCountry, resolvePlaceLocal } from './places-local';
+import { isoCountry, resolvePlaceLocal } from './places';
 import type { DatabaseSync } from 'node:sqlite';
 import { distinctByText, entities } from './text';
 

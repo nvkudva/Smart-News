@@ -5,10 +5,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import pLimit from 'p-limit';
-import { recountClusters } from '../src/lib/cluster';
-import { checkpoint } from '../src/lib/db';
-import { d1, type D1 } from '../src/lib/d1';
-import { applySchema, schemaCurrent } from './d1-schema';
+import { recountClusters } from '../../src/lib/cluster';
+import { checkpoint } from '../../src/lib/db';
+import { d1, type D1 } from '../../src/lib/d1';
+import { applySchema, schemaCurrent } from '../../src/lib/schema-d1';
 
 /**
  * Push the local pipeline's finished rows up to D1, which is what the deployed

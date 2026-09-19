@@ -3,12 +3,12 @@ config({ path: '.env.local', quiet: true });
 
 import { mkdirSync, openSync, readdirSync, rmSync, statSync, writeFileSync, writeSync } from 'node:fs';
 import { join } from 'node:path';
-import { clusterRecent } from '../src/lib/cluster';
-import { affordable, DAILY_NEURONS, NEURON_BUDGET, neuronsToday } from '../src/lib/budget';
-import { checkpoint } from '../src/lib/db';
-import { ingest } from '../src/lib/ingest';
-import { errorTally, tokenTally } from '../src/lib/llm';
-import { summarisePending } from '../src/lib/summarise';
+import { clusterRecent } from '../../src/lib/cluster';
+import { affordable, DAILY_NEURONS, NEURON_BUDGET, neuronsToday } from '../../src/lib/budget';
+import { checkpoint } from '../../src/lib/db';
+import { ingest } from '../../src/lib/ingest';
+import { errorTally, tokenTally } from '../../src/lib/llm';
+import { summarisePending } from '../../src/lib/summarise';
 
 /**
  * Mirror everything the run prints into a log, so a cycle can be followed live

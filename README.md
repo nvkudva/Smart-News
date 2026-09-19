@@ -90,10 +90,10 @@ npm run dev                         # http://localhost:3000
 
 Every fifteen minutes: read the feeds, cluster what is the same story, summarise each cluster once, push the results to D1. The browser then reads those results without waking a server for most of it. Each stage is below, in order.
 
-The pipeline and the site deliberately use different stores. The pipeline writes local SQLite because a cluster run issues thousands of statements, each of which would otherwise be an HTTP round trip; the site reads D1 through `src/lib/d1.ts`. `scripts/hydrate-d1.ts` pulls the working window down and `scripts/sync-d1.ts` pushes results back, which is what lets `.github/workflows/cycle.yml` run `hydrate` → `cycle` → `sync` on a runner with no persistent disk.
+The pipeline and the site deliberately use different stores. The pipeline writes local SQLite because a cluster run issues thousands of statements, each of which would otherwise be an HTTP round trip; the site reads D1 through `src/lib/d1.ts`. `scripts/d1/hydrate.ts` pulls the working window down and `scripts/d1/sync.ts` pushes results back, which is what lets `.github/workflows/cycle.yml` run `hydrate` → `cycle` → `sync` on a runner with no persistent disk.
 
 `npm run deploy` migrates D1 before it builds. This is not optional ceremony:
-the schema lives in two files (`src/lib/db.ts` for local SQLite, `scripts/d1-schema.ts`
+the schema lives in two files (`src/lib/schema-local.ts` for local SQLite, `src/lib/schema-d1.ts`
 for D1), every statement in them is `CREATE TABLE IF NOT EXISTS`, and a column
 added later therefore arrives only through the guarded `ALTER`s in
 `ADDED_COLUMNS`. Those used to run at the tail of `npm run sync` — which is the
@@ -110,7 +110,7 @@ exits non-zero if the two files have drifted apart.
 **Gathering**
 
 - `web/shared/sources.ts` is the list — 55 feeds, hand-curated, each with a country, a category and a political lean rated against its own country's politics. A feed enters the file only after three checks: it parses, its articles yield readable text through Readability, and its `robots.txt` permits the fetch.
-- `scripts/ingest.ts` reads every feed, normalises each link (dropping tracking parameters, which is not cosmetic — Al Jazeera's `robots.txt` disallows the `?traffic_source=` variant its own feed emits), and skips URLs already stored.
+- `scripts/pipeline/ingest.ts` reads every feed, normalises each link (dropping tracking parameters, which is not cosmetic — Al Jazeera's `robots.txt` disallows the `?traffic_source=` variant its own feed emits), and skips URLs already stored.
 - Before fetching an article, `src/lib/robots.ts` checks that host's `robots.txt` under RFC 9309 — most specific agent group, longest matching path, `Allow` breaking ties — caching one fetch per host per run and honouring `Crawl-delay` per host.
 - Full text is extracted with jsdom and Readability. Summaries come from the article, never the RSS blurb. A body that fails is retried on later runs for an hour, so a transient error is not permanent.
 
@@ -127,7 +127,7 @@ exits non-zero if the two files have drifted apart.
 
 **Storing**
 
-- `scripts/sync-d1.ts` pushes finished rows to D1 in batches, fingerprinting the tables that rarely change so unchanged rows are not rewritten, and paging by key rather than `OFFSET` — `OFFSET n` makes SQLite walk and discard n rows, which alone was costing millions of reads a day.
+- `scripts/d1/sync.ts` pushes finished rows to D1 in batches, fingerprinting the tables that rarely change so unchanged rows are not rewritten, and paging by key rather than `OFFSET` — `OFFSET n` makes SQLite walk and discard n rows, which alone was costing millions of reads a day.
 
 **Serving**
 
@@ -149,7 +149,7 @@ Known gaps, from the code review in `REVIEW.md` (7 September 2026):
 
 - **The deployed site has no authentication.** Every write is keyed `user_id = 'local'`, so any visitor overwrites the one shared preferences row and the one shared saved list.
 - **Scraped article bodies are interpolated into the prompt unescaped.** A hostile page can steer the headline and summary the front page shows.
-- `scripts/sync-d1.ts` `reap()` deletes D1 clusters missing from a freshly hydrated local file, guarded only by a 10% heuristic. A short hydrate can delete real rows irrecoverably.
+- `scripts/d1/sync.ts` `reap()` deletes D1 clusters missing from a freshly hydrated local file, guarded only by a 10% heuristic. A short hydrate can delete real rows irrecoverably.
 - Nothing prunes D1 outside the 5-day window, so storage grows without limit.
 - There are no tests and no lint config. `npm run build:check` is the only typecheck and no workflow runs it.
 - Reels, theme variants, GPS-local news, the left/centre/right coverage breakdown and the credibility signal are not built. `sources.bias` is declared in the schema and read by nothing.
@@ -176,7 +176,7 @@ What it does with other people's journalism, and what it deliberately does not:
   paraphrasing one piece.
 - Full text is fetched to write that summary and kept in the five-day working
   window so a cluster that grows can be re-summarised. It is never rendered by
-  any page, never returned by any route, and `prune()` in `scripts/sync-d1.ts`
+  any page, never returned by any route, and `prune()` in `scripts/d1/sync.ts`
   deletes it once it leaves the window.
 - Every story credits its sources and links to them. Traffic goes to the
   publisher; nothing here is monetised.

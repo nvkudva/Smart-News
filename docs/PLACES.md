@@ -60,7 +60,7 @@ it is the broader place, and the one an alias is most likely to exist for.
 the build script. Edit it, then:
 
 ```
-npm run gazetteer
+npm run places
 ```
 
 The run upserts both tables from the seed, deletes rows the seed no longer
@@ -85,7 +85,7 @@ Leave `lat`/`lon` null rather than guessing — a wrong coordinate sends the GPS
 opt-in to the wrong city, whereas a null one simply makes that place
 unreachable by GPS.
 
-`GAZETTEER_LLM=1 npm run gazetteer` asks the configured model about the
+`GAZETTEER_LLM=1 npm run places` asks the configured model about the
 leftovers and writes its answers back into the seed with `"source": "llm"`. That
 is a proposal, not a result: read the diff before running again. Model guesses
 are never resolved on the fly at query time.
@@ -99,18 +99,18 @@ The database and any other `data/` file stay ignored.
 | file | runs where | for |
 | --- | --- | --- |
 | `src/lib/places.ts` | Worker and Node | everything the web app asks — resolve, search, expand, adjacency, nearest. Imports only `./d1`; never node builtins. |
-| `src/lib/places-local.ts` | pipeline only | the same matching order, synchronous, over the local SQLite handle. Exists because summarising a cycle cannot afford one awaited D1 round trip per cluster. |
-| `scripts/build-gazetteer.ts` | one-off / on demand | loads the seed, backfills, reports coverage. |
+| `src/lib/places.ts` | pipeline only | the same matching order, synchronous, over the local SQLite handle. Exists because summarising a cycle cannot afford one awaited D1 round trip per cluster. |
+| `scripts/places/build.ts` | one-off / on demand | loads the seed, backfills, reports coverage. |
 
 ## Deploy order
 
 The gazetteer has to land before any code that reads it:
 
 ```
-npm run gazetteer && npm run sync    # then deploy the web app
+npm run places && npm run sync    # then deploy the web app
 ```
 
-`sync-d1.ts` pushes `places` and `place_aliases` whole on every run, and ALTERs
+`scripts/d1/sync.ts` pushes `places` and `place_aliases` whole on every run, and ALTERs
 `place_id` into the live `clusters` table — the schema block is all
 `CREATE TABLE IF NOT EXISTS`, which is a no-op against tables that already
 exist, so new columns need their own explicit step.

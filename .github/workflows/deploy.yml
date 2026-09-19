@@ -39,7 +39,7 @@ jobs:
       # Asked before it is answered: most releases change no schema at all, and
       # those should not issue DDL against a live database. --check reports what
       # the deployed D1 is missing, and fails the job outright if db.ts and
-      # d1-schema.ts have drifted apart — which is a bug to fix, not a thing to
+      # src/lib/schema-d1.ts have drifted apart — which is a bug to fix, not a thing to
       # deploy over.
       - name: Does D1 need migrating?
         id: schema

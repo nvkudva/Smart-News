@@ -1,21 +1,21 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import type { D1 } from '../src/lib/d1';
+import type { D1 } from './d1';
 
 /**
  * The D1 schema, and the migration that brings a live database up to it.
  *
- * This lives apart from sync-d1.ts because schema and rows have different
+ * This lives apart from scripts/d1/sync.ts because schema and rows have different
  * lifetimes: a column added in a release has to reach D1 the moment that
  * release deploys, whereas rows only move on the pipeline's half-hourly cycle.
  * Keeping the DDL here lets `npm run migrate:d1` apply it on its own, without
  * a local SQLite file and without pushing a single row.
  *
- * Mirrors migrate() in src/lib/db.ts. Both must change together — and that was
+ * Mirrors SCHEMA in src/lib/schema-local.ts. Both must change together — and that was
  * an aspiration rather than a fact until `npm run build:check` started
  * comparing them: three indexes had drifted out of this file, one of them on
- * the deployed read path. See indexNames() and the check in migrate-d1.ts.
+ * the deployed read path. See indexNames() and the check in scripts/d1/migrate.ts.
  */
 
 export const SCHEMA = `
@@ -70,7 +70,7 @@ CREATE INDEX IF NOT EXISTS clusters_live_category ON clusters(category, last_see
 CREATE INDEX IF NOT EXISTS clusters_live_country ON clusters(country, last_seen DESC) WHERE headline IS NOT NULL;
 CREATE INDEX IF NOT EXISTS articles_cluster ON articles(cluster_id);
 CREATE INDEX IF NOT EXISTS articles_published ON articles(published_at DESC);
--- Missing from D1 until now, though db.ts has had it since place_id existed.
+-- Missing from D1 until now, though the local schema has had it since place_id existed.
 -- getLocalFeed and getByPlace both filter on c.place_id, so the Local
 -- tab and every Explore place tile were falling back to the last_seen index
 -- and filtering. The drift went unnoticed because the pipeline reads places
@@ -85,7 +85,7 @@ CREATE INDEX IF NOT EXISTS places_admin1 ON places(admin1_id);
  * Columns the SCHEMA above cannot deliver. Every statement in it is CREATE
  * TABLE IF NOT EXISTS, which is a silent no-op against the live tables — so a
  * column added after those tables were first created has to be ALTERed in, the
- * same way db.ts does it locally.
+ * same way schema-local.ts does it locally.
  */
 export const ADDED_COLUMNS: Record<string, [string, string][]> = {
   clusters: [
@@ -110,7 +110,7 @@ export const ADDED_COLUMNS: Record<string, [string, string][]> = {
   ],
 };
 
-/** Index names this schema declares, for the drift check against db.ts. */
+/** Index names this schema declares, for the drift check against schema-local.ts. */
 export function indexNames(): string[] {
   return [...SCHEMA.matchAll(/CREATE INDEX IF NOT EXISTS (\w+)/g)].map((m) => m[1]).sort();
 }
@@ -123,10 +123,10 @@ const LOCAL_ONLY = new Set([
 ]);
 
 export function indexDrift(): string[] {
-  const local = readFileSync(resolve(process.cwd(), 'src/lib/db.ts'), 'utf8');
+  const local = readFileSync(resolve(process.cwd(), 'src/lib/schema-local.ts'), 'utf8');
   const declared = new Set(indexNames());
   const inLocal = [...local.matchAll(/CREATE INDEX IF NOT EXISTS (\w+)/g)].map((m) => m[1]);
-  // One direction only: db.ts also indexes columns the site never reads, and
+  // One direction only: schema-local.ts also indexes columns the site never reads, and
   // the partial cluster indexes are named the same in both.
   return [...new Set(inLocal)].filter((n) => !declared.has(n) && !LOCAL_ONLY.has(n)).sort();
 }

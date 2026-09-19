@@ -3,8 +3,8 @@ config({ path: '.env.local', quiet: true });
 
 import { appendFileSync } from 'node:fs';
 
-import { d1 } from '../src/lib/d1';
-import { applySchema, indexDrift, missingColumns, ADDED_COLUMNS } from './d1-schema';
+import { d1 } from '../../src/lib/d1';
+import { applySchema, indexDrift, missingColumns, ADDED_COLUMNS } from '../../src/lib/schema-d1';
 
 /**
  * Bring the live D1 database up to the current schema, without touching rows.
@@ -17,7 +17,7 @@ import { applySchema, indexDrift, missingColumns, ADDED_COLUMNS } from './d1-sch
  */
 
 /**
- * d1-schema.ts says it mirrors migrate() in db.ts. It said so while three
+ * src/lib/schema-d1.ts says it mirrors the local schema. It said so while three
  * indexes were missing from it, one of them on the deployed read path, because
  * nothing ever compared the two. Now something does.
  */
@@ -32,7 +32,7 @@ async function main() {
   }
 
   const drift = indexDrift();
-  if (drift.length) console.log(`\nIn db.ts but not in d1-schema.ts: ${drift.join(', ')}`);
+  if (drift.length) console.log(`\nIn src/lib/schema-local.ts but not in src/lib/schema-d1.ts: ${drift.join(', ')}`);
 
   if (check) {
     console.log(missing.length
