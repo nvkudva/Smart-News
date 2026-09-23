@@ -959,8 +959,12 @@ body {
   .card--compact .foot { flex-wrap: nowrap; }
   .card--compact .foot .kicker { min-width: 0; }
   .card--compact .foot .meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
-  /* Square, as tall as the row it shares with the summary. */
-  .card--compact .plate--thumb { width: auto; height: auto; aspect-ratio: 1; align-self: stretch; }
+  /* Square, as tall as the four summary lines beside it. Sized outright: a
+     width taken from a stretched height through aspect-ratio came out as a
+     tall strip in Safari. */
+  .card--compact .plate--thumb {
+    width: calc(4 * 1.5 * var(--t-2)); height: auto; aspect-ratio: 1; align-self: flex-start;
+  }
   .card--compact:not(:has(.plate--thumb)) p { -webkit-line-clamp: 4; }
 
   .card--stack .plate--hero,
