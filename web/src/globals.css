@@ -2479,9 +2479,11 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
   .story__head { grid-area: head; }
   .detail__main {
     display: grid; align-items: start; gap: 16px;
-    grid-template-columns: minmax(0, 1fr) 45%;
+    grid-template-columns: minmax(0, 1fr) 38.25%;
   }
-  .detail__main > .plate--detail { order: 0; max-height: none; }
+  /* 15% narrower than a 45% column at the same height: the sides are cropped,
+     not the picture scaled down. */
+  .detail__main > .plate--detail { order: 0; max-height: none; aspect-ratio: 13.6 / 9; }
   .story__meta { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
 
   /* One card across the full width, with the three columns inside it. */
