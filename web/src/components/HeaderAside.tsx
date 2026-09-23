@@ -1,10 +1,11 @@
 
 import { Link } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Pin } from './icons';
 import { ModeToggle } from './Mode';
 import { readPlaceLine, writePlaceLine, type PlaceLine } from '../lib/placeLine';
 import { sessionStamp, stillGood } from '../lib/store';
+import { isChecking, watchChecking } from '../lib/world';
 
 /**
  * The date and the place are the only part of the header that is not the same
@@ -16,6 +17,7 @@ import { sessionStamp, stillGood } from '../lib/store';
 export function HeaderAside() {
   const [today, setToday] = useState('');
   const [here, setHere] = useState('');
+  const checking = useSyncExternalStore(watchChecking, isChecking, () => false);
 
   useEffect(() => {
     setToday(new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }));
@@ -49,7 +51,10 @@ export function HeaderAside() {
 
   return (
     <div className="appbar__aside">
-      <span className="appbar__date">{today}</span>
+      <span className="appbar__when">
+        <span className="appbar__date">{today}</span>
+        {checking && <span className="appbar__sync" role="status">Getting new stories…</span>}
+      </span>
       {/* The one way into the local surface: no sixth tab, but the pin was
           already naming the reader's place, so make it go there. */}
       <Link to="/local" className="pinchip" aria-label={here ? `Local news for ${here}` : 'Local news'}>

@@ -1,10 +1,10 @@
-import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
+import { Link, Outlet, createRootRoute, useRouter } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { AppHeader } from '../components/AppHeader'
 import { ServiceWorker } from '../components/ServiceWorker'
 import { StoryWarm } from '../components/StoryWarm'
 import { UpdateBanner } from '../components/UpdateBanner'
-import { startWorldRefresh } from '../lib/world'
+import { onWorldUpdate, startWorldRefresh } from '../lib/world'
 import { TabBar } from '../components/TabBar'
 
 /**
@@ -24,6 +24,8 @@ function Root() {
   // meant a timer nothing had asked for and nothing could stop; it is the
   // app's clock, so the app's root starts it.
   useEffect(startWorldRefresh, [])
+  const router = useRouter()
+  useEffect(() => onWorldUpdate(() => void router.invalidate()), [router])
 
   return (
     <>

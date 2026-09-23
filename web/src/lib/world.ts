@@ -51,10 +51,44 @@ let at = 0;
 export function loadWorld(): Promise<World> {
   if (inflight && Date.now() - at < TTL_MS) return inflight;
   at = Date.now();
-  const p = resolve();
+  const p = opened ? resolve() : heldThenCheck();
+  opened = true;
   inflight = p;
   p.catch(() => { if (inflight === p) { inflight = null; at = 0; } });
   return p;
+}
+
+/**
+ * Opening the app paints what this browser holds at once, and asks whether it
+ * is current behind it. Waiting on the stamp first left a cold network in front
+ * of a feed that was already on disk.
+ */
+let opened = false;
+let checking = false;
+const checkWatchers = new Set<() => void>();
+const updateWatchers = new Set<() => void>();
+
+function setChecking(v: boolean) { checking = v; checkWatchers.forEach((f) => f()); }
+export function isChecking() { return checking; }
+export function watchChecking(f: () => void) { checkWatchers.add(f); return () => { checkWatchers.delete(f); }; }
+/** Called when a background check brought a different world than the one showing. */
+export function onWorldUpdate(f: () => void) { updateWatchers.add(f); return () => { updateWatchers.delete(f); }; }
+
+async function heldThenCheck(): Promise<World> {
+  const held = unstamping ? null : (await readEntry<World>(WORLD))?.data;
+  if (!held) return resolve();
+  queueMicrotask(() => check(held.stamp));
+  return warmed(held);
+}
+
+function check(was: string | null) {
+  at = Date.now();
+  const p = resolve();
+  inflight = p;
+  setChecking(true);
+  p.then((w) => { if (w.stamp !== was) updateWatchers.forEach((f) => f()); })
+    .catch(() => { if (inflight === p) { inflight = null; at = 0; } })
+    .finally(() => setChecking(false));
 }
 
 /**
@@ -241,8 +275,8 @@ const VISIBLE_GRACE_MS = 5 * 60_000;
 function refresh() {
   if (document.visibilityState !== 'visible') return;
   forgetStamp();
-  at = 0;
-  void loadWorld().catch(() => {});
+  const was = inflight;
+  void (was ?? Promise.resolve(null)).catch(() => null).then((w) => check(w?.stamp ?? null));
 }
 
 /**

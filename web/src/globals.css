@@ -1599,9 +1599,10 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .appbar__date {
   font-size: var(--t-2); font-weight: 600; color: var(--kicker); white-space: nowrap;
 }
-/* The date is the first thing to go: the pin names a place the reader chose,
-   and today's date is the one line they can read off any other clock. */
-@media (max-width: 439.98px) { .appbar__date { display: none; } }
+.appbar__when { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.appbar__sync { font-size: 11px; color: var(--kicker); opacity: .8; white-space: nowrap; }
+/* Hidden until the local surface is reworked. */
+.appbar__aside .pinchip { display: none; }
 
 @media (min-width: 700px) {
   .appbar__brand { font-size: var(--t-9); }
