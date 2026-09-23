@@ -272,7 +272,7 @@ export function clearSections() {
 const REFRESH_MS = 15 * 60_000;
 const VISIBLE_GRACE_MS = 5 * 60_000;
 
-function refresh() {
+export function refresh() {
   if (document.visibilityState !== 'visible') return;
   forgetStamp();
   const was = inflight;

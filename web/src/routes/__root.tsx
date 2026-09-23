@@ -6,6 +6,7 @@ import { StoryWarm } from '../components/StoryWarm'
 import { UpdateBanner } from '../components/UpdateBanner'
 import { onWorldUpdate, startWorldRefresh } from '../lib/world'
 import { TabBar } from '../components/TabBar'
+import { PullToRefresh } from '../components/PullToRefresh'
 
 /**
  * What layout.tsx held, minus the parts that were Next's.
@@ -31,6 +32,7 @@ function Root() {
     <>
       <div className="wash" aria-hidden><i /><i /><i /></div>
       <AppHeader />
+      <PullToRefresh />
       <Outlet />
       <StoryWarm />
       <ServiceWorker />
