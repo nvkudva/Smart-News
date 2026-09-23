@@ -622,6 +622,14 @@ body {
   .shell > .pager { min-width: 0; }
 }
 
+/* The desktop grid from 700 up, not only from 1024: at two columns an unfolded
+   phone or a tablet showed the lead story as one card across the whole screen.
+   Three columns keeps two or three stories side by side on every row, and the
+   lead takes two of them rather than the full width. */
+@media (min-width: 700px) and (max-width: 1023.98px) {
+  .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 @media (min-width: 1024px) {
   :root { --content: 1200px; }
   .shell { padding: 0 28px 110px; }
@@ -838,6 +846,15 @@ body {
   .reelnav { display: flex; }
 }
 
+/* A tablet or an unfolded phone keeps the phone's reel too, but at 700-1023
+   the body's 680px cap left the headline, summary and fade short of a photo
+   that ran edge to edge, with bare ground beside them. The whole reel narrows
+   to one centred column instead, so picture, fade and text share one width. */
+@media (min-width: 700px) and (max-width: 1023.98px) {
+  .reel { width: 80%; margin: 0 auto; }
+  .reel__body { max-width: none; }
+}
+
 /* ── Story detail ──────────────────────────────────────────────────────── */
 .detail { display: flex; flex-direction: column; gap: 22px; }
 /* The picture is written after the summary, because that is where it belongs
@@ -940,7 +957,7 @@ body {
     /* Row height is half a 1x card, so a 1x spans two rows and two 0.5x cards
        stack into exactly its height, gap included. That shared rhythm is what
        lets the three sizes mix without knocking rows out of alignment. */
-    grid-auto-rows: calc((var(--cat-h) - var(--gap)) / 2);
+    grid-auto-rows: calc((var(--card-h) - var(--gap)) / 2);
   }
   .cardwrap { height: auto; }
   .cardwrap > .card { height: 100%; }
@@ -1091,8 +1108,8 @@ body {
   background: var(--glass); border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow);
 }
-.skel--lead { min-height: var(--cat-h); }
-.skel--compact { min-height: calc((var(--cat-h) - var(--gap)) / 2); }
+.skel--lead { min-height: var(--card-h); }
+.skel--compact { min-height: calc((var(--card-h) - var(--gap)) / 2); }
 .cardwrap > .skel { flex: 1 1 auto; min-width: 0; height: 100%; }
 
 @media (prefers-reduced-motion: no-preference) {
