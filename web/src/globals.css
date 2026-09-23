@@ -344,7 +344,7 @@ body {
 .kicker > span { overflow: hidden; text-overflow: ellipsis; }
 .kicker span.sep { opacity: .35; }
 
-.card h2 { margin: 0; font-size: var(--t-6); line-height: 1.26; font-weight: 650; letter-spacing: -.016em; text-wrap: pretty;
+.card h2 { margin: 0; font-size: 1.0625rem; line-height: 1.26; font-weight: 650; letter-spacing: -.016em; text-wrap: pretty;
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .card p  { margin: 0; font-size: var(--t-3); line-height: 1.5; color: var(--ink-2); text-wrap: pretty;
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
@@ -487,7 +487,7 @@ body {
 .card--lead  .plate--hero { aspect-ratio: 21 / 9; height: auto; }
 
 /* No image: drop the plate rather than show a grey rectangle 350px wide. */
-.card--text h2 { font-size: var(--t-7); -webkit-line-clamp: 3; }
+.card--text h2 { -webkit-line-clamp: 3; }
 .card--text p  { -webkit-line-clamp: 6; }
 
 @media (min-width: 560px) {
@@ -664,7 +664,7 @@ body {
   background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: var(--shadow);
 }
 .tile__n { font-size: var(--t-2); font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink-3); }
-.tile h3 { margin: 0; font-size: var(--t-5); font-weight: 650; letter-spacing: -0.016em; text-wrap: balance; }
+.tile h3 { margin: 0; font-size: calc(var(--t-5) - 1pt); font-weight: 650; letter-spacing: -0.016em; text-wrap: balance; }
 .tile p  { margin: 0; font-size: var(--t-2); line-height: 1.42; color: var(--ink-2);
            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 /* Two up on a phone. The old auto-fill collapsed to one column under 240px of
@@ -696,9 +696,9 @@ body {
   background: var(--accent); color: var(--on-accent);
 }
 .pagehead { padding: 28px 4px 18px; }
-.pagehead h1 { margin: 0; font-size: var(--t-9); line-height: 1.05; font-weight: 700; letter-spacing: -0.028em; }
+.pagehead h1 { margin: 0; font-size: calc(var(--t-9) - 1pt); line-height: 1.05; font-weight: 700; letter-spacing: -0.028em; }
 .pagehead p  { margin: 6px 0 0; font-size: var(--t-3); color: var(--ink-2); }
-@media (min-width: 700px) { .pagehead h1 { font-size: var(--t-10); } }
+@media (min-width: 700px) { .pagehead h1 { font-size: calc(var(--t-10) - 1pt); } }
 
 /* ── Reels ─────────────────────────────────────────────────────────────── */
 .reels {
@@ -781,7 +781,7 @@ body {
 }
 .reel__body .kicker--reel .sep { opacity: .55; }
 .reel__body h2 {
-  margin: 0; font-size: var(--t-8); line-height: 1.18; font-weight: 700;
+  margin: 0; font-size: calc(var(--t-8) - 1pt); line-height: 1.18; font-weight: 700;
   letter-spacing: -0.026em; color: var(--ink); text-wrap: pretty;
 }
 /* Unclamped. A reel is one story on a whole screen; there is nothing else on
@@ -834,8 +834,10 @@ body {
   /* The photograph is in the flow here, not pinned under a body that hugs the
      bottom: the text sits directly under the picture, and the empty band that
      a short summary left between them on a tall window is gone. */
-  .reel__photo { position: relative; inset: auto; flex: 0 0 58%; }
-  .reel__body { max-width: none; padding-bottom: 28px; }
+  /* 58% when the text fits under it; a long summary shrinks the photograph
+     instead of running off the bottom of the screen. */
+  .reel__photo { position: relative; inset: auto; flex: 0 1 58%; min-height: 160px; }
+  .reel__body { max-width: none; padding-bottom: 28px; flex: 0 0 auto; }
   .reel__count { display: block; }
   /* Previous / next beside the column: a wheel tick against mandatory snap is
      a poor way to turn a page, so desktop gets a control that turns exactly one. */
@@ -863,7 +865,7 @@ body {
 @media (min-width: 700px) {
   .detail__main { gap: 22px; }
   .detail__side { display: flex; flex-direction: column; gap: 14px; }
-  .detail h1 { font-size: var(--t-9); }
+  .detail h1 { font-size: calc(var(--t-9) - 1pt); }
 }
 
 /* Named areas rather than source order: the page reads head → summary → how it
@@ -879,7 +881,7 @@ body {
   /* The outlet list stops being a sticky rail beside the summary and becomes a
      band under it: it is a credit, read once, not a companion to the reading. */
   .detail__side { grid-area: side; position: static; top: auto; }
-  .detail h1 { font-size: var(--t-10); }
+  .detail h1 { font-size: calc(var(--t-10) - 1pt); }
 }
 
 /* ── Exploration marker ────────────────────────────────────────────────────
@@ -950,7 +952,7 @@ body {
   .cardwrap:has(.card--lead)    { grid-row: span 2; }
   .cardwrap:has(.card--compact) { grid-row: span 1; }
 
-  .card--compact h2 { font-size: var(--t-5); -webkit-line-clamp: 2; }
+  .card--compact h2 { -webkit-line-clamp: 2; }
   /* Three lines, not four: the footer wraps to two lines on a ~226px track,
      which leaves the summary room for three and printed the fourth over it. */
   .card--compact p  { font-size: var(--t-2); -webkit-line-clamp: 3; }
@@ -2407,7 +2409,7 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
 @media (pointer: coarse) { .story__save { margin-right: -16.4px; } }
 .story__headtext { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
 .story__title {
-  margin: 0; font-size: var(--t-8); line-height: 1.16; font-weight: 700;
+  margin: 0; font-size: calc(var(--t-8) - 1pt); line-height: 1.16; font-weight: 700;
   letter-spacing: -0.026em; text-wrap: pretty;
 }
 .story__coverage { display: flex; flex-direction: column; gap: 18px; }
