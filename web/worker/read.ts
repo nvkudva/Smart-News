@@ -99,7 +99,14 @@ export async function place(request: Request, userId: string): Promise<Response>
   const here = found
     ? `${found.name}, ${found.country}`
     : prefs.places[0] ?? countryName(prefs.country);
-  return Response.json({ stamp: version.stamp, here }, { headers });
+  // Where the device said the reader is, and the nation it sits in, for
+  // Explore to lead with. Only with consent, and only what the gazetteer knows.
+  const gps = prefs.geoConsent && prefs.geoPlaceId ? (await getPlaces([prefs.geoPlaceId]))[0] : null;
+  const geo = gps
+    ? [...new Map([gps, ...(await getPlaces([`n:${gps.country.toLowerCase()}`]))]
+        .map((p) => [p.id, { place_id: p.id, label: p.label, kind: p.kind }])).values()]
+    : [];
+  return Response.json({ stamp: version.stamp, here, geo }, { headers });
 }
 
 export async function local(request: Request, userId: string): Promise<Response> {

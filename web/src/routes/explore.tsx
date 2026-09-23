@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import type { ExplorePayload } from '../../shared/types'
+import type { ExplorePayload, PlaceFacet } from '../../shared/types'
 import { PageSkeleton } from '../components/PageSkeleton'
 import { PlaceTile, SubTile } from '../components/ExploreTiles'
 import { StoryCard, variantFor } from '../components/StoryCard'
@@ -39,6 +39,7 @@ export const Route = createFileRoute('/explore')({
       persist: true, signal: abortController.signal,
     })
     if ('stories' in data) return { data, subs: [] as SubTileData[] }
+    data.places = await leadWithHere(data.places)
     // The subjects inside each topic, with today's counts, come from the world
     // the feed already holds: a keyword bucket with nothing in it is not a way in.
     const w = await loadWorld()
@@ -53,6 +54,22 @@ export const Route = createFileRoute('/explore')({
   pendingComponent: () => <PageSkeleton title="Explore" tab="explore" />,
   component: Explore,
 })
+
+type GeoTile = Pick<PlaceFacet, 'place_id' | 'label' | 'kind'>
+
+/** The reader's GPS city, then its nation, ahead of the rest - tiles with no
+ *  stories today still lead, at zero. A failed lookup leaves the order alone. */
+async function leadWithHere(places: PlaceFacet[]): Promise<PlaceFacet[]> {
+  const geo = await fetch('/api/place')
+    .then((r) => (r.ok ? r.json() as Promise<{ geo?: GeoTile[] }> : { geo: [] }))
+    .then((r) => r.geo ?? [])
+    .catch((): GeoTile[] => [])
+  if (!geo.length) return places
+  const lead = geo.map((g) => places.find((p) => p.place_id === g.place_id)
+    ?? { ...g, name: g.label, country: '', stories: 0 })
+  const ids = new Set(geo.map((g) => g.place_id))
+  return [...lead, ...places.filter((p) => !ids.has(p.place_id))]
+}
 
 type SubTileData = { cat: string; category: string; name: string; slug: string; count: number }
 
