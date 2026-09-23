@@ -436,6 +436,8 @@ body {
    on every panel of two themes, in both modes. */
 .label { font-size: var(--t-1); letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: var(--kicker); }
 .panel p { margin: 0; font-size: var(--t-4); line-height: 1.58; color: var(--ink-2); text-wrap: pretty; }
+/* A story reads at its card's size, so opening one does not change the type. */
+.detail .panel p { font-size: var(--t-3); line-height: 1.5; }
 
 /* A section heading in the detail's side column, where .label — a 10.5px
    all-caps kicker meant to sit inside a panel — read as a caption for the thing
@@ -523,8 +525,6 @@ body {
 }
 
 @media (min-width: 700px) {
-  :root { --content: 1080px; }
-  .shell { padding: 0 24px 110px; }
   .plate--thumb { width: 84px; height: 84px; }
 
   /* Thirty live backdrop-filters over a fixed wash stalls the compositor and
@@ -540,6 +540,8 @@ body {
    scroller. [data-edge] rather than the bare class: StripScroller keeps setting
    the attribute from a scrollLeft that no longer moves, and the mask rules it
    feeds are written at that specificity. */
+/* Category navigation is the one layout that waits for 1024 rather than 700:
+   a tablet keeps the phone's sweep strip, which a thumb can still reach. */
 @media (min-width: 1024px) {
   .substrip, .substrip[data-edge] {
     overflow: visible;
@@ -622,15 +624,10 @@ body {
   .shell > .pager { min-width: 0; }
 }
 
-/* The desktop grid from 700 up, not only from 1024: at two columns an unfolded
-   phone or a tablet showed the lead story as one card across the whole screen.
-   Three columns keeps two or three stories side by side on every row, and the
-   lead takes two of them rather than the full width. */
-@media (min-width: 700px) and (max-width: 1023.98px) {
-  .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1024px) {
+/* Desktop from 700 up. An unfolded phone or a tablet takes the desktop's layout
+   on every page; the category column and the Reels disc are the only
+   exceptions, and each says so where it is written. */
+@media (min-width: 700px) {
   :root { --content: 1200px; }
   .shell { padding: 0 28px 110px; }
   .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
@@ -702,7 +699,6 @@ body {
 .pagehead h1 { margin: 0; font-size: var(--t-9); line-height: 1.05; font-weight: 700; letter-spacing: -0.028em; }
 .pagehead p  { margin: 6px 0 0; font-size: var(--t-3); color: var(--ink-2); }
 @media (min-width: 700px) { .pagehead h1 { font-size: var(--t-10); } }
-@media (min-width: 1024px) { .pagehead h1 { font-size: var(--t-10); } }
 
 /* ── Reels ─────────────────────────────────────────────────────────────── */
 .reels {
@@ -833,7 +829,7 @@ body {
 /* Desktop keeps the phone's reel - photograph above, text below, one story a
    screen - inside a centred column instead of stretched across the window.
    It fills the height and no more. */
-@media (min-width: 1024px) {
+@media (min-width: 700px) {
   .reel { width: 100%; max-width: 560px; margin: 0 auto; justify-content: flex-start; }
   /* The photograph is in the flow here, not pinned under a body that hugs the
      bottom: the text sits directly under the picture, and the empty band that
@@ -844,15 +840,6 @@ body {
   /* Previous / next beside the column: a wheel tick against mandatory snap is
      a poor way to turn a page, so desktop gets a control that turns exactly one. */
   .reelnav { display: flex; }
-}
-
-/* A tablet or an unfolded phone keeps the phone's reel too, but at 700-1023
-   the body's 680px cap left the headline, summary and fade short of a photo
-   that ran edge to edge, with bare ground beside them. The whole reel narrows
-   to one centred column instead, so picture, fade and text share one width. */
-@media (min-width: 700px) and (max-width: 1023.98px) {
-  .reel { width: 80%; margin: 0 auto; }
-  .reel__body { max-width: none; }
 }
 
 /* ── Story detail ──────────────────────────────────────────────────────── */
@@ -877,11 +864,6 @@ body {
   .detail__main { gap: 22px; }
   .detail__side { display: flex; flex-direction: column; gap: 14px; }
   .detail h1 { font-size: var(--t-9); }
-  /* No measure cap. 78ch held the body to 596px inside a 793px column on a
-     folding phone's inner screen, which reads as the text having failed to
-     fill the page rather than as a considered measure. The column is what
-     limits the line length now - and above 1024 the photograph beside it does. */
-  .detail .panel p { font-size: var(--t-5); line-height: 1.62; }
 }
 
 /* Named areas rather than source order: the page reads head → summary → how it
@@ -907,7 +889,9 @@ body {
 .cardwrap > .card { flex: 1 1 auto; min-width: 0; }
 
 /* What the marker is indented into, and what it is centred in. */
-.card--explore .foot .kicker { padding-left: 16px; }
+/* The whole foot, not the kicker: on a narrow track the meta wraps to the
+   bottom row, which is where the marker sits. */
+.card--explore .foot { padding-left: 16px; }
 
 /* The marker is a sibling of the card, not a child of it, because a button
    inside an anchor is invalid markup - so it has to be told where the card's
@@ -967,7 +951,9 @@ body {
   .cardwrap:has(.card--compact) { grid-row: span 1; }
 
   .card--compact h2 { font-size: var(--t-5); -webkit-line-clamp: 2; }
-  .card--compact p  { font-size: var(--t-2); -webkit-line-clamp: 4; }
+  /* Three lines, not four: the footer wraps to two lines on a ~226px track,
+     which leaves the summary room for three and printed the fourth over it. */
+  .card--compact p  { font-size: var(--t-2); -webkit-line-clamp: 3; }
   /* Fluid width, because three columns leaves tracks as narrow as 235px and a
      fixed thumb there left the summary ~15 characters a line.
      Height comes from the row it shares with the summary. */
@@ -994,7 +980,7 @@ body {
    exploration marker sits outside the card and has to line up with the text
    inside it; Broadsheet, which has no card edge to speak of, sets its own. */
 :root { --card-h: 400px; --gap: 14px; --card-pad-x: 16px; }
-@media (min-width: 1024px) { :root { --card-h: 396px; --gap: 16px; } }
+@media (min-width: 700px) { :root { --card-h: 396px; --gap: 16px; } }
 @media (min-width: 1440px) { :root { --card-h: 372px; --gap: 18px; } }
 
 /* ── Focus, pointer feedback, reduced motion ───────────────────────────────
@@ -1584,7 +1570,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 .appnav__link[aria-current="page"] { color: var(--ink); background: rgba(255,255,255,0.72); }
 :root[data-mode="dark"] .appnav__link[aria-current="page"] { background: rgba(255,255,255,0.10); }
 @media (hover: hover) { .appnav__link:hover { color: var(--ink); } }
-@media (min-width: 1024px) {
+@media (min-width: 700px) {
   :root:not([data-nav]) .appnav { display: flex; }
   :root:not([data-nav]) .tabbar { display: none; }
   /* Reels is a full-bleed vertical stack built for a thumb; on a wide screen it
@@ -1595,15 +1581,13 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 :root[data-nav="top"] .appnav { display: flex; }
 :root[data-nav="top"] .tabbar { display: none; }
 
-/* A tablet or an unfolded phone takes the desktop's header nav by default, but
-   it is still held in the hand, so Reels keeps a thumb's way in: the dock goes
-   and only its disc is left, floating at the bottom right. The dock's own box
-   stays as the disc's fixed container, stripped of every surface it had. */
+/* Exception: a tablet or an unfolded phone is still held in the hand, so Reels
+   keeps a thumb's way in there. The dock stays hidden but for its disc,
+   floating at the bottom right; the dock's own box is the disc's fixed
+   container, stripped of every surface it had. */
 @media (min-width: 700px) and (max-width: 1023.98px) {
-  :root:not([data-nav]) .appnav { display: flex; }
-  :root:not([data-nav]) .appnav__link--reels { display: none; }
   :root:not([data-nav]) .tabbar {
-    left: auto; transform: none; width: auto; height: auto; padding: 0;
+    display: flex; left: auto; transform: none; width: auto; height: auto; padding: 0;
     right: calc(20px + env(safe-area-inset-right));
     bottom: calc(20px + env(safe-area-inset-bottom));
     background: none; border: 0; box-shadow: none;
@@ -1662,8 +1646,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* The gutter has to be the shell's own at every step, not a value of its own:
    the column is centred, so the wordmark's distance from the card edge is
    exactly the difference between these two paddings. */
-@media (min-width: 700px)  { .appbar__inner { padding-inline: 24px; } }
-@media (min-width: 1024px) { .appbar__inner { padding-inline: 28px; } }
+@media (min-width: 700px) { .appbar__inner { padding-inline: 28px; } }
 
 .appbar__aside {
   display: flex; align-items: center; gap: 10px; min-width: 0;
@@ -2495,10 +2478,10 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
      two thirds of it. */
   .story__head { grid-area: head; }
   .detail__main {
-    display: grid; align-items: start; gap: 32px;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
+    display: grid; align-items: start; gap: 16px;
+    grid-template-columns: minmax(0, 1fr) 45%;
   }
-  .detail__main > .plate--detail { order: 0; max-height: 288px; }
+  .detail__main > .plate--detail { order: 0; max-height: none; }
   .story__meta { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
 
   /* One card across the full width, with the three columns inside it. */

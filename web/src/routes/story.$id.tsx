@@ -258,7 +258,7 @@ function StoryPage() {
 
           {/* The photograph sits beside the summary rather than beside the
               headline: the headline gets the width it wants, and the picture
-              is next to the prose it illustrates. Below 1024 it goes back to
+              is next to the prose it illustrates. Below 700 it goes back to
               being a full-width lead above the text - which is why it is
               ordered ahead of the panel there rather than after it. */}
           <div className="detail__main">

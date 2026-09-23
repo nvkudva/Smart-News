@@ -63,7 +63,9 @@ function Plate({ kind, src, credit, priority = false }: {
 function Kicker({ story }: { story: Story }) {
   // The canonical label says which Delhi and which Hyderabad; the raw string is
   // all an unresolved cluster has, and it still reads exactly as it did before.
-  const place = story.place_id ? (story.place_label ?? story.place) : story.place;
+  // Cards show the city alone: "Hyderabad, Telangana, India" wrapped the footer
+  // to two lines and cost the summary its last line.
+  const place = (story.place_id ? (story.place_label ?? story.place) : story.place)?.split(',')[0].trim();
   // No category: on a section page it repeats the title overhead, and on Top it
   // was the half of the line that got ellipsed to a single letter.
   return <div className="kicker">{place && <span className="kicker__place">{place}</span>}</div>;
