@@ -881,7 +881,7 @@ body {
   /* The outlet list stops being a sticky rail beside the summary and becomes a
      band under it: it is a credit, read once, not a companion to the reading. */
   .detail__side { grid-area: side; position: static; top: auto; }
-  .detail h1 { font-size: calc(var(--t-10) - 1pt); }
+  .detail h1 { font-size: calc(var(--t-10) - 3pt); }
 }
 
 /* ── Exploration marker ────────────────────────────────────────────────────
@@ -953,13 +953,14 @@ body {
   .cardwrap:has(.card--compact) { grid-row: span 1; }
 
   .card--compact h2 { -webkit-line-clamp: 2; }
-  /* Three lines, not four: the footer wraps to two lines on a ~226px track,
-     which leaves the summary room for three and printed the fourth over it. */
-  .card--compact p  { font-size: var(--t-2); -webkit-line-clamp: 3; }
-  /* Fluid width, because three columns leaves tracks as narrow as 235px and a
-     fixed thumb there left the summary ~15 characters a line.
-     Height comes from the row it shares with the summary. */
-  .card--compact .plate--thumb { width: clamp(54px, 24%, 78px); }
+  .card--compact p  { font-size: var(--t-2); -webkit-line-clamp: 4; }
+  /* One line: a wrapped footer took the height the fourth summary line needs.
+     The place gives way first, then the meta. */
+  .card--compact .foot { flex-wrap: nowrap; }
+  .card--compact .foot .kicker { min-width: 0; }
+  .card--compact .foot .meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+  /* Square, as tall as the row it shares with the summary. */
+  .card--compact .plate--thumb { width: auto; height: auto; aspect-ratio: 1; align-self: stretch; }
   .card--compact:not(:has(.plate--thumb)) p { -webkit-line-clamp: 4; }
 
   .card--stack .plate--hero,
@@ -2481,10 +2482,9 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
   .story__head { grid-area: head; }
   .detail__main {
     display: grid; align-items: start; gap: 16px;
-    grid-template-columns: minmax(0, 1fr) 38.25%;
+    grid-template-columns: minmax(0, 1fr) 44%;
   }
-  /* 15% narrower than a 45% column at the same height: the sides are cropped,
-     not the picture scaled down. */
+  /* Wider than 16:9 is tall: the sides are cropped, not the picture scaled. */
   .detail__main > .plate--detail { order: 0; max-height: none; aspect-ratio: 13.6 / 9; }
   .story__meta { font-size: var(--t-2); letter-spacing: .02em; text-transform: none; }
 
