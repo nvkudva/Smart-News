@@ -70,10 +70,11 @@ export async function neuronsToday(): Promise<number | null> {
 export const DAILY_NEURONS = 10_000;
 
 /**
- * How much of it this pipeline will use. The rest is headroom for the site and
- * for a hand-run cycle; spending the last of it would leave nothing for either.
+ * How much of it this pipeline will use: all of it. Anything else drawing on
+ * the pool - the site, a hand-run cycle - is billed past the free allowance
+ * once the pipeline has spent it, at $0.011 per 1,000 neurons.
  */
-export const NEURON_BUDGET = Number(process.env.NEURON_BUDGET ?? 9_000);
+export const NEURON_BUDGET = Number(process.env.NEURON_BUDGET ?? DAILY_NEURONS);
 
 /**
  * Neurons one cluster costs to summarise, for turning headroom into a number of
