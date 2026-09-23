@@ -575,12 +575,14 @@ body {
        card that happened to hold navigation, sitting beside real ones. */
     margin-inline: 0; padding-inline: 0;
     overflow: visible; mask-image: none; -webkit-mask-image: none;
-    /* Only the item's own padding above the first name, so the list starts on
-       the sub-strip's line rather than a row below it. */
-    padding-block: 0;
+    /* The sub-strip's own top padding and nothing more, so the first name sits
+       on the sub-strip's line rather than a row below it. */
+    padding-block: 10px 0;
     /* Shorter than the feed beside it, so it rides down with the reader rather
-       than scrolling away in the first screen. */
-    position: sticky; top: calc(var(--appbar-h) + 8px);
+       than scrolling away in the first screen. The offset is from #root's
+       content box, which already starts below the app bar, so --appbar-h here
+       would count the bar twice. */
+    position: sticky; top: 0;
   }
   .shell > .catstrip .catstrip__row {
     flex-direction: column; flex-wrap: nowrap;
