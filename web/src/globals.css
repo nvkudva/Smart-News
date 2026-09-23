@@ -886,8 +886,8 @@ body {
 
 /* Named areas rather than source order: the page reads head → summary → how it
    was covered → related on a phone, and the same five blocks reflow into a
-   masthead, a body-and-rail row, and two full-width bands on a desktop. */
-@media (min-width: 1024px) {
+   masthead, a body-and-rail row, and two full-width bands from 700 up. */
+@media (min-width: 700px) {
   .detail {
     display: grid; grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "head" "main" "side" "cover" "rel";
@@ -2366,10 +2366,10 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    coverage split — the only thing here a feed reader could not show you — as
    small print in that rail. It is now a full-width band under the summary, and
    the rail keeps the one thing that genuinely wants to be a narrow list. */
-.story__topbar { display: flex; align-items: center; gap: 4px; padding: 4px 0 6px; }
+.story__topbar { display: flex; align-items: center; gap: 4px; padding: 4px 0 6px; --glyph-inset: -15px; }
 .story__back {
   display: flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; margin-left: -10px; border-radius: 50%; color: var(--ink);
+  width: 40px; height: 40px; margin-left: var(--glyph-inset); border-radius: 50%; color: var(--ink);
   transition: background .18s ease;
 }
 .story__back:hover { background: color-mix(in oklab, var(--ink) 8%, transparent); }
@@ -2383,11 +2383,14 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 .story__meta > span { overflow: hidden; text-overflow: ellipsis; }
 .story__meta span.sep { opacity: .4; flex: 0 0 auto; }
-.story__save { margin-left: auto; flex: 0 0 auto; }
-/* Next through the story's own section, beside the bookmark. Desktop only:
-   the phone has back and a swipe, and the row has no room. */
-.story__nav { display: none; margin-left: auto; flex: 0 0 auto; gap: 2px; }
-.story__nav + .story__save { margin-left: 4px; }
+/* Next through the story's own section, beside the bookmark, at every width.
+   The dateline gives up characters from its end to make the room. */
+.story__nav { display: flex; margin-left: auto; margin-right: var(--glyph-inset); flex: 0 0 auto; gap: 2px; }
+/* The back and next chevrons sit in 40px targets but are drawn 15px in from
+   either side of them, so a target flush with the column put each chevron
+   15px inside the edge the headline and picture share. Pulling the target out
+   by that much (--glyph-inset, on .story__topbar) lines the drawn stroke up
+   with the text instead. */
 .story__nav__btn {
   display: flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; border-radius: 50%; color: var(--ink);
@@ -2395,7 +2398,6 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 }
 .story__nav__btn--next { transform: scaleX(-1); }
 a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transparent); }
-@media (min-width: 1024px) { .story__nav { display: flex; } }
 
 /* The summary is the story, so it is set on the page rather than in a box.
    Glass, a 20px radius and a shadow gave it the same chrome as the coverage
@@ -2412,7 +2414,14 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
 
-.story__head { display: flex; flex-direction: column; gap: 14px; }
+/* The bookmark sits beside the headline, at its first line: it saves this
+   story, so it belongs to the title rather than to the dateline above it. */
+.story__head { display: flex; align-items: flex-start; gap: 12px; }
+.story__head > .story__headtext { flex: 1 1 auto; }
+/* Same idea for the bookmark: its stroke ends 13.4px inside a 38px target and
+   16.4px inside the 44px one a coarse pointer gets. */
+.story__save { flex: 0 0 auto; margin-right: -13.4px; }
+@media (pointer: coarse) { .story__save { margin-right: -16.4px; } }
 .story__headtext { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
 .story__title {
   margin: 0; font-size: var(--t-8); line-height: 1.16; font-weight: 700;
@@ -2478,7 +2487,10 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
   .story__framings { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 20px; }
 }
 
-@media (min-width: 1024px) {
+/* The desktop's story layout from 700 up, the same step the feed takes to three
+   columns: an unfolded phone or a tablet has room for the picture beside the
+   summary, and stacked it put the text a full screen below the headline. */
+@media (min-width: 700px) {
   /* The headline is on its own now, so it takes the full width rather than
      two thirds of it. */
   .story__head { grid-area: head; }
@@ -2498,7 +2510,7 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
   .story__relgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 }
 .story__rail { display: flex; flex-direction: column; gap: 12px; }
-@media (min-width: 1024px) {
+@media (min-width: 700px) {
   .story__rail { flex-direction: row; align-items: baseline; gap: 18px; flex-wrap: wrap; }
 }
 

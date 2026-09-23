@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { slug } from '../../shared/taxonomy'
 import { coverageOf } from '../../shared/coverage'
 import type { Coverage, Outlet, Story, StoryPayload } from '../../shared/types'
@@ -150,8 +151,64 @@ function StoryUnavailable({ reset }: { reset: () => void }) {
   )
 }
 
+/**
+ * A horizontal swipe turns the page: leftward to the next story in the section,
+ * rightward back to wherever the reader came from - the same two moves as the
+ * next arrow and the back button, for a thumb.
+ *
+ * Decided on release, not dragged: the story page has no track to slide the
+ * way the category pager does, and a page that follows the finger and then
+ * snaps back when there is no next story reads as a fault. Down the page wins
+ * ties, so reading never fights it, and a gesture that starts in a horizontal
+ * scroller or within the left edge belongs to that scroller or to the
+ * browser's own edge-swipe.
+ */
+const SWIPE_PX = 70
+const EDGE_PX = 24
+
+function useStorySwipe(next: string | null) {
+  const router = useRouter()
+  useEffect(() => {
+    let x = 0, y = 0, on = false
+    const scrollsSideways = (el: Element | null) => {
+      for (; el && el !== document.body; el = el.parentElement) {
+        if (el.matches('[data-noswipe]')) return true
+        if (el.scrollWidth > el.clientWidth && /auto|scroll/.test(getComputedStyle(el).overflowX)) return true
+      }
+      return false
+    }
+    const start = (e: TouchEvent) => {
+      const p = e.touches[0]
+      on = e.touches.length === 1 && p.clientX > EDGE_PX && !scrollsSideways(e.target as Element)
+      if (on) { x = p.clientX; y = p.clientY }
+    }
+    const end = (e: TouchEvent) => {
+      if (!on) return
+      on = false
+      const p = e.changedTouches[0]
+      if (!p) return
+      const dx = p.clientX - x, dy = p.clientY - y
+      if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return
+      if (dx < 0) {
+        if (next) void router.navigate({ to: '/story/$id', params: { id: next } })
+      } else if (router.history.canGoBack()) {
+        router.history.back()
+      } else {
+        void router.navigate({ to: '/' })
+      }
+    }
+    window.addEventListener('touchstart', start, { passive: true })
+    window.addEventListener('touchend', end, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', start)
+      window.removeEventListener('touchend', end)
+    }
+  }, [next, router])
+}
+
 function StoryPage() {
   const { cluster, outlets, related, coverage, saved, next } = Route.useLoaderData()
+  useStorySwipe(next)
   // Two sentences per paragraph reads better than one wall of prose.
   const paragraphs = cluster.crux.split(/(?<=\.)\s+(?=[A-Z])/)
     .reduce<string[][]>((acc, s, i) => { (acc[Math.floor(i / 2)] ??= []).push(s); return acc }, [])
@@ -187,15 +244,15 @@ function StoryPage() {
               <Link to="/story/$id" params={{ id: next }} className="story__nav__btn story__nav__btn--next" aria-label="Next story"><Back /></Link>
             </nav>
           )}
-          <div className="story__save">
-            <SaveButton clusterId={cluster.id} initial={saved} iconOnly />
-          </div>
         </header>
 
         <div className="detail">
           <div className="story__head">
             <div className="story__headtext">
               <h1 className="story__title">{cluster.headline}</h1>
+            </div>
+            <div className="story__save">
+              <SaveButton clusterId={cluster.id} initial={saved} iconOnly />
             </div>
           </div>
 
@@ -206,7 +263,6 @@ function StoryPage() {
               ordered ahead of the panel there rather than after it. */}
           <div className="detail__main">
             <div className="panel">
-              <div className="label">What happened</div>
               {paragraphs.map((group, i) => <p key={i}>{group.join(' ')}</p>)}
             </div>
 
