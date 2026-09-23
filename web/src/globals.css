@@ -87,44 +87,44 @@
 :root[data-theme="pastel"] .wash i:nth-child(2) { background: oklch(0.88 0.100 335); }
 :root[data-theme="pastel"] .wash i:nth-child(3) { background: oklch(0.90 0.085 175); }
 
-/* Hue per category. --cat-h is the one thing that changes; a card's fill, edge
-   and kicker and a strip's type are all derived from it, so a new category
-   needs one line. Keyed on the attribute alone rather than on .card, because
+/* Hue per category. --cat-h is the one thing that changes; a pastel card's
+   fill, edge and kicker and a strip's type in Frosted and Pastel are all
+   derived from it, so a new category needs one line. Keyed on the attribute alone rather than on .card, because
    the same slug rides on the category strip and on the sub-strip. */
 :root[data-theme="pastel"] .card,
-:root[data-theme="pastel"] [data-cat]                { --cat-h: 252; }
-:root[data-theme="pastel"] [data-cat="top"]           { --cat-h: 252; }
-:root[data-theme="pastel"] [data-cat="latest"]        { --cat-h: 32; }
-:root[data-theme="pastel"] [data-cat="local"]         { --cat-h: 158; }
-:root[data-theme="pastel"] [data-cat="national"]      { --cat-h: 62; }
-:root[data-theme="pastel"] [data-cat="international"] { --cat-h: 232; }
-:root[data-theme="pastel"] [data-cat="world"]         { --cat-h: 252; }
-:root[data-theme="pastel"] [data-cat="india"]         { --cat-h: 62; }
-:root[data-theme="pastel"] [data-cat="politics"]      { --cat-h: 305; }
-:root[data-theme="pastel"] [data-cat="business"]      { --cat-h: 210; }
-:root[data-theme="pastel"] [data-cat="technology"]    { --cat-h: 278; }
-:root[data-theme="pastel"] [data-cat="science"]       { --cat-h: 195; }
-:root[data-theme="pastel"] [data-cat="health"]        { --cat-h: 355; }
-:root[data-theme="pastel"] [data-cat="sports"]        { --cat-h: 150; }
-:root[data-theme="pastel"] [data-cat="entertainment"] { --cat-h: 330; }
-:root[data-theme="pastel"] [data-cat="climate"]       { --cat-h: 128; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat]                { --cat-h: 252; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="top"]           { --cat-h: 252; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="latest"]        { --cat-h: 32; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="local"]         { --cat-h: 158; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="national"]      { --cat-h: 62; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="international"] { --cat-h: 232; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="world"]         { --cat-h: 252; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="india"]         { --cat-h: 62; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="politics"]      { --cat-h: 305; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="business"]      { --cat-h: 210; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="technology"]    { --cat-h: 278; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="science"]       { --cat-h: 195; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="health"]        { --cat-h: 355; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="sports"]        { --cat-h: 150; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="entertainment"] { --cat-h: 330; }
+:root:is(:not([data-theme]), [data-theme="pastel"]) [data-cat="climate"]       { --cat-h: 128; }
 
 /* The strip is the page title, so the selected category says its own colour at
    full strength and its neighbours say theirs quietly. Lightness carries the
    distinction, not opacity: a wash of grey over a hue reads as a disabled
    control, where a paler version of the same hue reads as further away. */
-:root[data-theme="pastel"] .catlink {
+:root:is(:not([data-theme]), [data-theme="pastel"]) .catlink {
   color: oklch(0.64 0.100 var(--cat-h)); opacity: 1;
 }
-:root[data-theme="pastel"] .catlink[data-active="true"],
-:root[data-theme="pastel"] .catlink[aria-current="page"] {
+:root:is(:not([data-theme]), [data-theme="pastel"]) .catlink[data-active="true"],
+:root:is(:not([data-theme]), [data-theme="pastel"]) .catlink[aria-current="page"] {
   color: oklch(0.44 0.185 var(--cat-h));
 }
 /* Sub-categories inherit the section's hue from the strip around them; they are
    a refinement of that choice, not a set of choices of their own. */
-:root[data-theme="pastel"] .subpill { color: oklch(0.58 0.110 var(--cat-h)); }
-:root[data-theme="pastel"] .subpill[data-active="true"],
-:root[data-theme="pastel"] .subpill[aria-current="page"] {
+:root:is(:not([data-theme]), [data-theme="pastel"]) .subpill { color: oklch(0.58 0.110 var(--cat-h)); }
+:root:is(:not([data-theme]), [data-theme="pastel"]) .subpill[data-active="true"],
+:root:is(:not([data-theme]), [data-theme="pastel"]) .subpill[aria-current="page"] {
   color: oklch(0.37 0.160 var(--cat-h));
   background: oklch(0.930 0.075 var(--cat-h));
   border-color: oklch(0.84 0.095 var(--cat-h));
@@ -140,8 +140,11 @@
 }
 :root[data-theme="pastel"] .card .kicker { color: oklch(0.49 0.150 var(--cat-h)); }
 :root[data-theme="pastel"] .card .meta   { color: oklch(0.48 0.060 var(--cat-h)); }
-/* The placeholder plate is the one surface with no photo to carry the hue. */
-:root[data-theme="pastel"] .card .plate {
+/* A photo's own edge would otherwise meet the card at whatever colour the
+   picture happens to end in; a fixed rim in the card's own shade frames every
+   one the same way. */
+:root[data-theme="pastel"] .card .plate { border-color: oklch(0.94 0.070 var(--cat-h)); }
+:root[data-theme="pastel"] .card .plate:not(:has(img)) {
   background: linear-gradient(150deg,
               oklch(0.86 0.105 var(--cat-h)), oklch(0.91 0.065 var(--cat-h)));
 }
@@ -196,18 +199,19 @@
 /* The date and the source count are not the category and must not compete
    with it, so the meta line keeps the hue and gives up the chroma. */
 :root[data-theme="pastel"][data-mode="dark"] .card .meta   { color: oklch(0.70 0.030 var(--cat-h)); }
-:root[data-theme="pastel"][data-mode="dark"] .card .plate {
+:root[data-theme="pastel"][data-mode="dark"] .card .plate { border-color: oklch(0.238 0.034 var(--cat-h)); }
+:root[data-theme="pastel"][data-mode="dark"] .card .plate:not(:has(img)) {
   background: linear-gradient(150deg,
               oklch(0.44 0.150 var(--cat-h)), oklch(0.31 0.105 var(--cat-h)));
 }
-:root[data-theme="pastel"][data-mode="dark"] .catlink { color: oklch(0.63 0.105 var(--cat-h)); }
-:root[data-theme="pastel"][data-mode="dark"] .catlink[data-active="true"],
-:root[data-theme="pastel"][data-mode="dark"] .catlink[aria-current="page"] {
+:root:is(:not([data-theme]), [data-theme="pastel"])[data-mode="dark"] .catlink { color: oklch(0.63 0.105 var(--cat-h)); }
+:root:is(:not([data-theme]), [data-theme="pastel"])[data-mode="dark"] .catlink[data-active="true"],
+:root:is(:not([data-theme]), [data-theme="pastel"])[data-mode="dark"] .catlink[aria-current="page"] {
   color: oklch(0.89 0.175 var(--cat-h));
 }
-:root[data-theme="pastel"][data-mode="dark"] .subpill { color: oklch(0.74 0.090 var(--cat-h)); }
-:root[data-theme="pastel"][data-mode="dark"] .subpill[data-active="true"],
-:root[data-theme="pastel"][data-mode="dark"] .subpill[aria-current="page"] {
+:root:is(:not([data-theme]), [data-theme="pastel"])[data-mode="dark"] .subpill { color: oklch(0.74 0.090 var(--cat-h)); }
+:root:is(:not([data-theme]), [data-theme="pastel"])[data-mode="dark"] .subpill[data-active="true"],
+:root:is(:not([data-theme]), [data-theme="pastel"])[data-mode="dark"] .subpill[aria-current="page"] {
   color: oklch(0.93 0.145 var(--cat-h));
   background: oklch(0.29 0.090 var(--cat-h));
   border-color: oklch(0.50 0.135 var(--cat-h));
@@ -227,9 +231,14 @@ html { background: var(--ground); height: 100%; overflow: hidden; }
    every weight of them.
 
    Declared for every theme and downloaded by none of them until a rule below
-   actually sets one: the two glass themes name only the system sans, so a
-   reader on Frosted pays nothing for any of this.
+   actually sets one, so each theme pays only for its own faces: the two glass
+   themes load Google Sans, and the two reading themes their serifs.
    ───────────────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Google Sans';
+  src: url('/fonts/google-sans-var.woff2') format('woff2-variations');
+  font-weight: 400 700; font-style: normal; font-display: swap;
+}
 @font-face {
   font-family: 'Newsreader';
   src: url('/fonts/newsreader-var.woff2') format('woff2-variations');
@@ -266,6 +275,15 @@ body {
   font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+}
+/* The two glass themes set every piece of text in Google Sans, the wordmark
+   included, which is why the brand is listed beside body: it states its own
+   face for the serif themes and would otherwise keep the system sans here. */
+:root:not([data-theme]) body,
+:root:not([data-theme]) .appbar__brand,
+:root[data-theme="pastel"] body,
+:root[data-theme="pastel"] .appbar__brand {
+  font-family: 'Google Sans', -apple-system, "SF Pro Text", system-ui, sans-serif;
 }
 
 /* The app scrolls, the document does not. Chrome animates its browser
@@ -922,7 +940,7 @@ body {
     /* Row height is half a 1x card, so a 1x spans two rows and two 0.5x cards
        stack into exactly its height, gap included. That shared rhythm is what
        lets the three sizes mix without knocking rows out of alignment. */
-    grid-auto-rows: calc((var(--card-h) - var(--gap)) / 2);
+    grid-auto-rows: calc((var(--cat-h) - var(--gap)) / 2);
   }
   .cardwrap { height: auto; }
   .cardwrap > .card { height: 100%; }
@@ -1073,8 +1091,8 @@ body {
   background: var(--glass); border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow);
 }
-.skel--lead { min-height: var(--card-h); }
-.skel--compact { min-height: calc((var(--card-h) - var(--gap)) / 2); }
+.skel--lead { min-height: var(--cat-h); }
+.skel--compact { min-height: calc((var(--cat-h) - var(--gap)) / 2); }
 .cardwrap > .skel { flex: 1 1 auto; min-width: 0; height: 100%; }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1338,8 +1356,8 @@ body {
     color: var(--accent);
     box-shadow: none;
   }
-  :root[data-theme="pastel"] .subpill[aria-current="page"],
-  :root[data-theme="pastel"] .subpill[data-active="true"] {
+  :root:is(:not([data-theme]), [data-theme="pastel"]) .subpill[aria-current="page"],
+  :root:is(:not([data-theme]), [data-theme="pastel"]) .subpill[data-active="true"] {
     background: color-mix(in oklab, oklch(0.55 0.13 var(--cat-h)) 14%, transparent);
     border-color: color-mix(in oklab, oklch(0.55 0.13 var(--cat-h)) 28%, transparent);
     color: oklch(0.55 0.13 var(--cat-h));
