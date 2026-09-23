@@ -5,6 +5,7 @@ import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } f
 import { isoCountry, resolvePlaceLocal } from './places';
 import type { DatabaseSync } from 'node:sqlite';
 import { distinctByText, entities } from './text';
+import { trending, trendingTerms, type Trend } from './trends';
 
 const MAX_ARTICLES = 6;
 const MAX_ATTEMPTS = 3;
@@ -406,7 +407,7 @@ function sourceAllowance(d: DatabaseSync): Map<string, number> {
   return left;
 }
 
-function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] {
+function worthWriting(d: DatabaseSync, terms: Trend[]): { id: string; article_count: number }[] {
   const since = Date.now() - 48 * 3_600_000;
   // Heat is measured against two days of headlines, but only fresh articles are
   // eligible to be written. An older singleton has had longer to accumulate
@@ -446,7 +447,7 @@ function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] 
   ).all(MAX_ATTEMPTS, fresh, settled) as unknown as
     { id: string; article_count: number; source_id: string; title: string; published_at: number }[];
 
-  const scored: { id: string; article_count: number; source_id: string; heat: number; at: number }[] = [];
+  const scored: { id: string; article_count: number; source_id: string; hot: boolean; heat: number; at: number }[] = [];
   for (const r of rows) {
     if (isRoutine(routine, r.source_id, r.title)) continue;
     const others = new Set<string>();
@@ -459,12 +460,14 @@ function worthWriting(d: DatabaseSync): { id: string; article_count: number }[] 
     // writing about Kioxia, or about whatever The Verge noticed this morning,
     // and that is the normal condition of a technology desk rather than a
     // reason to publish nothing.
-    scored.push({ id: r.id, source_id: r.source_id, heat: others.size, at: r.published_at,
+    scored.push({ id: r.id, source_id: r.source_id, hot: trending(terms, r.title),
+                  heat: others.size, at: r.published_at,
                   article_count: r.article_count });
   }
   // Heat still sorts, so if the run's limit binds it binds on the weakest
-  // stories rather than on whichever desk happened to be queried first.
-  scored.sort((a, b) => b.heat - a.heat || b.at - a.at);
+  // stories rather than on whichever desk happened to be queried first. A story
+  // people are searching or posting about outside the feed goes ahead of both.
+  scored.sort((a, b) => Number(b.hot) - Number(a.hot) || b.heat - a.heat || b.at - a.at);
   // One entry per cluster: the join above yields a row per fresh article, and
   // a cluster with two of them was queued, and paid for, twice in one run.
   const left = sourceAllowance(d);
@@ -560,7 +563,7 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   // the cap refuses the tail and heat decides which stories are in it.
   const singleMax = Number(process.env.SUMMARISE_SINGLE_MAX ?? 36);
   if (targets.length < limit) {
-    targets.push(...worthWriting(d).slice(0, Math.min(singleMax, limit - targets.length)));
+    targets.push(...worthWriting(d, await trendingTerms()).slice(0, Math.min(singleMax, limit - targets.length)));
   }
 
   // Title-tier members are excluded: we never fetched their article, so the

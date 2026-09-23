@@ -1,12 +1,12 @@
 /**
  * Bias is rated against the outlet's OWN country's politics, not a single
  * global axis: The Hindu is left in Indian terms the way the Guardian is left
- * in British ones. These are the project's own hand ratings over 67 outlets,
+ * in British ones. These are the project's own hand ratings over 89 outlets,
  * not a licensed dataset — AllSides and MBFC both restrict commercial reuse,
  * and at this size curating it is cheaper than licensing it anyway.
  *
- * The distribution is 13 left / 43 centre / 6 right over the 62 outlets we read
- * — the five front pages are rated too but never counted, because we never read
+ * The distribution is 14 left / 63 centre / 6 right over the 83 outlets we read
+ * — the six front pages are rated too but never counted, because we never read
  * what they said. That lopsidedness is a property of the feed, not of the
  * ratings: this list is mostly public broadcasters, wire services and quality
  * dailies. Read a "right" blindspot as "these sources did not cover it", which
@@ -160,6 +160,39 @@ export const SOURCES: SourceSeed[] = [
   { id: 'grist',        name: 'Grist',         feed_url: 'https://grist.org/feed/',                               homepage: 'https://grist.org',           country: 'US', category: 'Climate', bias: 'left' },
   { id: 'insideclimate',name: 'Inside Climate News', feed_url: 'https://insideclimatenews.org/feed/',             homepage: 'https://insideclimatenews.org', country: 'US', category: 'Climate', bias: 'left' },
 
+  // --- technology: the launch and platform beat, as Feedly and Flipboard
+  // carry it. Same reasoning as the consumer desk above: these outlets overlap
+  // each other on the same announcements, which is what gets a launch past the
+  // two-source gate. VentureBeat (429) and InfoQ (406) refused the feed itself
+  // when probed and are absent; YourStory's article pages yield ~300 characters
+  // through Readability and would never clear the body floor.
+  { id: '9to5mac',      name: '9to5Mac',        feed_url: 'https://9to5mac.com/feed/',                            homepage: 'https://9to5mac.com',         country: 'US', category: 'Technology', bias: 'centre' },
+  { id: '9to5google',   name: '9to5Google',     feed_url: 'https://9to5google.com/feed/',                         homepage: 'https://9to5google.com',      country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'macrumors',    name: 'MacRumors',      feed_url: 'https://feeds.macrumors.com/MacRumors-All',            homepage: 'https://macrumors.com',       country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'androidauthority', name: 'Android Authority', feed_url: 'https://www.androidauthority.com/feed/',        homepage: 'https://androidauthority.com', country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'androidpolice', name: 'Android Police', feed_url: 'https://www.androidpolice.com/feed/',                 homepage: 'https://androidpolice.com',   country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'xda',          name: 'XDA',            feed_url: 'https://www.xda-developers.com/feed/',                 homepage: 'https://xda-developers.com',  country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'gizmodo',      name: 'Gizmodo',        feed_url: 'https://gizmodo.com/rss',                              homepage: 'https://gizmodo.com',         country: 'US', category: 'Technology', bias: 'left' },
+  { id: 'thenextweb',   name: 'The Next Web',   feed_url: 'https://thenextweb.com/feed',                          homepage: 'https://thenextweb.com',      country: 'NL', category: 'Technology', bias: 'centre' },
+  { id: 'zdnet',        name: 'ZDNet',          feed_url: 'https://www.zdnet.com/news/rss.xml',                   homepage: 'https://zdnet.com',           country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'geekwire',     name: 'GeekWire',       feed_url: 'https://www.geekwire.com/feed/',                       homepage: 'https://geekwire.com',        country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'siliconangle', name: 'SiliconANGLE',   feed_url: 'https://siliconangle.com/feed/',                       homepage: 'https://siliconangle.com',    country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'thenewstack',  name: 'The New Stack',  feed_url: 'https://thenewstack.io/feed/',                         homepage: 'https://thenewstack.io',      country: 'US', category: 'Technology', bias: 'centre' },
+
+  // --- ai: labs and analysts, the daily.dev end of the desk. Like DeepMind,
+  // the lab blogs are primary accounts. The newsletters are low-volume and will
+  // rarely corroborate on their own; they are here to deepen a story the
+  // newsrooms have already put on the feed.
+  { id: 'openai',       name: 'OpenAI',         feed_url: 'https://openai.com/news/rss.xml',                      homepage: 'https://openai.com',          country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'huggingface',  name: 'Hugging Face',   feed_url: 'https://huggingface.co/blog/feed.xml',                 homepage: 'https://huggingface.co',      country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'cloudflare-blog', name: 'Cloudflare Blog', feed_url: 'https://blog.cloudflare.com/rss/',                 homepage: 'https://blog.cloudflare.com', country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'github-blog',  name: 'The GitHub Blog', feed_url: 'https://github.blog/feed/',                           homepage: 'https://github.blog',         country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'importai',     name: 'Import AI',      feed_url: 'https://importai.substack.com/feed',                   homepage: 'https://importai.substack.com', country: 'GB', category: 'Technology', bias: 'centre' },
+  { id: 'interconnects', name: 'Interconnects', feed_url: 'https://www.interconnects.ai/feed',                    homepage: 'https://interconnects.ai',    country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'latentspace',  name: 'Latent Space',   feed_url: 'https://www.latent.space/feed',                        homepage: 'https://latent.space',        country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'stratechery',  name: 'Stratechery',    feed_url: 'https://stratechery.com/feed/',                        homepage: 'https://stratechery.com',     country: 'US', category: 'Technology', bias: 'centre' },
+  { id: 'semianalysis', name: 'SemiAnalysis',   feed_url: 'https://semianalysis.com/feed/',                       homepage: 'https://semianalysis.com',    country: 'US', category: 'Technology', bias: 'centre' },
+
   // --- health. STAT News and Medical Xpress are the obvious two and both
   // disallow ClaudeBot on their articles, so this desk stays thin on purpose.
 
@@ -181,4 +214,9 @@ export const SOURCES: SourceSeed[] = [
   { id: 'nbc-top',      name: 'NBC News',      feed_url: 'https://feeds.nbcnews.com/nbcnews/public/news',         homepage: 'https://nbcnews.com',         country: 'US', category: 'World',    bias: 'left',   tier: 'title' },
   { id: 'thehindu-top', name: 'The Hindu',     feed_url: 'https://www.thehindu.com/feeder/default.rss',           homepage: 'https://thehindu.com',        country: 'IN', category: 'World',    bias: 'left',   tier: 'title' },
   { id: 'et-top',       name: 'The Economic Times', feed_url: 'https://economictimes.indiatimes.com/rssfeedstopstories.cms', homepage: 'https://economictimes.indiatimes.com', country: 'IN', category: 'Business', bias: 'centre', tier: 'title' },
+  // Hacker News is the one aggregator here, and it is safe as a front page for
+  // the same reason it was unsafe as a source: its links are other newsrooms'
+  // URLs, so an HN front-page hit flags our own copy of that story as prominent
+  // and never supplies a byline. The points floor is what makes it curated.
+  { id: 'hn-front',     name: 'Hacker News',   feed_url: 'https://hnrss.org/frontpage?points=150',                homepage: 'https://news.ycombinator.com', country: 'US', category: 'Technology', bias: 'centre', tier: 'title' },
 ];
