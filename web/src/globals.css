@@ -276,7 +276,7 @@ body {
    header's clearance moves in here from body, since this is now the box the
    content starts in. */
 #root {
-  height: 100%; overflow-y: auto; overscroll-behavior-y: none;
+  height: 100%; overflow-y: auto;
   box-sizing: border-box; padding-top: var(--appbar-h);
 }
 
