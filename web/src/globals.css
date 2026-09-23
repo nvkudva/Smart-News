@@ -1595,6 +1595,34 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 :root[data-nav="top"] .appnav { display: flex; }
 :root[data-nav="top"] .tabbar { display: none; }
 
+/* A tablet or an unfolded phone takes the desktop's header nav by default, but
+   it is still held in the hand, so Reels keeps a thumb's way in: the dock goes
+   and only its disc is left, floating at the bottom right. The dock's own box
+   stays as the disc's fixed container, stripped of every surface it had. */
+@media (min-width: 700px) and (max-width: 1023.98px) {
+  :root:not([data-nav]) .appnav { display: flex; }
+  :root:not([data-nav]) .appnav__link--reels { display: none; }
+  :root:not([data-nav]) .tabbar {
+    left: auto; transform: none; width: auto; height: auto; padding: 0;
+    right: calc(20px + env(safe-area-inset-right));
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    background: none; border: 0; box-shadow: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  :root:not([data-nav]) .tabbar > .inner { width: auto; }
+  :root:not([data-nav]) .tabbar .tabgroup { display: none; }
+  :root:not([data-nav]) .reelsbtn { margin-top: 0; width: 58px; height: 58px; }
+}
+/* Below 860 the four labelled links and the date do not fit one header row, so
+   the links go to icons. The label is hidden visually, not removed: it is the
+   link's accessible name. */
+@media (min-width: 700px) and (max-width: 859.98px) {
+  :root:not([data-nav]) .appnav__link span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+}
+
 /* The placement control's own buttons: .chip was written for <label> and <a>,
    neither of which needs a font reset. */
 button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: pointer; }
