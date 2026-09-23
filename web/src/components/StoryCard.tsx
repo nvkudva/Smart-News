@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import type { Story } from '../../shared/types';
 import { Photo } from './icons';
@@ -48,12 +49,17 @@ export function variantFor(story: Story, index: number): Variant {
 function Plate({ kind, src, credit, priority = false }: {
   kind: 'hero' | 'thumb'; src: string | null; credit?: string | null; priority?: boolean;
 }) {
+  // A source that refuses the hotlink or has moved leaves the browser's broken
+  // image icon; a calm gradient reads as a design choice instead.
+  const [failed, setFailed] = useState(false);
+  if (src && failed) return <div className={`plate plate--${kind} plate--failed`} />;
   return (
     <div className={`plate plate--${kind}`}>
       {src
         ? <img src={src} alt=""
                loading={priority ? 'eager' : 'lazy'}
-               fetchPriority={priority ? 'high' : undefined} />
+               fetchPriority={priority ? 'high' : undefined}
+               onError={() => setFailed(true)} />
         : <Photo size={kind === 'hero' ? 26 : 19} />}
       {src && credit && <span className="credit">Source : {credit}</span>}
     </div>

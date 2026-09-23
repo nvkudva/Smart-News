@@ -2510,3 +2510,12 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
    someone asks whether they are on the latest deploy. */
 .buildstamp { margin: 44px 2px 0; color: var(--ink-3); font-size: 9px; line-height: 1.7;
               font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .02em; }
+
+/* An image that failed to load. Muted on purpose: it stands in for a photo,
+   so it must not outshine the ones that did load. */
+.plate--failed {
+  background: linear-gradient(135deg, oklch(0.80 0.050 230), oklch(0.76 0.055 290) 55%, oklch(0.80 0.045 340));
+}
+:root[data-mode="dark"] .plate--failed {
+  background: linear-gradient(135deg, oklch(0.36 0.045 230), oklch(0.33 0.050 290) 55%, oklch(0.35 0.040 340));
+}
