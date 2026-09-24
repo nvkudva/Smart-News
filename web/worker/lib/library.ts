@@ -147,13 +147,61 @@ async function uncachedByColumn(
 
 // ----------------------------------------------------------------- reels ---
 
-/** Reels wants the biggest stories, image-first, newest — not the ranked feed. */
+/**
+ * A day, not two. Reels is the surface a reader flicks through expecting to
+ * see what is happening, and at 48 hours the far end of the window was still
+ * eligible for the first card.
+ */
+const REELS_WINDOW_H = 24;
+
+/**
+ * The same half-life the feed ranks with. Reels had none at all: `last_seen`
+ * sat behind importance and source_count in the ORDER BY, so it only ever
+ * broke a tie between rows equal on both — which is rare enough that a
+ * pictured, widely-run story from yesterday led the surface all day.
+ */
+const REELS_HALF_LIFE_H = 6;
+
+/**
+ * Reels wants the biggest stories, image-first, newest.
+ *
+ * Image-first stays a hard partition rather than a term in the score: a card
+ * here IS its photograph, and a scored pictureless story pushing a pictured
+ * one down the deck would be the wrong trade at any weight. Within each half,
+ * the order is decayed importance — so a fresh story can now outrank an older
+ * bigger one, which is the whole point.
+ *
+ * The SQL orders the same way it always did, but only to decide which rows are
+ * worth reading; the deck is cut from candidates rather than from the table.
+ */
 export async function getReels(limit = 20): Promise<Story[]> {
+  return warm(`reels:${limit}`, await cycleStamp(), () => uncachedReels(limit));
+}
+
+function reelScore(s: Story): number {
+  const ageH = (Date.now() - s.last_seen) / 3_600_000;
+  const recency = Math.pow(0.5, ageH / REELS_HALF_LIFE_H);
+  // Mapped to 0.6-1.0 rather than 0.2-1.0, as the feed's ranker maps it and for
+  // the same reason: importance should sort the deck, not decide it alone.
+  const weight = 0.5 + 0.1 * s.importance;
+  const corroboration = Math.min(1, Math.log1p(s.source_count) / Math.log(25));
+  return recency * weight * (0.35 + 0.65 * corroboration);
+}
+
+async function uncachedReels(limit: number): Promise<Story[]> {
   const ready = await placesReady();
-  return warm(`reels:${limit}`, await cycleStamp(), async () => withPlaceLabels(await d1().all<Story>(
+  // Five to a slot: enough that the decay has something to reorder, few enough
+  // that D1 bills a hundred rows rather than the window.
+  const rows = withPlaceLabels(await d1().all<Story>(
     `${select(ready)} WHERE c.headline IS NOT NULL AND c.last_seen >= ?
        ORDER BY (c.image_url IS NOT NULL) DESC, c.importance DESC, c.source_count DESC, c.last_seen DESC
-       LIMIT ?`, [Date.now() - 48 * 3_600_000, limit])));
+       LIMIT ?`, [Date.now() - REELS_WINDOW_H * 3_600_000, limit * 5]));
+
+  return rows
+    .map((s) => ({ s, pictured: s.image_url ? 1 : 0, k: reelScore(s) }))
+    .sort((a, b) => (b.pictured - a.pictured) || (b.k - a.k))
+    .slice(0, limit)
+    .map(({ s }) => s);
 }
 
 // ----------------------------------------------------------------- stats ---
