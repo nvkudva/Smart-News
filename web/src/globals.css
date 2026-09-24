@@ -464,6 +464,7 @@ body {
   background: var(--glass); border: 1px solid var(--glass-edge);
 }
 .sources a:hover { text-decoration: underline; }
+.sources__search { margin-left: auto; }
 
 /* ─────────────────────────────────────────────────────────────────────────
    Responsive pass.

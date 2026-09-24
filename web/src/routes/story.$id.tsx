@@ -206,9 +206,29 @@ function useStorySwipe(next: string | null) {
   }, [next, router])
 }
 
+const YOUTUBE = 'https://www.youtube.com'
+const GOOGLE = 'https://www.google.com'
+
+/** A fresh link element each time: the browser re-warms a connection that has gone idle. */
+function warm(origin: string) {
+  const link = document.createElement('link')
+  link.rel = 'preconnect'
+  link.href = origin
+  document.head.append(link)
+  setTimeout(() => link.remove(), 10_000)
+}
+
 function StoryPage() {
   const { cluster, outlets, related, coverage, saved, next } = Route.useLoaderData()
   useStorySwipe(next)
+  // Cross-site results pages cannot be prefetched usefully (no cookies, no
+  // prerender across sites), so warm the connection instead: once after the
+  // reader has settled, and again on hover or touch since an idle warm socket
+  // only lives ~10s.
+  useEffect(() => {
+    const t = setTimeout(() => { warm(YOUTUBE); warm(GOOGLE) }, 3000)
+    return () => clearTimeout(t)
+  }, [])
   // Two sentences per paragraph reads better than one wall of prose.
   const paragraphs = cluster.crux.split(/(?<=\.)\s+(?=[A-Z])/)
     .reduce<string[][]>((acc, s, i) => { (acc[Math.floor(i / 2)] ??= []).push(s); return acc }, [])
@@ -283,6 +303,12 @@ function StoryPage() {
                   <a href={a.url} target="_blank" rel="noreferrer noopener">{a.source}</a>
                 </li>
               ))}
+              <li className="sources__search">
+                <a onPointerEnter={() => warm(YOUTUBE)} onTouchStart={() => warm(YOUTUBE)} href={`${YOUTUBE}/results?search_query=${encodeURIComponent(cluster.headline)}`} target="_blank" rel="noreferrer noopener">YouTube</a>
+              </li>
+              <li>
+                <a onPointerEnter={() => warm(GOOGLE)} onTouchStart={() => warm(GOOGLE)} href={`${GOOGLE}/search?q=${encodeURIComponent(cluster.headline)}`} target="_blank" rel="noreferrer noopener">Google</a>
+              </li>
             </ul>
           </div>
 
