@@ -218,24 +218,6 @@ function warm(origin: string) {
   setTimeout(() => link.remove(), 10_000)
 }
 
-const ANDROID = /Android/i.test(navigator.userAgent)
-const IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-
-/**
- * Hands the search to the app when the phone has it. Android gets an intent
- * link that names the app and falls back to the page. iOS opens an app only
- * from a plain same-tab https link it has a universal link for, so the new
- * tab is dropped there.
- */
-function searchLink(url: string, androidPackage: string) {
-  if (ANDROID) {
-    const { host, pathname, search } = new URL(url)
-    return { href: `intent://${host}${pathname}${search}#Intent;scheme=https;package=${androidPackage};S.browser_fallback_url=${encodeURIComponent(url)};end` }
-  }
-  if (IOS) return { href: url }
-  return { href: url, target: '_blank', rel: 'noreferrer noopener' }
-}
-
 function StoryPage() {
   const { cluster, outlets, related, coverage, saved, next } = Route.useLoaderData()
   useStorySwipe(next)
@@ -322,10 +304,10 @@ function StoryPage() {
                 </li>
               ))}
               <li className="sources__search">
-                <a onPointerEnter={() => warm(YOUTUBE)} onTouchStart={() => warm(YOUTUBE)} {...searchLink(`${YOUTUBE}/results?search_query=${encodeURIComponent(cluster.headline)}`, 'com.google.android.youtube')}>YouTube</a>
+                <a onPointerEnter={() => warm(YOUTUBE)} onTouchStart={() => warm(YOUTUBE)} href={`${YOUTUBE}/results?search_query=${encodeURIComponent(cluster.headline)}`} target="_blank" rel="noreferrer noopener">YouTube</a>
               </li>
               <li>
-                <a onPointerEnter={() => warm(GOOGLE)} onTouchStart={() => warm(GOOGLE)} {...searchLink(`${GOOGLE}/search?q=${encodeURIComponent(cluster.headline)}`, 'com.google.android.googlequicksearchbox')}>Google</a>
+                <a onPointerEnter={() => warm(GOOGLE)} onTouchStart={() => warm(GOOGLE)} href={`${GOOGLE}/search?q=${encodeURIComponent(cluster.headline)}`} target="_blank" rel="noreferrer noopener">Google</a>
               </li>
             </ul>
           </div>
