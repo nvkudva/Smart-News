@@ -615,7 +615,9 @@ body {
   }
   .shell > .catstrip .catlink[aria-current="page"],
   .shell > .catstrip .catlink[data-active="true"] {
-    background: color-mix(in oklab, var(--accent) 9%, transparent);
+    background: color-mix(in oklab, currentColor 14%, transparent);
+    text-decoration: none;
+    box-shadow: inset 4px 0 0 currentColor;
   }
   @media (hover: hover) {
     .shell > .catstrip .catlink:hover { color: var(--ink); }
@@ -1323,7 +1325,10 @@ body {
   transition: color .18s ease;
 }
 .catlink[aria-current="page"],
-.catlink[data-active="true"] { color: var(--ink); opacity: 1; }
+.catlink[data-active="true"] {
+  color: var(--ink); opacity: 1;
+  text-decoration: underline 4px currentColor; text-underline-offset: 9px;
+}
 
 /* One step quieter than .catlink: the sub-strip is a refinement of a choice the
    reader has already made, so idle pills carry no border and no fill. */
