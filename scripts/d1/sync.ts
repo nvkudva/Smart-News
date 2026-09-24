@@ -404,7 +404,7 @@ async function main() {
           WHERE published_at >= ? AND id IN (${ids.map(() => '?').join(',')})`, since, ...ids));
   await push('articles', colList(articleCols), articles);
 
-  const clusterCols = `id,headline,crux,category,place,country,place_id,importance,image_url,image_source,
+  const clusterCols = `id,headline,crux,category,topic,place,country,place_id,importance,image_url,image_source,
             framing_left,framing_centre,framing_right,
             article_count,source_count,prominence,first_seen,last_seen,summarised_at,summarised_n,attempts`;
   // Clusters a merge folded away since the last push. D1 still holds each;

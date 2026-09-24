@@ -30,7 +30,7 @@ type Member = { source_id: string; name: string; title: string; lead: string | n
                 bias: Bias | null };
 
 export type Summary = {
-  headline: string; crux: string; category: string;
+  headline: string; crux: string; category: string; topic?: string | null;
   place: string | null; city: string | null; region: string | null;
   country: string | null; importance: number;
   framing_left: string | null; framing_centre: string | null; framing_right: string | null;
@@ -53,6 +53,11 @@ category:   the subject the story is about, never where it happened - scope is
             court ruling is Crime & Courts even when the defendant is a
             minister. Conflict & Diplomacy covers war, strikes, sanctions and
             talks between states. Others only when nothing else fits.
+topic:      the running story this belongs to, in 1 to 3 words, title case:
+            "Asia Cup", "H-1B Visas", "Gaza Ceasefire", "Nvidia Earnings".
+            Narrower than category, broad enough that tomorrow's follow-up
+            shares it. If a listed recent topic fits, copy it exactly. Never
+            the category name itself. Null when nothing narrower fits.
 place:      where the event happened, as you would say it in a sentence, else
             null. This is what the reader sees.
 city:       just the city or town, no country, no state, else null. "Hyderabad",
@@ -84,6 +89,7 @@ const SCHEMA: JsonSchema = {
     headline:   { type: 'string' },
     crux:       { type: 'string' },
     category:   { type: 'string', enum: CATEGORIES },
+    topic:      { type: 'string', nullable: true },
     place:      { type: 'string', nullable: true },
     // Asked for in parts as well as prose. The parts cost a dozen output tokens
     // on a response that already runs to hundreds, and they save the resolver
@@ -125,7 +131,9 @@ export function keepPresent(f: Record<Bias, string | null>, present: Set<Bias>):
   return out;
 }
 
-export async function summariseCluster(members: Member[], signal?: AbortSignal): Promise<LlmOutcome<Summary>> {
+export async function summariseCluster(
+  members: Member[], signal?: AbortSignal, recentTopics: readonly string[] = [],
+): Promise<LlmOutcome<Summary>> {
   // One article per source, longest body first: diverse and substantive.
   const bySource = new Map<string, Member>();
   for (const m of [...members].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))) {
@@ -145,9 +153,12 @@ export async function summariseCluster(members: Member[], signal?: AbortSignal):
     `<article n="${i + 1}" source="${m.name}"${framed && m.bias ? ` lean="${m.bias}"` : ''}>\n<title>${m.title}</title>\n` +
     `${(m.body ?? m.lead ?? '').slice(0, MAX_CHARS_EACH)}\n</article>`).join('\n\n');
 
+  // In the user turn, not the system prompt: the list moves every cycle and
+  // would otherwise break whatever prefix caching the provider does.
+  const hint = recentTopics.length ? `Recent topics: ${recentTopics.join('; ')}\n\n` : '';
   const out = await completeJson<Summary>(
     framed ? SYSTEM + FRAMING : SYSTEM,
-    `${members.length} articles cover this one event. Here are ${picked.length} of them.\n\n${corpus}`,
+    `${hint}${members.length} articles cover this one event. Here are ${picked.length} of them.\n\n${corpus}`,
     framed ? FRAMING_SCHEMA : SCHEMA,
     undefined,
     signal,
@@ -163,6 +174,38 @@ export async function summariseCluster(members: Member[], signal?: AbortSignal):
   const crux = whole(s.crux);
   if (!s.headline.trim() || crux.length < 40) return { ok: false, reason: 'content' };
   return { ok: true, value: { ...s, crux } };
+}
+
+/**
+ * The labels stories have been filed under lately, busiest first, offered back
+ * to the model so a follow-up reuses "Asia Cup" rather than coining "Asia Cup
+ * 2026" beside it. That reuse is the whole of the canonicalisation: sub-pills
+ * group by exact label, and a synonym is a second, thinner pill.
+ *
+ * Forty is about 150 input tokens, against roughly 2,500 for the articles.
+ */
+const TOPIC_HINTS = 40;
+const TOPIC_WINDOW_MS = 3 * 24 * 3600_000;
+export function recentTopics(d: DatabaseSync): string[] {
+  const rows = d.prepare(
+    `SELECT topic FROM clusters
+      WHERE topic IS NOT NULL AND headline IS NOT NULL AND last_seen >= ?
+      GROUP BY topic ORDER BY COUNT(*) DESC, MAX(last_seen) DESC LIMIT ?`,
+  ).all(Date.now() - TOPIC_WINDOW_MS, TOPIC_HINTS) as { topic: string }[];
+  return rows.map((r) => r.topic);
+}
+
+/**
+ * The model's label, or null when it is no label at all. It becomes a pill and
+ * a URL segment, so a sentence, a placeholder or the category repeated back is
+ * worse than nothing.
+ */
+export function cleanTopic(v: unknown, category: string): string | null {
+  const t = typeof v === 'string' ? v.trim().replace(/\s+/g, ' ').replace(/[.:;,]+$/, '') : '';
+  if (!t || t.length > 32 || t.split(' ').length > 4) return null;
+  if (/^(null|undefined|none|nil|n\/?a|unknown|other|others|general|misc)$/i.test(t)) return null;
+  if (t.toLowerCase() === category.toLowerCase()) return null;
+  return t;
 }
 
 /**
@@ -206,6 +249,7 @@ function extractive(members: Member[]): LlmOutcome<Summary> {
       headline: best.title.replace(/\s*[|–-]\s*[^|–-]{0,24}$/, '').slice(0, 90),
       crux,
       category: 'Others',
+      topic: null,
       place: null,
       city: null,
       region: null,
@@ -576,7 +620,7 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
       WHERE a.cluster_id = ? AND COALESCE(s.tier, 'full') <> 'title'`,
   );
   const save = d.prepare(
-    `UPDATE clusters SET headline=?, crux=?, category=?, place=?, country=?, place_id=?,
+    `UPDATE clusters SET headline=?, crux=?, category=?, topic=?, place=?, country=?, place_id=?,
             importance=?, framing_left=?, framing_centre=?, framing_right=?,
             summarised_at=?, summarised_n=? WHERE id=?`,
   );
@@ -584,6 +628,7 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
 
   // Requests are paced to LLM_RPM inside llm.ts; concurrency only hides latency,
   // so it wants to be roughly rpm * seconds-per-call / 60 to actually reach that rate.
+  const topics = recentTopics(d);
   const limiter = pLimit(Number(process.env.LLM_CONCURRENCY ?? 3));
   let done = 0, skipped = 0, stalled = 0;
   let authFailure = false;
@@ -618,7 +663,7 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   await Promise.all(targets.map((t) => limiter(async () => {
     if (authFailure || stop.aborted) { skipped++; return; }
     const members = membersOf.all(t.id) as unknown as Member[];
-    const r = config ? await summariseCluster(members, stop) : extractive(members);
+    const r = config ? await summariseCluster(members, stop, topics) : extractive(members);
     if (!r.ok) {
       // Only the model's own failure to produce a usable summary spends an
       // attempt. A call that never got an answer says nothing about this
@@ -660,7 +705,7 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
       { left: framing(s.framing_left), centre: framing(s.framing_centre), right: framing(s.framing_right) },
       new Set(members.map((m) => m.bias).filter((b): b is Bias => !!b)),
     );
-    save.run(s.headline, s.crux, category, place, resolved.country, resolved.place_id,
+    save.run(s.headline, s.crux, category, cleanTopic(s.topic, category), place, resolved.country, resolved.place_id,
              Math.max(1, Math.min(5, Math.round(s.importance) || 3)),
              framed.left, framed.centre, framed.right,
              Date.now(), t.article_count, t.id);

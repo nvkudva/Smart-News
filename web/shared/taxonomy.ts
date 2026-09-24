@@ -8,6 +8,8 @@ import { CATEGORIES, type Category } from './categories';
  * Nothing here is stored. Scope categories are derived from columns the cluster
  * already carries (place_id, country) and topic sub-categories are derived from
  * the text, so the taxonomy can be reshaped without a migration or a re-summarise.
+ * On top of those declared lenses, dynamicSubs offers the running stories the
+ * summariser named in clusters.topic - the one part that is stored.
  */
 
 /** Kebab-case of the display name; this is the URL segment and the ?sub= value. */
@@ -42,6 +44,8 @@ export type Section =
 /** The only shape the matchers need. Story satisfies it structurally. */
 export type Matchable = {
   headline: string; crux: string | null; category: string;
+  /** The summariser's running-story label. See dynamicSubs. */
+  topic?: string | null;
   /** Which scope lenses this story falls under, resolved against the reader's
    *  country and places by the Worker - see scopesFor in worker/lib/world.ts.
    *  Absent on rows that were never scoped, which simply show no scope pill. */
@@ -69,6 +73,14 @@ export type SubCount = { name: string; slug: string; count: number };
 
 /** How many topic pills a scope category shows before the strip stops helping. */
 const SCOPE_SUB_LIMIT = 5;
+
+/**
+ * Dynamic sub-pills: a topic label needs this many stories on the page to earn
+ * a pill, and a section shows at most this many of them. Two is a pair, not a
+ * running story; more than five and the strip is a tag cloud.
+ */
+const TOPIC_MIN = 3;
+const TOPIC_LIMIT = 5;
 
 const sub = (name: string, keywords: readonly string[]): SubCategory =>
   ({ name, slug: slug(name), keywords });
@@ -217,10 +229,45 @@ export function searchText(s: Matchable): string {
   return `${s.headline} ${s.crux ?? ''}`.toLowerCase();
 }
 
-/** True when the story falls under this sub-category of this topic section. */
+/**
+ * The story's topic as a sub slug, or null. A label whose slug is a scope pill's
+ * ("Local") would shadow that pill, so it is dropped rather than renamed.
+ */
+function topicSlug(s: Matchable): string | null {
+  const t = s.topic ? slug(s.topic) : '';
+  return t && !SCOPE_SUB_SLUGS.has(t) ? t : null;
+}
+
+/**
+ * True when the story falls under this sub-category of this topic section.
+ * A curated sub also takes the stories the model labelled with its exact name,
+ * so "Cricket" from the summariser and the cricket keywords land in one pill.
+ */
 export function matchesSub(sectionSlug: string, subSlug: string, s: Matchable): boolean {
   const re = MATCHERS.get(`${sectionSlug}/${subSlug}`);
-  return re ? re.test(searchText(s)) : false;
+  return (re ? re.test(searchText(s)) : false) || topicSlug(s) === subSlug;
+}
+
+/**
+ * The running stories on this page, busiest first: topic labels carried by at
+ * least TOPIC_MIN rows. Nothing is declared - a pill appears when the news
+ * does and goes when it moves on. A label that names a curated sub is left to
+ * that sub, which already counts it.
+ */
+function dynamicSubs(cat: Section, stories: readonly Matchable[]): SubCount[] {
+  const curated = new Set((cat.subs ?? []).map((s) => s.slug));
+  const seen = new Map<string, SubCount>();
+  for (const s of stories) {
+    const t = topicSlug(s);
+    if (!t || curated.has(t)) continue;
+    const hit = seen.get(t);
+    if (hit) hit.count++;
+    else seen.set(t, { name: s.topic!.trim(), slug: t, count: 1 });
+  }
+  return [...seen.values()]
+    .filter((s) => s.count >= TOPIC_MIN)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, TOPIC_LIMIT);
 }
 
 /**
@@ -258,11 +305,13 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
     for (const s of stories) if (s.scopes?.includes(sc.slug)) count++;
     if (count > 0) out.push({ name: sc.name, slug: sc.slug, count });
   }
+  // Then what the news is about this hour, ahead of the standing lenses.
+  out.push(...dynamicSubs(cat, stories));
   for (const s of cat.subs) {
     const re = MATCHERS.get(`${cat.slug}/${s.slug}`);
     if (!re) continue;
     let count = 0;
-    for (const t of texts) if (re.test(t)) count++;
+    stories.forEach((st, i) => { if (re.test(texts[i]) || topicSlug(st) === s.slug) count++; });
     if (count > 0) out.push({ name: s.name, slug: s.slug, count });
   }
   return out;
@@ -281,12 +330,13 @@ export function subSlugsFor(categorySlug: string, story: Matchable): string[] {
   if (!cat) return [];
   if (cat.kind === 'scope') return [slug(story.category)];
   const text = searchText(story);
-  return [
-    ...(story.scopes ?? []),
-    ...(cat.subs ?? [])
-      .filter((sub) => MATCHERS.get(`${cat.slug}/${sub.slug}`)?.test(text))
-      .map((sub) => sub.slug),
-  ];
+  const t = topicSlug(story);
+  const curated = (cat.subs ?? [])
+    .filter((sub) => MATCHERS.get(`${cat.slug}/${sub.slug}`)?.test(text) || sub.slug === t)
+    .map((sub) => sub.slug);
+  // The topic slug travels whether or not it earned a pill: the client only
+  // filters by slugs the section offers, so an unoffered one is inert.
+  return [...new Set([...(story.scopes ?? []), ...curated, ...(t ? [t] : [])])];
 }
 
 export function filterBySub<T extends Matchable>(
@@ -299,6 +349,5 @@ export function filterBySub<T extends Matchable>(
     return name ? stories.filter((s) => s.category === name) : [...stories];
   }
   if (SCOPE_SUB_SLUGS.has(subSlug)) return stories.filter((s) => s.scopes?.includes(subSlug));
-  const re = MATCHERS.get(`${cat.slug}/${subSlug}`);
-  return re ? stories.filter((s) => re.test(searchText(s))) : [...stories];
+  return stories.filter((s) => matchesSub(cat.slug, subSlug, s));
 }

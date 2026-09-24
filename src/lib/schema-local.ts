@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS clusters (
   headline       TEXT,
   crux           TEXT,
   category       TEXT,
+  topic          TEXT,
   place          TEXT,
   country        TEXT,
   importance     INTEGER DEFAULT 3,
@@ -170,6 +171,9 @@ export const ADDED_COLUMNS: [table: string, column: string, ddl: string][] = [
   ['clusters', 'framing_right', 'framing_right TEXT'],
   // Which outlet's feed the chosen image came from, so it can be credited.
   ['clusters', 'image_source', 'image_source TEXT'],
+  // The running story a cluster belongs to, as the model named it. Drives the
+  // dynamic sub-pills; NULL on anything summarised before it existed.
+  ['clusters', 'topic', 'topic TEXT'],
   ['prefs', 'place_ids', 'place_ids TEXT'],
   ['prefs', 'geo_consent', 'geo_consent INTEGER NOT NULL DEFAULT 0'],
   ['prefs', 'geo_place_id', 'geo_place_id TEXT'],

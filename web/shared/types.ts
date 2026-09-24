@@ -15,6 +15,8 @@ import type { Bias } from './sources';
 
 export type Story = {
   id: string; headline: string; crux: string; category: string;
+  /** The running story, as the summariser named it. Null before it existed. */
+  topic: string | null;
   place: string | null; country: string | null;
   place_id: string | null; place_label: string | null;
   importance: number;
