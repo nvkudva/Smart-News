@@ -27,7 +27,7 @@ export const DEFAULT_PREFS: Prefs = {
  * caller sees is identical either way, and a deploy that lands before the
  * pipeline serves pre-v1.5 stories instead of nothing at all.
  */
-export const storyCols = (ready: boolean) => `c.id, c.headline, c.crux, c.category, c.place, c.country,
+export const storyCols = (ready: boolean) => `c.id, c.headline, c.crux, c.category, c.topic, c.place, c.country,
        ${ready ? 'c.place_id' : 'NULL AS place_id'}, NULL AS place_label,
        c.importance, c.image_url, c.image_source,
        c.article_count, c.source_count, c.prominence, c.first_seen, c.last_seen, c.summarised_at,
