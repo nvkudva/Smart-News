@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en" data-mode="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Styles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0c0f; --surface:#121418; --ink:#f4f5f7; --ink-2:#a8adb8; --ink-3:#6f7583;
+  --line:rgba(255,255,255,.10); --radius:18px;
+  --pol:#e0607e; --world:#5b8def; --biz:#2fb79a; --health:#c07ae8; --sci:#57b6d8; --sport:#e39447; --climate:#6cc07a;
+}
+:root[data-mode="light"]{
+  --bg:#f3f4f6; --surface:#ffffff; --ink:#15171c; --ink-2:#565c69; --ink-3:#878e9c;
+  --line:rgba(0,0,0,.10);
+  --pol:#c0264a; --world:#2f5fd0; --biz:#0e7f6a; --health:#8a3fc0; --sci:#1e7fa6; --sport:#b4611a; --climate:#2e8a45;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.page{max-width:1200px;margin:0 auto;padding:28px 20px 90px}
+header.top{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+h1{font-size:clamp(22px,3vw,30px);font-weight:800;letter-spacing:-.02em;margin:0}
+.sub{color:var(--ink-2);font-size:14px;margin:6px 0 22px;max-width:62ch;line-height:1.5}
+.toggle{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px}
+.toggle button{appearance:none;border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;cursor:pointer}
+.toggle button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+section.style{margin-top:40px}
+.style__head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.style__n{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.style__name{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.style__note{color:var(--ink-2);font-size:13.5px;flex:1 1 320px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.grid{grid-template-columns:minmax(0,1fr)}}
+.span2{grid-column:1/-1}
+.tag{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:20px 0 8px}
+img{display:block;width:100%;height:100%;object-fit:cover}
+
+/* ============ Style 1 — Bleed ============ */
+.bleed{position:relative;display:block;border-radius:var(--radius);overflow:hidden;background:var(--surface);text-decoration:none;color:inherit;isolation:isolate}
+.bleed__img{position:absolute;inset:0}
+.bleed__img::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,color-mix(in oklab,var(--c) 22%,transparent) 0%,color-mix(in oklab,var(--c) 58%,#000 20%) 46%,color-mix(in oklab,#000 74%,var(--c)) 100%)}
+.bleed__body{position:relative;z-index:1;padding:14px 16px;display:flex;flex-direction:column;justify-content:flex-end;gap:7px}
+.bleed--2x .bleed__body{min-height:300px;padding:18px}
+.bleed--1x .bleed__body{min-height:250px}
+.bleed--half .bleed__body{min-height:0;padding:12px 14px}
+.bleed .over{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.bleed h2{margin:0;font-weight:800;letter-spacing:-.022em;line-height:1.14;color:#fff;text-wrap:balance}
+.bleed--2x h2{font-size:31px} .bleed--1x h2{font-size:22px} .bleed--half h2{font-size:17px}
+.bleed h2 em{font-style:normal;color:color-mix(in oklab,var(--c) 62%,#fff)}
+.bleed p{margin:0;color:rgba(255,255,255,.80);font-size:14.5px;line-height:1.45;max-width:54ch}
+.bleed--half p{display:none}
+.bleed .row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:rgba(255,255,255,.66);font-weight:500}
+.bleed--half{background:color-mix(in oklab,var(--c) 16%,var(--surface))}
+.bleed--half .bleed__img{inset:auto 0 auto auto;width:96px;height:100%;border-radius:0}
+.bleed--half .bleed__img::after{background:linear-gradient(90deg,color-mix(in oklab,var(--c) 90%,var(--surface)) 0%,transparent 70%)}
+.bleed--half .bleed__body{padding-right:112px}
+
+/* ============ Style 2 — Rule ============ */
+.rule{display:block;text-decoration:none;color:inherit;padding:14px 0 16px;border-top:2px solid var(--c);position:relative}
+.rule .over{display:flex;gap:8px;align-items:center;font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--c);margin-bottom:9px}
+.rule .over b{color:var(--ink-3);font-weight:600;letter-spacing:.06em}
+.rule h2{margin:0 0 8px;font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:-.015em;line-height:1.1;text-wrap:balance}
+.rule--2x h2{font-size:36px} .rule--1x h2{font-size:24px} .rule--half h2{font-size:18px;margin-bottom:6px}
+.rule p{margin:0;color:var(--ink-2);font-size:15px;line-height:1.5;max-width:58ch}
+.rule--half p{font-size:13.5px;-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+.rule__split{display:grid;grid-template-columns:minmax(0,1fr) 42%;gap:18px;align-items:start}
+.rule__split .shot{aspect-ratio:4/3;border-radius:10px;overflow:hidden;background:var(--surface)}
+.rule--2x .rule__split{grid-template-columns:minmax(0,1fr) 46%}
+.rule .foot{display:flex;gap:10px;align-items:center;margin-top:11px;font-size:12.5px;color:var(--ink-3)}
+.rule .bias{display:flex;height:3px;width:74px;border-radius:2px;overflow:hidden}
+.rule .bias i{display:block;height:100%}
+
+/* ============ Style 3 — Tint ============ */
+.tint{position:relative;display:block;text-decoration:none;color:inherit;border-radius:var(--radius);overflow:hidden;
+  background:linear-gradient(160deg,color-mix(in oklab,var(--c) 20%,var(--surface)),color-mix(in oklab,var(--c) 7%,var(--surface)));
+  padding:16px}
+.tint::before{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.14);pointer-events:none}
+.tint--2x{display:grid;grid-template-columns:minmax(0,1fr) 38%;gap:18px;align-items:center;padding:16px}
+.tint .shot{border-radius:12px;overflow:hidden;aspect-ratio:4/3;background:rgba(0,0,0,.2)}
+.tint--2x .shot{aspect-ratio:1/1}
+.tint h2{margin:8px 0 7px;font-weight:800;letter-spacing:-.022em;line-height:1.15;text-wrap:balance}
+.tint--2x h2{font-size:30px} .tint--1x h2{font-size:21px} .tint--half h2{font-size:17px;margin:0 0 5px}
+.tint p{margin:0;color:var(--ink-2);font-size:14.5px;line-height:1.45}
+.tint--half p{display:none}
+.tint .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.tint .chip{font-size:11.5px;font-weight:600;letter-spacing:.02em;padding:4px 9px;border-radius:999px;
+  background:color-mix(in oklab,var(--c) 26%,transparent);color:color-mix(in oklab,var(--c) 72%,var(--ink))}
+.tint .chip--plain{background:rgba(128,128,128,.16);color:var(--ink-2)}
+.tint--half{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:12px;align-items:center;padding:13px 14px}
+.tint--half .shot{aspect-ratio:1/1;border-radius:10px}
+.tint--1x .shot{margin:-16px -16px 0;border-radius:0;aspect-ratio:16/9}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>Three card styles</h1>
+    </div>
+    <div class="toggle" role="group" aria-label="Mode">
+      <button aria-pressed="true" data-m="dark">Dark</button>
+      <button aria-pressed="false" data-m="light">Light</button>
+    </div>
+  </header>
+  <p class="sub">Mocks only — nothing here is wired to the feed. Each style shows the three sizes the grid asks for: <b>2x</b> (lead, spans both columns), <b>1x</b> (one track), <b>½x</b> (compact). All three are borderless and drop the card's outer padding, so the same space carries more text.</p>
+
+  <!-- ============================= 1 ============================= -->
+  <section class="style">
+    <div class="style__head">
+      <span class="style__n">01</span>
+      <span class="style__name">Bleed</span>
+      <span class="style__note">Photo runs to the edge, category tint poured over it, text sitting on the image. No frame, no inner chrome. Entities pick up the category colour in the headline.</span>
+    </div>
+
+    <div class="tag">2x — lead</div>
+    <div class="grid">
+      <a class="bleed bleed--2x span2" style="--c:var(--pol)">
+        <div class="bleed__img"><img src="https://images.unsplash.com/photo-1555848962-6e79363ec58f?w=1200&q=70" alt=""></div>
+        <div class="bleed__body">
+          <div class="over">32 articles · 7h ago</div>
+          <h2>Supreme Court blocks <em>Missouri</em>’s redrawn 2025 map, keeping the 2022 lines for November</h2>
+          <p>The court said switching maps now would disrupt voting that has already begun, and left the 2025 plan to be decided after the midterms.</p>
+          <div class="row">Reuters · Guardian · Telegraph · +29</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="tag">1x and ½x</div>
+    <div class="grid">
+      <a class="bleed bleed--1x" style="--c:var(--biz)">
+        <div class="bleed__img"><img src="https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=800&q=70" alt=""></div>
+        <div class="bleed__body">
+          <div class="over">18 articles · 1h ago</div>
+          <h2><em>Chipmaker</em> lifts forecast on data-centre orders</h2>
+          <p>Guidance moved above the analyst range for a third straight quarter, with supply still the limit on revenue.</p>
+          <div class="row">9 sources</div>
+        </div>
+      </a>
+      <div style="display:grid;gap:14px;align-content:start">
+        <a class="bleed bleed--half" style="--c:var(--climate)">
+          <div class="bleed__img"><img src="https://images.unsplash.com/photo-1444927714506-8492d94b4e3d?w=400&q=70" alt=""></div>
+          <div class="bleed__body">
+            <div class="over">6 articles · 4h ago</div>
+            <h2>Wildfire season closes with the smallest burned area in a decade</h2>
+          </div>
+        </a>
+        <a class="bleed bleed--half" style="--c:var(--sport)">
+          <div class="bleed__img"><img src="https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=400&q=70" alt=""></div>
+          <div class="bleed__body">
+            <div class="over">4 articles · 10h ago</div>
+            <h2>Striker signs through 2030 after a record fee</h2>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 2 ============================= -->
+  <section class="style">
+    <div class="style__head">
+      <span class="style__n">02</span>
+      <span class="style__name">Rule</span>
+      <span class="style__note">No card at all — a coloured hairline over a serif headline, the way a front page sets a story. The photo is an inset beside the summary rather than a lid on top, so the text starts at the top of the column.</span>
+    </div>
+
+    <div class="tag">2x — lead</div>
+    <div class="grid">
+      <a class="rule rule--2x span2" style="--c:var(--world)">
+        <div class="over">World <b>· 55 articles · 1h ago</b></div>
+        <div class="rule__split">
+          <div>
+            <h2>Talks on the maritime border resume in the capital after a year of silence</h2>
+            <p>Both delegations arrived with new maps. Neither would say whether the disputed bank is on the table, and the mediator has given them until Friday.</p>
+            <div class="foot">
+              <span class="bias"><i style="flex:3;background:var(--world)"></i><i style="flex:5;background:var(--ink-3)"></i><i style="flex:2;background:var(--pol)"></i></span>
+              <span>10 left · 17 centre · 7 right</span>
+            </div>
+          </div>
+          <div class="shot"><img src="https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=800&q=70" alt=""></div>
+        </div>
+      </a>
+    </div>
+
+    <div class="tag">1x and ½x</div>
+    <div class="grid">
+      <a class="rule rule--1x" style="--c:var(--health)">
+        <div class="over">Health <b>· 12 articles · 3h ago</b></div>
+        <div class="rule__split">
+          <div>
+            <h2>Vaccine trial reports a durable response after one year</h2>
+            <p>Sustained antibody levels in the treated group, with no serious adverse events reported.</p>
+          </div>
+          <div class="shot"><img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=70" alt=""></div>
+        </div>
+        <div class="foot">
+          <span class="bias"><i style="flex:2;background:var(--world)"></i><i style="flex:6;background:var(--ink-3)"></i><i style="flex:2;background:var(--pol)"></i></span>
+          <span>6 sources</span>
+        </div>
+      </a>
+      <div style="display:grid;gap:4px;align-content:start">
+        <a class="rule rule--half" style="--c:var(--sci)">
+          <div class="over">Science <b>· 5 articles · 6h ago</b></div>
+          <h2>Telescope finds water vapour in a young planet’s disc</h2>
+          <p>The detection puts the snow line closer to the star than the models predicted.</p>
+        </a>
+        <a class="rule rule--half" style="--c:var(--biz)">
+          <div class="over">Business <b>· 3 articles · 9h ago</b></div>
+          <h2>Regulator fines lender over overdraft charges</h2>
+          <p>The penalty covers four years of fees the watchdog said were never disclosed.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= 3 ============================= -->
+  <section class="style">
+    <div class="style__head">
+      <span class="style__n">03</span>
+      <span class="style__name">Tint</span>
+      <span class="style__note">A flat panel washed with the category's colour, no outline and no shadow. Works with or without a photo, which is what most clusters actually have. Facts move into chips so the summary keeps its last line.</span>
+    </div>
+
+    <div class="tag">2x — lead</div>
+    <div class="grid">
+      <a class="tint tint--2x span2" style="--c:var(--pol)">
+        <div>
+          <div class="chips"><span class="chip">Politics</span><span class="chip chip--plain">32 articles</span><span class="chip chip--plain">7h ago</span></div>
+          <h2>Cabinet backs the emergency energy package after a night of talks</h2>
+          <p>Ministers agreed a cap on household bills and a levy on generators, ending a week of open disagreement inside the coalition.</p>
+        </div>
+        <div class="shot"><img src="https://images.unsplash.com/photo-1494172961521-33799ddd43a5?w=800&q=70" alt=""></div>
+      </a>
+    </div>
+
+    <div class="tag">1x and ½x</div>
+    <div class="grid">
+      <a class="tint tint--1x" style="--c:var(--world)">
+        <div class="shot"><img src="https://images.unsplash.com/photo-1547683905-f686c993aae5?w=800&q=70" alt=""></div>
+        <h2>Flood defences hold along the lower delta as the river peaks</h2>
+        <p>The barrage took the crest three hours after midnight. Towns downstream reported no evacuations.</p>
+        <div class="chips"><span class="chip">World</span><span class="chip chip--plain">14 articles</span><span class="chip chip--plain">2h ago</span></div>
+      </a>
+      <div style="display:grid;gap:14px;align-content:start">
+        <a class="tint tint--half" style="--c:var(--biz)">
+          <div>
+            <h2>Rail strike suspended as the pay offer improves</h2>
+            <div class="chips"><span class="chip">Business</span><span class="chip chip--plain">5h ago</span></div>
+          </div>
+          <div class="shot"><img src="https://images.unsplash.com/photo-1474487548417-781cb71495f3?w=300&q=70" alt=""></div>
+        </a>
+        <a class="tint tint--half" style="--c:var(--health)">
+          <div>
+            <h2>City council approves the tram extension</h2>
+            <div class="chips"><span class="chip">Politics</span><span class="chip chip--plain">8h ago</span></div>
+          </div>
+          <div class="shot"><img src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=300&q=70" alt=""></div>
+        </a>
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+  document.querySelectorAll('.toggle button').forEach(b => b.onclick = () => {
+    document.documentElement.dataset.mode = b.dataset.m;
+    document.querySelectorAll('.toggle button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  });
+</script>
+</body>
+</html>
