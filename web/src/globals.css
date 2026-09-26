@@ -633,10 +633,10 @@ body {
 @media (min-width: 700px) {
   :root { --content: 1200px; }
   .shell { padding: 0 28px 110px; }
-  .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-  /* At three columns a two-wide lead strands a ragged hole beside it, so it
-     takes the whole row instead. Four columns has room for two cards beside. */
-  .cardwrap:has(.card--lead) { grid-column: span 3; }
+  .feed { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  /* At two columns a two-wide lead fills the row, which is what a lead wants.
+     Four columns has room for two cards beside it. */
+  .cardwrap:has(.card--lead) { grid-column: span 2; }
 }
 
 @media (min-width: 1440px) {
