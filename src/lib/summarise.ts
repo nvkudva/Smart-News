@@ -617,7 +617,8 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   const membersOf = d.prepare(
     `SELECT a.source_id, s.name, s.bias, s.country AS source_country, a.title, a.lead, a.body
        FROM articles a JOIN sources s ON s.id = a.source_id
-      WHERE a.cluster_id = ? AND COALESCE(s.tier, 'full') <> 'title'`,
+      WHERE a.cluster_id = ? AND COALESCE(s.tier, 'full') <> 'title'
+      ORDER BY a.published_at ASC`,
   );
   const save = d.prepare(
     `UPDATE clusters SET headline=?, crux=?, category=?, topic=?, place=?, country=?, place_id=?,
