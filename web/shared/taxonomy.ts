@@ -60,18 +60,14 @@ export type Matchable = {
 };
 
 /**
- * Offered under every subject section: the other axis, as the sub-row rule has
- * it. Empty keyword lists because these are not matched against text - the
+ * Offered under Trending only: where a story happened, ahead of what it is
+ * about. Empty keyword lists because these are not matched against text - the
  * Worker resolves them from c.country and c.place_id, which every row carries.
- *
- * Slug 'unplaced' rather than 'others' so a ?sub= value can never be confused
- * with the Others *subject*.
  */
 export const SCOPE_SUBS: readonly SubCategory[] = [
   { name: 'City', slug: 'local', keywords: [] },
   { name: 'National', slug: 'national', keywords: [] },
   { name: 'World', slug: 'international', keywords: [] },
-  { name: 'Others', slug: 'unplaced', keywords: [] },
 ];
 
 const SCOPE_SUB_SLUGS = new Set(SCOPE_SUBS.map((s) => s.slug));
@@ -103,10 +99,8 @@ const TOPIC_SUBS: Record<StripSubject, SubCategory[]> = {
   Sports: [
     sub('Football', ['football', 'premier league', 'chelsea', 'arsenal', 'united', 'liverpool', 'uefa', 'fifa', 'la liga', 'serie a', 'psg', 'goal', 'goals', 'striker', 'midfielder', 'isl', 'derby', 'fc', 'wsl', 'draw', 'marseille', 'monaco', 'keeper', 'bagan']),
     sub('American Sports', ['nfl', 'quarterback', 'touchdown', 'college football', 'cfp', 'big ten', 'ncaa', 'rams', 'braves', 'giants', 'notre dame', 'mlb', 'nba', 'homer', 'fantasy football', 'yards']),
-    sub('Combat Sports', ['boxing', 'boxer', 'ufc', 'mma', 'wrestling', 'wrestler', 'fury', 'usyk', 'joshua', 'knockout', 'powerlifter', 'deadlift', 'darts', 'title fight', 'undisputed', 'champion']),
+    sub('More Sports', ['rugby', 'nrl', 'afl', 'aflw', 'wallabies', 'scrum', 'flyhalf', 'formula 1', 'f1', 'grand prix', 'nascar', 'motogp', 'race', 'racing', 'boxing', 'boxer', 'ufc', 'mma', 'wrestling', 'wrestler', 'fury', 'usyk', 'joshua', 'knockout', 'powerlifter', 'deadlift', 'darts', 'title fight', 'undisputed', 'champion']),
     sub('Cricket', ['cricket', 'test', 'odi', 't20', 'ipl', 'bcci', 'wicket', 'wickets', 'batsman', 'batsmen', 'batter', 'bowler', 'bowlers', 'duleep', 'ranji', 'innings', 'century', 'kohli', 'wpl', 'asia cup', 'trophy', 'stumps', 'all-rounder', 'batting', 'bowling', 'runs', 'de villiers', 'misbah', 'mushtaq', 'pcb', 'sri lanka', 'bangladesh']),
-    sub('Rugby & AFL', ['rugby', 'nrl', 'afl', 'aflw', 'wallabies', 'scrum', 'flyhalf', 'swans', 'crows', 'hawthorn', 'premiership']),
-    sub('Motorsport', ['formula 1', 'f1', 'grand prix', 'nascar', 'motogp', 'tsunoda', 'audi', 'race', 'racing', 'circuit', 'driver']),
     sub('Olympics & Athletics', ['olympic', 'olympics', 'athletics', 'marathon', 'sprint', 'medal', 'world championship', 'commonwealth', 'chess', 'olympiad', 'swimming', 'hockey']),
     sub('Tennis', ['tennis', 'us open', 'wimbledon', 'french open', 'australian open', 'atp', 'wta', 'alcaraz', 'sabalenka', 'djokovic', 'sinner', 'quarterfinals', 'quarter-finals', 'shelton', 'townsend']),
   ],
@@ -116,21 +110,17 @@ const TOPIC_SUBS: Record<StripSubject, SubCategory[]> = {
     sub('Security & Privacy', ['breach', 'hack', 'hacked', 'ransomware', 'malware', 'cyber', 'cybersecurity', 'phishing', 'vulnerability', 'leak', 'privacy', 'password', 'hackers']),
     sub('Platforms & Policy', ['meta', 'facebook', 'instagram', 'tiktok', 'social media', 'google', 'antitrust', 'lawsuit', 'sue', 'sues', 'regulation', 'copyright', 'ban', 'settles', 'court']),
     sub('Chips & Data Centres', ['chip', 'chips', 'semiconductor', 'nvidia', 'tsmc', 'data centre', 'data center', 'gpu', 'processor', 'memory', 'cloud']),
-    sub('Crypto', ['bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'cryptocurrency', 'stablecoin', 'blockchain', 'token', 'tokens', 'coinbase', 'binance', 'defi', 'web3', 'wallet', 'mining', 'halving', 'sec approval', 'etf']),
-    sub('Space & Satellites', ['isro', 'satellite', 'satellites', 'rocket', 'spacex', 'orbit', 'orbital', 'space', 'nasa']),
     sub('Cars & EVs', ['tesla', 'robotaxi', 'ev', 'evs', 'electric vehicle', 'car', 'cars', 'truck', 'driverless', 'autonomous', 'carplay', 'android auto', 'charging']),
   ],
   Entertainment: [
-    sub('Indian Cinema', ['bollywood', 'tollywood', 'malayalam', 'tamil', 'telugu', 'kannada', 'hindi', 'actress', 'actor', 'box office', 'crore', 'mammootty', 'khan', 'kapoor', 'dutt', 'film', 'films']),
+    sub('Movies', ['venice', 'cannes', 'film festival', 'documentary', 'premiere', 'box office', 'sundance', 'berlinale', 'bollywood', 'tollywood', 'malayalam', 'tamil', 'telugu', 'kannada', 'hindi', 'actress', 'actor', 'box office', 'crore', 'mammootty', 'khan', 'kapoor', 'dutt', 'film', 'films']),
     sub('TV & Streaming', ['bigg boss', 'ott', 'series', 'netflix', 'prime video', 'season', 'episode', 'reality show', 'show', 'streaming', 'mediacorp', 'channel']),
-    sub('Film Festivals', ['venice', 'cannes', 'festival', 'documentary', 'doc', 'premiere', 'premieres', 'director', 'screening', 'sundance', 'berlinale', 'san sebastian', 'deauville', 'unifrance']),
     sub('Music', ['singer', 'song', 'album', 'concert', 'music', 'band', 'rapper', 'tour', 'headline', 'folk']),
     sub('Books & Arts', ['book', 'books', 'author', 'novel', 'poet', 'art', 'theater', 'theatre', 'museum', 'exhibition', 'dance', 'bharatanatyam', 'literature']),
   ],
   Politics: [
     sub('Parties & Leaders', ['bjp', 'congress', 'aap', 'tmc', 'dmk', 'shiv sena', 'rahul gandhi', 'modi', 'party', 'mla', 'mlas', 'mp', 'leader', 'alliance', 'opposition', 'chief minister', 'nda']),
     sub('Elections', ['election', 'elections', 'poll', 'polls', 'vote', 'voters', 'ballot', 'constituency', 'candidate', 'campaign', 'electoral', 'by-election', 'seat-sharing']),
-    sub('World Politics', ['trump', 'white house', 'republican', 'democrat', 'democratic', 'senate', 'governor', 'washington', 'afd', 'german', 'germany', 'chancellor', 'downing street', 'eu', 'canada', 'swedish', 'singapore', 'uk']),
     sub('Parliament & Assemblies', ['assembly', 'parliament', 'bill', 'legislation', 'session', 'amendment', 'speaker', 'lok sabha', 'rajya sabha', 'chancellor', 'budget']),
     sub('Protest & Rights', ['protest', 'protests', 'march', 'rally', 'strike', 'activists', 'rights', 'clashes', 'anti-migrant']),
     // Thin but real — ED raids are a recurring beat. The non-empty gate drops it
@@ -185,6 +175,25 @@ export const TOPIC_CATEGORIES: Section[] = STRIP_SUBJECTS.map((name) => {
   const folded = subs.flatMap((s) => (s.category ? [s.category] : []));
   return { kind: 'topic' as const, name: label(name), categories: [name, ...folded], slug: slug(name), subs };
 });
+
+/** Stored categories with no pill anywhere: too broad, or not wanted. */
+const UNPILLED = new Set<string>(['Crime & Courts', 'Others']);
+
+/**
+ * The strip section a stored category reads under: its own, or the one it
+ * folds into (Health -> Science). Categories with no section keep their own
+ * slug, which the scope pills use.
+ */
+export function sectionSlugFor(category: string): string {
+  const c = TOPIC_CATEGORIES.find((t) => t.kind === 'topic' && t.categories.includes(category as Category));
+  return c ? c.slug : slug(category);
+}
+
+function pillFor(category: string): { name: string; slug: string } | null {
+  if (UNPILLED.has(category)) return null;
+  const s = sectionSlugFor(category);
+  return { name: categoryBySlug(s)?.name ?? label(category), slug: s };
+}
 
 /** Retired section slugs and where their readers land now. */
 export const MOVED_SECTIONS: Record<string, string> = {
@@ -290,11 +299,16 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
   if (!cat) return [];
 
   if (cat.kind === 'scope') {
-    const seen = new Map<string, number>();
-    for (const s of stories) seen.set(s.category, (seen.get(s.category) ?? 0) + 1);
-    const present = CATEGORIES
-      .map((name) => ({ name: label(name), slug: slug(name), count: seen.get(name) ?? 0 }))
-      .filter((s) => s.count > 0);
+    const seen = new Map<string, SubCount>();
+    for (const name of CATEGORIES) {
+      const p = pillFor(name);
+      if (p && !seen.has(p.slug)) seen.set(p.slug, { ...p, count: 0 });
+    }
+    for (const s of stories) {
+      const p = pillFor(s.category);
+      if (p) seen.get(p.slug)!.count++;
+    }
+    const present = [...seen.values()].filter((s) => s.count > 0);
     // A scope's subs are the ten topics, and on a busy day nine of them qualify —
     // a second strip as long as the first, saying the same words. The thinnest
     // are dropped by count, then declared order is restored so the pills keep
@@ -302,17 +316,20 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
     const keep = new Set(
       [...present].sort((a, b) => b.count - a.count).slice(0, SCOPE_SUB_LIMIT).map((s) => s.slug),
     );
-    return present.filter((s) => keep.has(s.slug));
+    const subjects = present.filter((s) => keep.has(s.slug));
+    if (cat.slug !== 'top') return subjects;
+    // Trending alone also slices by place: where these happened, then what.
+    const places: SubCount[] = [];
+    for (const sc of SCOPE_SUBS) {
+      let count = 0;
+      for (const s of stories) if (s.scopes?.includes(sc.slug)) count++;
+      if (count > 0) places.push({ name: sc.name, slug: sc.slug, count });
+    }
+    return [...places, ...subjects];
   }
 
   const texts = stories.map(searchText);
   const out: SubCount[] = [];
-  // The other axis first: where these happened, before what they are about.
-  for (const sc of SCOPE_SUBS) {
-    let count = 0;
-    for (const s of stories) if (s.scopes?.includes(sc.slug)) count++;
-    if (count > 0) out.push({ name: sc.name, slug: sc.slug, count });
-  }
   // Then what the news is about this hour, ahead of the standing lenses.
   out.push(...dynamicSubs(cat, stories));
   for (const s of cat.subs) {
@@ -335,8 +352,8 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
  */
 export function subSlugsFor(categorySlug: string, story: Matchable): string[] {
   const cat = categoryBySlug(categorySlug);
-  if (!cat) return [];
-  if (cat.kind === 'scope') return [slug(story.category)];
+  if (!cat) return [...(story.scopes ?? [])];
+  if (cat.kind === 'scope') return [...(story.scopes ?? []), sectionSlugFor(story.category)];
   const text = searchText(story);
   const t = topicSlug(story);
   const curated = (cat.subs ?? [])
@@ -345,6 +362,7 @@ export function subSlugsFor(categorySlug: string, story: Matchable): string[] {
     .map((sub) => sub.slug);
   // The topic slug travels whether or not it earned a pill: the client only
   // filters by slugs the section offers, so an unoffered one is inert.
+  // Scopes travel too: Trending filters by them, whatever section a row is in.
   return [...new Set([...(story.scopes ?? []), ...curated, ...(t ? [t] : [])])];
 }
 
@@ -353,10 +371,7 @@ export function filterBySub<T extends Matchable>(
 ): T[] {
   const cat = categoryBySlug(categorySlug);
   if (!cat) return [...stories];
-  if (cat.kind === 'scope') {
-    const name = CATEGORIES.find((c) => slug(c) === subSlug);
-    return name ? stories.filter((s) => s.category === name) : [...stories];
-  }
   if (SCOPE_SUB_SLUGS.has(subSlug)) return stories.filter((s) => s.scopes?.includes(subSlug));
+  if (cat.kind === 'scope') return stories.filter((s) => sectionSlugFor(s.category) === subSlug);
   return stories.filter((s) => matchesSub(cat.slug, subSlug, s));
 }

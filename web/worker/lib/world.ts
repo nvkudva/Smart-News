@@ -2,7 +2,7 @@ import { cycleStamp } from './cycle';
 import { effectivePlaceIds, getPrefs } from './feed';
 import { expandPlaceIds, placesReady } from './places';
 import { SECTION_PAGE, getSection, outletsFor } from './sections';
-import { TAXONOMY, slug, subCategoriesFor, subSlugsFor, type SubCount } from '../../shared/taxonomy';
+import { TAXONOMY, sectionSlugFor, subCategoriesFor, subSlugsFor, type SubCount } from '../../shared/taxonomy';
 import type { Outlet, Story } from './feed';
 
 /**
@@ -82,8 +82,8 @@ function scopesFor(s: Story, country: string, local: Local): string[] {
   if (local.ids.size ? (s.place_id !== null && local.ids.has(s.place_id)) : named(s, local.typed)) {
     out.push('local');
   }
-  if (!s.country) out.push('unplaced');
-  else if (s.country === country) out.push('national');
+  if (!s.country) return out;
+  if (s.country === country) out.push('national');
   else out.push('international');
   return out;
 }
@@ -112,10 +112,9 @@ export async function getWorld(userId: string, since: number): Promise<World> {
   const bodies = new Map<string, Story>();
 
   for (const [c, raw] of got) {
-    // Subject sections are sliced by scope, so their rows need the verdict
-    // before the counts are taken. Scope sections are sliced by subject and
-    // never look at it, so they are left as the memoised query returned them.
-    const rows = c.kind === 'topic' ? scoped(raw) : raw;
+    // Trending is sliced by place as well as subject, so its rows need the
+    // verdict before the counts are taken. The rest never look at it.
+    const rows = c.slug === 'top' ? scoped(raw) : raw;
     const page = rows.slice(0, SECTION_PAGE);
     sections[c.slug] = {
       name: c.name,
@@ -155,8 +154,8 @@ export async function getWorld(userId: string, since: number): Promise<World> {
     // A story sits in exactly one topic section, so its sub-tags are its own.
     // The scope sections tag by category name, which the row already carries,
     // and the client derives those without needing the taxonomy.
-    subs: subSlugsFor(slug(s.category), { ...s, scopes: scopesFor(s, prefs.country, local) }),
-    cslug: slug(s.category),
+    subs: subSlugsFor(sectionSlugFor(s.category), { ...s, scopes: scopesFor(s, prefs.country, local) }),
+    cslug: sectionSlugFor(s.category),
     outlets: outlets.get(s.id) ?? [],
   }));
 

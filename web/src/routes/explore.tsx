@@ -8,8 +8,8 @@ import { load } from '../lib/load'
 import { loadWorld } from '../lib/world'
 import { SCOPE_SUBS } from '../../shared/taxonomy'
 
-/** Local / National / International / Others ride along in every topic's
- *  subs as scope filters; they are places to the reader, not subjects. */
+/** City / National / World are place filters, not subjects; kept out in
+ *  case a section offers them. */
 const SCOPES = new Set(SCOPE_SUBS.map((s) => s.slug))
 
 /**

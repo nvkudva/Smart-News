@@ -1,7 +1,10 @@
 import { useLoaderData, useSearch } from '@tanstack/react-router';
+import { SCOPE_SUBS } from '../../shared/taxonomy';
 import { sectionFrom, type World } from '../lib/world';
 import { StoryCard, variantFor } from './StoryCard';
 import { SubcategoryStrip } from './SubcategoryStrip';
+
+const SCOPE_SLUGS = new Set(SCOPE_SUBS.map((s) => s.slug));
 
 export function SectionFeed({ cat, name }: { cat: string; name: string }) {
   // strict:false because this renders under several routes; each one declares
@@ -20,11 +23,11 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
   // one: the keyword lists run against live rows, and yesterday's link should
   // still land somewhere useful.
   const active = sub && data.subs.some((s) => s.slug === sub) ? sub : null;
-  // A scope section's pills are the ten topics, so its filter is the story's
-  // own category; a topic section's are its keyword lists, which each row
-  // carries the verdicts for.
+  // A scope section's subject pills filter on the story's own section; its
+  // place pills (Trending only), like a topic's keyword pills, on the verdicts
+  // each row carries.
   const shown = !active ? data.stories
-    : data.kind === 'scope' ? data.stories.filter((s) => s.cslug === active)
+    : data.kind === 'scope' && !SCOPE_SLUGS.has(active) ? data.stories.filter((s) => s.cslug === active)
     : data.stories.filter((s) => s.subs.includes(active));
 
   return (

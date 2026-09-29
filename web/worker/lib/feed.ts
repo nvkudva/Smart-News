@@ -167,9 +167,8 @@ const MACRO_SUBS: readonly (readonly [string, string])[] = [
   ['business', 'markets'], ['business', 'economy'],
   ['business', 'trade-tariffs'], ['business', 'energy-commodities'],
   // Crypto counts as an asset class here, not as a gadget: a readership that
-  // follows markets reads a Bitcoin move the way it reads a rate decision. The
-  // pill exists under Technology too, and either filing earns the lift.
-  ['business', 'crypto'], ['technology', 'crypto'],
+  // follows markets reads a Bitcoin move the way it reads a rate decision.
+  ['business', 'crypto'],
 ];
 
 function macroLift(s: Story): number {
