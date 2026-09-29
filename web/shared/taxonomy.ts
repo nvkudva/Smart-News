@@ -17,29 +17,36 @@ export function slug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-export type SubCategory = { name: string; slug: string; keywords: readonly string[] };
+export type SubCategory = {
+  name: string; slug: string; keywords: readonly string[];
+  /** A stored category folded into this section; its rows match whatever their text says. */
+  category?: Category;
+};
 
 export type ScopeSlug = 'top' | 'national' | 'international';
 
 /**
  * The subjects that get a top-level pill, in strip order.
  *
- * Four of the stored categories are missing on purpose: Governance,
+ * Health and Climate fold into Science as sub-pills. Others has no pill: its
+ * rows still reach the reader through Trending, National and World.
+ *
+ * Four more stored categories are missing on purpose: Governance,
  * Crime & Courts, Disasters & Accidents and Conflict & Diplomacy classify
  * sharply - without them 269 of the old India/World rows would fall back to
  * Others - but a reader meets them as subject pills under Trending, National
  * and World rather than as fourteen entries in one strip.
  */
 export const STRIP_SUBJECTS = [
-  'Technology', 'Politics', 'Business', 'Science', 'Health',
-  'Education', 'Sports', 'Entertainment', 'Climate', 'Others',
+  'Technology', 'Politics', 'Business', 'Science',
+  'Education', 'Sports', 'Entertainment',
 ] as const satisfies readonly Category[];
 
 export type StripSubject = (typeof STRIP_SUBJECTS)[number];
 
 export type Section =
   | { kind: 'scope'; name: string; slug: ScopeSlug; subs: null }
-  | { kind: 'topic'; name: string; category: Category; slug: string; subs: SubCategory[] };
+  | { kind: 'topic'; name: string; categories: readonly Category[]; slug: string; subs: SubCategory[] };
 
 /** The only shape the matchers need. Story satisfies it structurally. */
 export type Matchable = {
@@ -139,18 +146,14 @@ const TOPIC_SUBS: Record<StripSubject, SubCategory[]> = {
     sub('Trade & Tariffs', ['tariff', 'tariffs', 'trade', 'exports', 'imports', 'wto', 'supply chain', 'customs']),
   ],
   Science: [
+    { name: 'Health', slug: 'health', keywords: [], category: 'Health' },
+    { name: 'Climate', slug: 'climate', keywords: [], category: 'Climate' },
     sub('Life Sciences', ['study', 'cells', 'protein', 'gene', 'dna', 'brain', 'cancer', 'immune', 'metabolic', 'microbe', 'bacteria', 'virus', 'neural', 'clinical', 'health']),
     sub('Earth Sciences', ['earthquake', 'volcano', 'ocean', 'climate', 'forest', 'carbon', 'geology', 'seismic', 'glacier', 'soil', 'atmosphere', 'mantle', 'lava', 'core']),
     sub('Space & Astronomy', ['nasa', 'galaxy', 'nebula', 'star', 'stars', 'pulsar', 'black hole', 'telescope', 'planet', 'moon', 'mars', 'spacecraft', 'astronomy', 'cosmic', 'dark matter', 'isro', 'orbit', 'mercury']),
     sub('Animals & Wildlife', ['species', 'bird', 'birds', 'fish', 'shark', 'frog', 'whale', 'insect', 'wildlife', 'animals', 'salmon', 'narwhals', 'habitat', 'cheetah']),
     sub('Archaeology', ['archaeology', 'fossil', 'ancient', 'excavation', 'artefacts', 'prehistoric', 'cave', 'arrowheads', 'remains', 'tomb', 'folklore']),
     sub('Physics & Materials', ['physics', 'quantum', 'atom', 'atoms', 'particle', 'laser', 'magnet', 'materials', 'alloy', 'copper', 'superconductor', 'crystal', 'pressure', 'emission']),
-  ],
-  Health: [
-    sub('Conditions & Treatment', ['cancer', 'diabetes', 'disease', 'patient', 'patients', 'treatment', 'symptoms', 'therapy', 'drug', 'surgery', 'diagnosis', 'study', 'risk']),
-    sub('Nutrition', ['diet', 'food', 'nutrition', 'fibre', 'fiber', 'sugar', 'protein', 'vitamin', 'ghee', 'alcohol', 'supplement', 'weight', 'eating']),
-    sub('Hospitals & Care', ['hospital', 'hospitals', 'nhs', 'doctors', 'nurse', 'clinic', 'maternity', 'ambulance', 'care', 'guidelines', 'fda']),
-    sub('Mental Health', ['mental', 'anxiety', 'depression', 'adhd', 'burnout', 'stress', 'cognition', 'sleep']),
   ],
   Education: [
     sub('Schools', ['school', 'schools', 'pupil', 'pupils', 'classroom', 'teacher', 'teachers', 'headteacher', 'syllabus', 'textbook', 'midday meal', 'rte', 'cbse', 'icse', 'board exam']),
@@ -159,12 +162,6 @@ const TOPIC_SUBS: Record<StripSubject, SubCategory[]> = {
     sub('Policy & Funding', ['education policy', 'nep', 'scholarship', 'scholarships', 'fee', 'fees', 'grant', 'grants', 'literacy', 'enrolment', 'dropout', 'reservation', 'quota']),
     sub('Research & Faculty', ['research', 'researchers', 'study', 'paper', 'journal', 'professor', 'lecturer', 'academic', 'thesis', 'laboratory', 'fellowship']),
   ],
-  Climate: [
-    sub('Warming & Emissions', ['warming', 'emissions', 'carbon', '1.5c', 'fossil', 'net zero', 'cop', 'greenhouse', 'temperature', 'air quality', 'sea-level']),
-    sub('Extreme Weather', ['heat', 'heatwaves', 'wildfires', 'fire', 'fires', 'flood', 'flooding', 'storm', 'drought', 'el nino', 'haze', 'cyclone', 'hurricane']),
-    sub('Nature & Adaptation', ['forest', 'forests', 'rewilding', 'habitat', 'conservation', 'biodiversity', 'tree', 'trees', 'wildlife', 'adaptation', 'risk assessment']),
-  ],
-  Others: [],
 };
 
 /**
@@ -183,9 +180,21 @@ export const SCOPE_CATEGORIES: Section[] = [
   { kind: 'scope', name: 'World', slug: 'international', subs: null },
 ];
 
-export const TOPIC_CATEGORIES: Section[] = STRIP_SUBJECTS.map((name) => ({
-  kind: 'topic' as const, name: label(name), category: name, slug: slug(name), subs: TOPIC_SUBS[name],
-}));
+export const TOPIC_CATEGORIES: Section[] = STRIP_SUBJECTS.map((name) => {
+  const subs = TOPIC_SUBS[name];
+  const folded = subs.flatMap((s) => (s.category ? [s.category] : []));
+  return { kind: 'topic' as const, name: label(name), categories: [name, ...folded], slug: slug(name), subs };
+});
+
+/** Retired section slugs and where their readers land now. */
+export const MOVED_SECTIONS: Record<string, string> = {
+  latest: 'top', health: 'science', climate: 'science', others: 'top',
+};
+
+const FOLDED = new Map<string, Category>();
+for (const c of TOPIC_CATEGORIES) {
+  for (const s of c.subs ?? []) if (s.category) FOLDED.set(`${c.slug}/${s.slug}`, s.category);
+}
 
 // STRIP_SUBJECTS leads with Technology because it renders second, ahead of the
 // other scope tabs; the rest follow in declared order.
@@ -219,7 +228,7 @@ function matcher(keywords: readonly string[]): RegExp {
 const MATCHERS = new Map<string, RegExp>();
 for (const c of TOPIC_CATEGORIES) {
   if (!c.subs) continue;
-  for (const s of c.subs) MATCHERS.set(`${c.slug}/${s.slug}`, matcher(s.keywords));
+  for (const s of c.subs) if (!s.category) MATCHERS.set(`${c.slug}/${s.slug}`, matcher(s.keywords));
 }
 
 export function searchText(s: Matchable): string {
@@ -241,7 +250,9 @@ function topicSlug(s: Matchable): string | null {
  * so "Cricket" from the summariser and the cricket keywords land in one pill.
  */
 export function matchesSub(sectionSlug: string, subSlug: string, s: Matchable): boolean {
-  const re = MATCHERS.get(`${sectionSlug}/${subSlug}`);
+  const key = `${sectionSlug}/${subSlug}`;
+  if (FOLDED.has(key)) return s.category === FOLDED.get(key);
+  const re = MATCHERS.get(key);
   return (re ? re.test(searchText(s)) : false) || topicSlug(s) === subSlug;
 }
 
@@ -306,9 +317,9 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
   out.push(...dynamicSubs(cat, stories));
   for (const s of cat.subs) {
     const re = MATCHERS.get(`${cat.slug}/${s.slug}`);
-    if (!re) continue;
     let count = 0;
-    stories.forEach((st, i) => { if (re.test(texts[i]) || topicSlug(st) === s.slug) count++; });
+    if (s.category) for (const st of stories) { if (st.category === s.category) count++; }
+    else if (re) stories.forEach((st, i) => { if (re.test(texts[i]) || topicSlug(st) === s.slug) count++; });
     if (count > 0) out.push({ name: s.name, slug: s.slug, count });
   }
   return out;
@@ -329,7 +340,8 @@ export function subSlugsFor(categorySlug: string, story: Matchable): string[] {
   const text = searchText(story);
   const t = topicSlug(story);
   const curated = (cat.subs ?? [])
-    .filter((sub) => MATCHERS.get(`${cat.slug}/${sub.slug}`)?.test(text) || sub.slug === t)
+    .filter((sub) => sub.category ? story.category === sub.category
+      : MATCHERS.get(`${cat.slug}/${sub.slug}`)?.test(text) || sub.slug === t)
     .map((sub) => sub.slug);
   // The topic slug travels whether or not it earned a pill: the client only
   // filters by slugs the section offers, so an unoffered one is inert.

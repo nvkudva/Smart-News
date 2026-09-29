@@ -131,8 +131,8 @@ export async function getInternationalSection(limit: number, userId: string): Pr
                [prefs.country, ...h.params], limit);
 }
 
-export function getTopicSection(category: string, limit = SECTION_PAGE): Promise<Story[]> {
-  return bySql('c.category = ?', [category], limit);
+export function getTopicSection(categories: readonly string[], limit = SECTION_PAGE): Promise<Story[]> {
+  return bySql(`c.category IN (${categories.map(() => '?').join(', ')})`, [...categories], limit);
 }
 
 /**
@@ -162,7 +162,7 @@ export async function getSection(slug: string, userId: string): Promise<Story[]>
   let stories: Story[] = [];
   try {
     stories = await warm(key, stamp, () => {
-      if (category.kind === 'topic') return getTopicSection(category.category, limit);
+      if (category.kind === 'topic') return getTopicSection(category.categories, limit);
       if (category.slug === 'top') return getFeed(limit, userId);
       if (category.slug === 'national') return getNationalSection(limit, userId);
       return getInternationalSection(limit, userId);
