@@ -1,4 +1,4 @@
-import { CATEGORIES, type Category } from './categories';
+import { CATEGORIES, label, type Category } from './categories';
 
 /**
  * The two-level taxonomy. Top level is the strip a reader moves along; the
@@ -19,7 +19,7 @@ export function slug(name: string): string {
 
 export type SubCategory = { name: string; slug: string; keywords: readonly string[] };
 
-export type ScopeSlug = 'top' | 'latest' | 'national' | 'international';
+export type ScopeSlug = 'top' | 'national' | 'international';
 
 /**
  * The subjects that get a top-level pill, in strip order.
@@ -28,7 +28,7 @@ export type ScopeSlug = 'top' | 'latest' | 'national' | 'international';
  * Crime & Courts, Disasters & Accidents and Conflict & Diplomacy classify
  * sharply - without them 269 of the old India/World rows would fall back to
  * Others - but a reader meets them as subject pills under Trending, National
- * and International rather than as fourteen entries in one strip.
+ * and World rather than as fourteen entries in one strip.
  */
 export const STRIP_SUBJECTS = [
   'Technology', 'Politics', 'Business', 'Science', 'Health',
@@ -39,7 +39,7 @@ export type StripSubject = (typeof STRIP_SUBJECTS)[number];
 
 export type Section =
   | { kind: 'scope'; name: string; slug: ScopeSlug; subs: null }
-  | { kind: 'topic'; name: Category; slug: string; subs: SubCategory[] };
+  | { kind: 'topic'; name: string; category: Category; slug: string; subs: SubCategory[] };
 
 /** The only shape the matchers need. Story satisfies it structurally. */
 export type Matchable = {
@@ -61,9 +61,9 @@ export type Matchable = {
  * with the Others *subject*.
  */
 export const SCOPE_SUBS: readonly SubCategory[] = [
-  { name: 'Local', slug: 'local', keywords: [] },
+  { name: 'City', slug: 'local', keywords: [] },
   { name: 'National', slug: 'national', keywords: [] },
-  { name: 'International', slug: 'international', keywords: [] },
+  { name: 'World', slug: 'international', keywords: [] },
   { name: 'Others', slug: 'unplaced', keywords: [] },
 ];
 
@@ -169,7 +169,9 @@ const TOPIC_SUBS: Record<StripSubject, SubCategory[]> = {
 
 /**
  * Trending keeps the slug 'top': it is the section at `/`, and every stored
- * link and prerendered path says so. Only the label changed.
+ * link and prerendered path says so. Only the label changed. It absorbed
+ * Latest, which drew the same pool and differed only in order; /c/latest
+ * redirects here. World keeps the slug 'international' for the same reason.
  *
  * Local is no longer one of these. It is a scope sub-pill under every subject
  * now, which is a lens over rows the section already holds rather than a
@@ -177,26 +179,21 @@ const TOPIC_SUBS: Record<StripSubject, SubCategory[]> = {
  */
 export const SCOPE_CATEGORIES: Section[] = [
   { kind: 'scope', name: 'Trending', slug: 'top', subs: null },
-  // The one section with no ranking in it: newest first, whatever the subject
-  // and wherever it happened. Trending answers "what matters"; this answers
-  // "what just landed", which on a half-hourly cycle is a different question.
-  { kind: 'scope', name: 'Latest', slug: 'latest', subs: null },
   { kind: 'scope', name: 'National', slug: 'national', subs: null },
-  { kind: 'scope', name: 'International', slug: 'international', subs: null },
+  { kind: 'scope', name: 'World', slug: 'international', subs: null },
 ];
 
 export const TOPIC_CATEGORIES: Section[] = STRIP_SUBJECTS.map((name) => ({
-  kind: 'topic' as const, name, slug: slug(name), subs: TOPIC_SUBS[name],
+  kind: 'topic' as const, name: label(name), category: name, slug: slug(name), subs: TOPIC_SUBS[name],
 }));
 
 // STRIP_SUBJECTS leads with Technology because it renders second, ahead of the
-// two scope tabs; the rest follow in declared order.
+// other scope tabs; the rest follow in declared order.
 const [TECHNOLOGY, ...REST_OF_SUBJECTS] = TOPIC_CATEGORIES;
 
 /** Declared order is render order. */
 export const TAXONOMY: Section[] = [
-  SCOPE_CATEGORIES[0], SCOPE_CATEGORIES[1], TECHNOLOGY,
-  ...SCOPE_CATEGORIES.slice(2), ...REST_OF_SUBJECTS,
+  SCOPE_CATEGORIES[0], TECHNOLOGY, ...SCOPE_CATEGORIES.slice(1), ...REST_OF_SUBJECTS,
 ];
 
 export function categoryBySlug(s: string): Section | null {
@@ -231,7 +228,7 @@ export function searchText(s: Matchable): string {
 
 /**
  * The story's topic as a sub slug, or null. A label whose slug is a scope pill's
- * ("Local") would shadow that pill, so it is dropped rather than renamed.
+ * ("Local", the City pill's slug) would shadow that pill, so it is dropped rather than renamed.
  */
 function topicSlug(s: Matchable): string | null {
   const t = s.topic ? slug(s.topic) : '';
@@ -285,7 +282,7 @@ export function subCategoriesFor(categorySlug: string, stories: readonly Matchab
     const seen = new Map<string, number>();
     for (const s of stories) seen.set(s.category, (seen.get(s.category) ?? 0) + 1);
     const present = CATEGORIES
-      .map((name) => ({ name, slug: slug(name), count: seen.get(name) ?? 0 }))
+      .map((name) => ({ name: label(name), slug: slug(name), count: seen.get(name) ?? 0 }))
       .filter((s) => s.count > 0);
     // A scope's subs are the ten topics, and on a busy day nine of them qualify —
     // a second strip as long as the first, saying the same words. The thinnest
