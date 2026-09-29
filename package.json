@@ -17,7 +17,8 @@
     "deploy": "bun run migrate:d1 && cd web && bun run deploy",
     "hydrate": "bun scripts/d1/hydrate.ts",
     "seed:local-d1": "bun scripts/d1/seed-local.ts",
-    "checkpoint": "bun scripts/pipeline/checkpoint.ts"
+    "checkpoint": "bun scripts/pipeline/checkpoint.ts",
+    "backfill:country": "bun scripts/pipeline/backfill-country.ts"
   },
   "dependencies": {
     "@google/genai": "^2.22.0",

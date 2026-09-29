@@ -42,6 +42,20 @@ export function isoCountry(v: unknown): string | null {
   return ALIASES[code] ?? code;
 }
 
+/**
+ * The country most of a story's outlets file from, or null on a tie or when
+ * none says. A guess, and used only where the story itself names no country.
+ */
+export function outletCountry(countries: readonly (string | null)[]): string | null {
+  const n = new Map<string, number>();
+  for (const c of countries) {
+    const cc = isoCountry(c);
+    if (cc) n.set(cc, (n.get(cc) ?? 0) + 1);
+  }
+  const [first, second] = [...n.entries()].sort((a, b) => b[1] - a[1]);
+  return first && (!second || first[1] > second[1]) ? first[0] : null;
+}
+
 /** The country a trailing segment names, if it names one. */
 function countryHint(d: DatabaseSync, segments: string[]): string | null {
   if (segments.length < 2) return null;
@@ -58,6 +72,8 @@ export function resolvePlaceLocal(
   d: DatabaseSync,
   raw: string | null,
   country: string | null,
+  /** Tie-break for a name several countries share: the outlets' own country. */
+  prefer: string | null = null,
 ): { place_id: string | null; country: string | null } {
   const cc = isoCountry(country);
   const text = (raw ?? '').trim();
@@ -103,14 +119,17 @@ export function resolvePlaceLocal(
   // Nothing matched under a country, and the text named none. A name that
   // belongs to exactly one place in the gazetteer is not ambiguous, whatever
   // the seed happens to have filed it under: "Delhi" is stored against IN and
-  // nowhere else, so a story that says only "Delhi" means that one.
+  // nowhere else, so a story that says only "Delhi" means that one. A name
+  // two countries share ("Hyderabad") goes to the one the outlets file from.
   for (const alias of aliases) {
-    const only = d.prepare(
+    const all = d.prepare(
       `SELECT DISTINCT p.id AS place_id, p.country AS place_country
          FROM place_aliases a JOIN places p ON p.id = a.place_id
-        WHERE a.alias = ? LIMIT 2`,
+        WHERE a.alias = ?`,
     ).all(alias) as unknown as { place_id: string; place_country: string }[];
-    if (only.length === 1) return { place_id: only[0].place_id, country: hinted ?? only[0].place_country ?? null };
+    const pick = all.length === 1 ? all
+      : prefer ? all.filter((r) => r.place_country === prefer) : [];
+    if (pick.length === 1) return { place_id: pick[0].place_id, country: hinted ?? pick[0].place_country ?? null };
   }
   return { place_id: null, country: cc };
 }
