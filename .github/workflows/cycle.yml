@@ -78,6 +78,11 @@ jobs:
       - name: Fetch, cluster, summarise
         run: bun run cycle 150
 
+      # Cheap and idempotent: only written stories with no country are read,
+      # so after the first run this touches a handful of new rows at most.
+      - name: Fill missing countries
+        run: bun run backfill:country
+
       # The runner's disk is scratch, so a failed sync throws away everything
       # the summarise step just paid Workers AI for, and the next run starts
       # again from D1's older state. It is the one step worth retrying.
