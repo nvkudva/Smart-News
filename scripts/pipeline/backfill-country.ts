@@ -20,15 +20,24 @@ const fromPlace = d.prepare(
     WHERE c.headline IS NOT NULL AND c.country IS NULL`,
 ).all() as unknown as { id: string; country: string }[];
 
-const rest = d.prepare(
-  `SELECT c.id, group_concat(COALESCE(s.country, ''), ',') AS countries
+// Earliest article first, so a tie between countries goes to the outlet that
+// broke the story.
+const articles = d.prepare(
+  `SELECT c.id, s.country
      FROM clusters c JOIN articles a ON a.cluster_id = c.id JOIN sources s ON s.id = a.source_id
     WHERE c.headline IS NOT NULL AND c.country IS NULL AND c.place_id IS NULL
-    GROUP BY c.id`,
-).all() as unknown as { id: string; countries: string }[];
+    ORDER BY c.id, a.published_at ASC`,
+).all() as unknown as { id: string; country: string | null }[];
+
+const byCluster = new Map<string, (string | null)[]>();
+for (const r of articles) {
+  const list = byCluster.get(r.id);
+  if (list) list.push(r.country); else byCluster.set(r.id, [r.country]);
+}
+const rest = [...byCluster.keys()];
 
 const fromOutlets = rest
-  .map((r) => ({ id: r.id, country: outletCountry(r.countries.split(',')) }))
+  .map((id) => ({ id, country: outletCountry(byCluster.get(id)!) }))
   .filter((r): r is { id: string; country: string } => !!r.country);
 
 console.log(`from place: ${fromPlace.length}, from outlets: ${fromOutlets.length}, still none: ${rest.length - fromOutlets.length}`);

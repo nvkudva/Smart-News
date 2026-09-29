@@ -43,8 +43,9 @@ export function isoCountry(v: unknown): string | null {
 }
 
 /**
- * The country most of a story's outlets file from, or null on a tie or when
- * none says. A guess, and used only where the story itself names no country.
+ * The country most of a story's outlets file from, or null when none says.
+ * Pass them earliest-published first: a tie goes to the country whose outlet
+ * broke the story. A guess, and used only where the story names no country.
  */
 export function outletCountry(countries: readonly (string | null)[]): string | null {
   const n = new Map<string, number>();
@@ -52,8 +53,10 @@ export function outletCountry(countries: readonly (string | null)[]): string | n
     const cc = isoCountry(c);
     if (cc) n.set(cc, (n.get(cc) ?? 0) + 1);
   }
-  const [first, second] = [...n.entries()].sort((a, b) => b[1] - a[1]);
-  return first && (!second || first[1] > second[1]) ? first[0] : null;
+  // Map keeps first-seen order and sort is stable, so equal counts stay
+  // earliest-first.
+  const best = [...n.entries()].sort((a, b) => b[1] - a[1])[0];
+  return best ? best[0] : null;
 }
 
 /** The country a trailing segment names, if it names one. */
