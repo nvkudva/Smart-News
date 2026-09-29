@@ -32,7 +32,7 @@ function Local() {
       <main className="shell">
         <div className="pagehead">
           <Link to="/" className="kicker" style={{ textDecoration: 'none' }}>← Today</Link>
-          <h1 style={{ marginTop: 8 }}>Local</h1>
+          <h1 style={{ marginTop: 8 }}>City</h1>
           <p>
             {nothingNamed
               ? 'Follow a place and its news collects here.'

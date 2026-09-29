@@ -131,20 +131,8 @@ export async function getInternationalSection(limit: number, userId: string): Pr
                [prefs.country, ...h.params], limit);
 }
 
-/**
- * Newest first, and nothing else: no interest weighting, no exploration slot,
- * no importance tie-break ahead of the clock. The reader who opens Latest is
- * asking what the last cycle brought, so the only judgement applied is the
- * reader's own — hidden categories still stay hidden.
- *
- */
-export async function getLatestSection(limit: number, userId: string): Promise<Story[]> {
-  const h = notHidden(await getPrefs(userId));
-  return bySql(h.where, h.params, limit, 'recency');
-}
-
-export function getTopicSection(category: string, limit = SECTION_PAGE): Promise<Story[]> {
-  return bySql('c.category = ?', [category], limit);
+export function getTopicSection(categories: readonly string[], limit = SECTION_PAGE): Promise<Story[]> {
+  return bySql(`c.category IN (${categories.map(() => '?').join(', ')})`, [...categories], limit);
 }
 
 /**
@@ -166,23 +154,16 @@ export async function getSection(slug: string, userId: string): Promise<Story[]>
   // so two readers on the same prefs (most of them, on the defaults) share one
   // answer per cycle. The key used to carry the userId as well, which gave
   // each of them a private copy of one identical query.
-  // Latest sits between the two: it ranks against nothing, so country and
-  // places cannot move it and the full fingerprint would give every reader a
-  // private copy of one identical query. The only preference it honours is the
-  // hidden list, so that is the whole of its key.
   const key = category.kind === 'topic'
     ? `${slug}:${limit}`
-    : category.slug === 'latest'
-      ? `${slug}:${limit}:${(await getPrefs(userId)).hidden.join(',')}`
-      : `${slug}:${limit}:${prefsFingerprint(await getPrefs(userId))}`;
+    : `${slug}:${limit}:${prefsFingerprint(await getPrefs(userId))}`;
   const stamp = await cycleStamp();
 
   let stories: Story[] = [];
   try {
     stories = await warm(key, stamp, () => {
-      if (category.kind === 'topic') return getTopicSection(category.name, limit);
+      if (category.kind === 'topic') return getTopicSection(category.categories, limit);
       if (category.slug === 'top') return getFeed(limit, userId);
-      if (category.slug === 'latest') return getLatestSection(limit, userId);
       if (category.slug === 'national') return getNationalSection(limit, userId);
       return getInternationalSection(limit, userId);
     });

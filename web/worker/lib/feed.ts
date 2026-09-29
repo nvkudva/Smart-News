@@ -167,9 +167,8 @@ const MACRO_SUBS: readonly (readonly [string, string])[] = [
   ['business', 'markets'], ['business', 'economy'],
   ['business', 'trade-tariffs'], ['business', 'energy-commodities'],
   // Crypto counts as an asset class here, not as a gadget: a readership that
-  // follows markets reads a Bitcoin move the way it reads a rate decision. The
-  // pill exists under Technology too, and either filing earns the lift.
-  ['business', 'crypto'], ['technology', 'crypto'],
+  // follows markets reads a Bitcoin move the way it reads a rate decision.
+  ['business', 'crypto'],
 ];
 
 function macroLift(s: Story): number {
@@ -242,6 +241,17 @@ function prominenceLift(s: Story): number {
   return 1 + 0.5 * Math.min(1, (s.prominence ?? 0) / PROMINENCE_FULL);
 }
 
+/**
+ * The editorial tilt of Trending, applied to every reader. The hard-news desks
+ * are doubled and Entertainment is cut to a fifth: at the six-hour half-life a
+ * 2x story holds its place for six hours longer, and a film story has to be
+ * about fourteen hours fresher than a tech one to outrank it.
+ */
+const DESK_WEIGHT: Partial<Record<string, number>> = {
+  Technology: 2, Politics: 2, 'Conflict & Diplomacy': 2, Business: 2,
+  Entertainment: 0.2,
+};
+
 function rank(s: Story, prefs: Prefs, inside: Set<string> | null): number {
   const ageH = (Date.now() - s.last_seen) / 3_600_000;
   const recency = Math.pow(0.5, ageH / HALF_LIFE_H);
@@ -262,7 +272,7 @@ function rank(s: Story, prefs: Prefs, inside: Set<string> | null): number {
   // 0.6-1.0 it still sorts, but a widely-run story can now outrank a lightly-run
   // one the model happened to like better.
   return recency * (0.5 + 0.1 * s.importance) * interest
-         * prominenceLift(s) * macroLift(s);
+         * prominenceLift(s) * macroLift(s) * (DESK_WEIGHT[s.category] ?? 1);
 }
 
 /**

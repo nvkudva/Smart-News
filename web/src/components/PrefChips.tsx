@@ -1,4 +1,5 @@
 
+import { label } from '../../shared/categories';
 import { useState, useTransition } from 'react';
 import { HIDDEN_KEY } from '../lib/boot';
 import { toggleHiddenAction, toggleInterestAction } from '../lib/actions';
@@ -61,7 +62,7 @@ export function PrefChips(
               <label key={c} className="chip" data-on={picked.includes(c)}>
                 <input type="checkbox" checked={picked.includes(c)} disabled={pending}
                        onChange={() => start(async () => { apply(await toggleInterestAction(c)); prefsChanged(); })} />
-                {c}
+                {label(c)}
               </label>
             ))}
           </div>
@@ -80,7 +81,7 @@ export function PrefChips(
               <label key={c} className="chip chip--off" data-on={hidden.includes(c)}>
                 <input type="checkbox" checked={hidden.includes(c)} disabled={pending}
                        onChange={() => start(async () => { apply(await toggleHiddenAction(c)); prefsChanged(); })} />
-                {c}
+                {label(c)}
               </label>
             ))}
           </div>

@@ -2,7 +2,7 @@ import pLimit from 'p-limit';
 import { CATEGORIES, db, markDirty } from './db';
 import type { Bias } from '../../web/shared/sources';
 import { completeJson, describe, llmConfig, type JsonSchema, type LlmOutcome } from './llm';
-import { isoCountry, resolvePlaceLocal } from './places';
+import { isoCountry, outletCountry, resolvePlaceLocal } from './places';
 import type { DatabaseSync } from 'node:sqlite';
 import { distinctByText, entities } from './text';
 import { trending, trendingTerms, type Trend } from './trends';
@@ -27,7 +27,7 @@ const MAX_ATTEMPTS = 3;
 const MAX_CHARS_EACH = 1800;
 
 type Member = { source_id: string; name: string; title: string; lead: string | null; body: string | null;
-                bias: Bias | null };
+                bias: Bias | null; source_country: string | null };
 
 export type Summary = {
   headline: string; crux: string; category: string; topic?: string | null;
@@ -615,7 +615,7 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
   // as sources anywhere else either. They put the story on a front page; that
   // is a ranking fact, not something the write-up may attribute to them.
   const membersOf = d.prepare(
-    `SELECT a.source_id, s.name, s.bias, a.title, a.lead, a.body
+    `SELECT a.source_id, s.name, s.bias, s.country AS source_country, a.title, a.lead, a.body
        FROM articles a JOIN sources s ON s.id = a.source_id
       WHERE a.cluster_id = ? AND COALESCE(s.tier, 'full') <> 'title'`,
   );
@@ -692,12 +692,17 @@ export async function summarisePending(limit = 30): Promise<{ done: number; skip
     // bar shows. place_id is the canonical row it points at, resolved from the
     // parts the model separated for us, most specific first, and falling back
     // to the prose when it gave none. NULL when nothing matches.
+    const home = outletCountry(members.map((m) => m.source_country));
     const resolved = [named(s.city), named(s.region), place]
       .filter((v): v is string => !!v)
       .reduce<{ place_id: string | null; country: string | null }>(
-        (hit, name) => (hit.place_id ? hit : resolvePlaceLocal(d, name, cc)),
+        (hit, name) => (hit.place_id ? hit : resolvePlaceLocal(d, name, cc, home)),
         { place_id: null, country: cc },
       );
+    // Last resort: a story that names no place anywhere reads as the outlets'
+    // country. Often right for a domestic desk, sometimes wrong for a foreign
+    // one, and better than a story that no National or World tab will show.
+    resolved.country ??= home;
     // A one-sentence field the model padded to a paragraph is still useful, but
     // an empty string is not — it renders as a side that said nothing.
     const framing = (v: unknown) => (typeof v === 'string' && v.trim().length > 15 ? v.trim() : null);

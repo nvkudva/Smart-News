@@ -57,9 +57,9 @@ export function HeaderAside() {
       </span>
       {/* The one way into the local surface: no sixth tab, but the pin was
           already naming the reader's place, so make it go there. */}
-      <Link to="/local" className="pinchip" aria-label={here ? `Local news for ${here}` : 'Local news'}>
+      <Link to="/local" className="pinchip" aria-label={here ? `City news for ${here}` : 'City news'}>
         <span className="pinchip__i"><Pin size={12} /></span>
-        <span className="pinchip__t">{here || 'Local'}</span>
+        <span className="pinchip__t">{here || 'City'}</span>
       </Link>
       <ModeToggle />
     </div>

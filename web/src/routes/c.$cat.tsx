@@ -1,5 +1,5 @@
-import { createFileRoute, notFound } from '@tanstack/react-router'
-import { categoryBySlug } from '../../shared/taxonomy'
+import { createFileRoute, notFound, redirect } from '@tanstack/react-router'
+import { MOVED_SECTIONS, categoryBySlug } from '../../shared/taxonomy'
 import { FeedError, FeedPending } from '../components/FeedBoundary'
 import { FeedPage } from '../components/FeedPage'
 import { loadWorld } from '../lib/world'
@@ -27,6 +27,10 @@ export const Route = createFileRoute('/c/$cat')({
   // A pure taxonomy lookup, before anything is loaded: an unknown slug is a
   // 404 rather than an empty section.
   beforeLoad: ({ params }) => {
+    // Merged sections: old links land on their new home rather than a 404.
+    const moved = MOVED_SECTIONS[params.cat]
+    if (moved === 'top') throw redirect({ to: '/' })
+    if (moved) throw redirect({ to: '/c/$cat', params: { cat: moved } })
     if (!categoryBySlug(params.cat)) throw notFound()
   },
   // One answer for every category, so the loader does not depend on the param:
