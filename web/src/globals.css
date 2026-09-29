@@ -633,6 +633,13 @@ body {
 @media (min-width: 700px) {
   :root { --content: 1200px; }
   .shell { padding: 0 28px 110px; }
+}
+
+/* A foldable's inner screen (Fold 7 unfolded is ~750px) clears 700 and takes the
+   desktop shell, but three ~250px tracks there are narrower than the phone's
+   own card. So the feed holds at two columns until 900, where a third track is
+   genuinely wide enough to carry a headline and a thumb. */
+@media (min-width: 900px) {
   .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   /* At three columns a two-wide lead strands a ragged hole beside it, so it
      takes the whole row instead. Four columns has room for two cards beside. */
