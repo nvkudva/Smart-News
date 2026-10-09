@@ -1909,22 +1909,37 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* No photo: the same neutral fill. */
 :root[data-theme="cover"] .card--stack.card--text,
 :root[data-theme="cover"] .card--lead.card--text { background: var(--cover-bg); }
-/* Compact: neutral fill, photo bled down the right edge full-height. */
+/* Compact: the photo takes the left half and melts into the neutral fill on
+   the right; the type runs the card's full width over both. The scrim keeps the
+   type readable where it crosses the photograph. */
 :root[data-theme="cover"] .card--compact {
   position: relative;
-  padding: 12px calc(36% + 14px) 12px 14px;
+  --cover-bg: #fff;
+  padding: 12px 14px;
   min-height: 118px; justify-content: center;
-  background: #fff;
+  background: var(--cover-bg);
 }
-:root[data-theme="cover"] .card--compact:not(:has(.plate--thumb)) { padding-right: 14px; }
 :root[data-theme="cover"] .card--compact .plate--thumb {
-  position: absolute; top: 0; right: 0; bottom: 0;
-  width: 36%; height: 100%; margin: 0; flex: none;
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 50%; height: 100%; margin: 0; flex: none; aspect-ratio: auto;
   border: 0; border-radius: 0;
+  -webkit-mask-image: linear-gradient(to right, #000 55%, transparent);
+  mask-image: linear-gradient(to right, #000 55%, transparent);
 }
+:root[data-theme="cover"] .card--compact:has(.plate--thumb)::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(to right,
+    color-mix(in oklch, var(--cover-bg) 62%, transparent) 0%,
+    color-mix(in oklch, var(--cover-bg) 88%, transparent) 50%,
+    var(--cover-bg) 75%);
+}
+/* card__mid is positioned by nothing here: it dissolves so the photo anchors to
+   the card itself and the summary becomes a plain child above the scrim. */
+:root[data-theme="cover"] .card--compact .card__mid { display: contents; }
+:root[data-theme="cover"] .card--compact > :not(.plate) { position: relative; z-index: 2; }
 :root[data-theme="cover"][data-mode="dark"] .card--stack,
 :root[data-theme="cover"][data-mode="dark"] .card--lead { --cover-bg: oklch(0.22 0.010 262); }
-:root[data-theme="cover"][data-mode="dark"] .card--compact { background: oklch(0.22 0.010 262); }
+:root[data-theme="cover"][data-mode="dark"] .card--compact { --cover-bg: oklch(0.22 0.010 262); }
 :root[data-theme="cover"][data-mode="dark"] .card--stack .kicker,
 :root[data-theme="cover"][data-mode="dark"] .card--lead .kicker,
 :root[data-theme="cover"][data-mode="dark"] .card--compact .kicker { color: oklch(0.84 0.155 var(--cat-h, 252)); }
