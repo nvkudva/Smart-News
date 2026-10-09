@@ -3,7 +3,7 @@ config({ path: '.env.local', quiet: true });
 
 import { mkdirSync, openSync, readdirSync, rmSync, statSync, writeFileSync, writeSync } from 'node:fs';
 import { join } from 'node:path';
-import { clusterRecent } from '../../src/lib/cluster';
+import { clusterRecent, mergeWrittenDuplicates } from '../../src/lib/cluster';
 import { affordable, DAILY_NEURONS, NEURON_BUDGET, neuronsToday } from '../../src/lib/budget';
 import { checkpoint } from '../../src/lib/db';
 import { ingest } from '../../src/lib/ingest';
@@ -125,6 +125,8 @@ async function main() {
   const { done, skipped, using } = limit === 0
     ? { done: 0, skipped: 0, using: `budget spent — no summarising until 00:00 UTC` }
     : await summarisePending(limit);
+  const twins = mergeWrittenDuplicates(t0);
+  if (twins) console.log(`${twins} written stories folded into a twin`);
   console.log(`+${added} articles (${withBody} with text) · ${done} summarised, ${skipped} skipped · ${using}`);
   if (errorTally.size) console.log(`failures: ${[...errorTally].map(([k, n]) => `${k}=${n}`).join(', ')}`);
   // Printed per run so a day of logs answers where the money goes without

@@ -340,6 +340,25 @@ function centroidSim(vec: Map<string, number>, group: { members: number[]; sum: 
   return dot;
 }
 
+/**
+ * How alike two groups must be as wholes before one folds into the other. Far
+ * above CENTROID_FLOOR: that one guards a single article against a group, this
+ * one lets a whole group skip the size-scaled threshold.
+ */
+const GROUP_CENTROID_FLOOR = 0.3;
+
+/** Cosine between two groups' summed vectors. */
+function groupCos(a: Map<string, number>, b: Map<string, number>): number {
+  let na = 0, nb = 0, dot = 0;
+  for (const w of a.values()) na += w * w;
+  for (const w of b.values()) nb += w * w;
+  for (const [t, w] of a) {
+    const o = b.get(t);
+    if (o) dot += w * o;
+  }
+  return dot / (Math.sqrt(na * nb) || 1);
+}
+
 /** The few terms an article is most about — its keys in the blocking index. */
 function keysOf(vec: Map<string, number>, ents: Set<string>): string[] {
   const top = [...vec.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([t]) => t);
@@ -479,6 +498,50 @@ export function clusterRecent(): { clusters: number; assigned: number } {
     join(i, into);
     groups[g].members = [];
   }
+
+  // Whole groups can split the same way: two outlets' first wording forms one
+  // group, the follow-up wording another, and the size-scaled threshold keeps
+  // either from reaching the other one article at a time. Both then get written
+  // up and frozen, and the same story sits on the feed twice. So each unwritten
+  // group is offered to its neighbours as a whole, priced at the base threshold,
+  // with the two groups' overall direction standing in for the size penalty.
+  for (let g = 0; g < groups.length; g++) {
+    const G = groups[g];
+    if (G.frozen || !G.members.length) continue;
+    const into = bestNeighbour(g);
+    if (into === -1) continue;
+    for (const i of G.members) join(i, into);
+    G.members = [];
+  }
+
+  function bestNeighbour(g: number): number {
+    const G = groups[g];
+    let best = -1, bestSim = 0;
+    const seen = new Set<number>();
+    for (const i of G.members) {
+      for (const k of keysOf(vecs[i], ents[i])) {
+        for (const h of index.get(k) ?? []) {
+          const H = groups[h];
+          if (h === g || seen.has(h) || !H.members.length) continue;
+          seen.add(h);
+          // The smaller folds into the larger; the larger gets its own turn.
+          if (!H.frozen && H.members.length < G.members.length) continue;
+          if (!sharesName(G.ents, H.ents, alias)) continue;
+          if (groupCos(G.sum, H.sum) < GROUP_CENTROID_FLOOR) continue;
+          let sim = 0;
+          for (const a of G.members) {
+            for (const b of H.members) {
+              const o = overlap(vecs[a], vecs[b]);
+              if (o.residual >= RESIDUAL_FLOOR && o.sim > sim) sim = o.sim;
+            }
+          }
+          if (sim < THRESHOLD || sim <= bestSim) continue;
+          best = h; bestSim = sim;
+        }
+      }
+    }
+    return best;
+  }
   const live = groups.filter((g) => g.members.length);
 
   const insert = d.prepare(
@@ -573,4 +636,65 @@ export function clusterRecent(): { clusters: number; assigned: number } {
   markDirty('gone', emptied);
   d.exec('DELETE FROM clusters WHERE id NOT IN (SELECT DISTINCT cluster_id FROM articles WHERE cluster_id IS NOT NULL)');
   return { clusters: live.length, assigned };
+}
+
+/** Headlines this alike, written for stories this close in time, are one story. */
+const HEADLINE_DUPLICATE = 0.5;
+const HEADLINE_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
+
+/**
+ * Fold stories written this run into an already-written twin. The pass in
+ * clusterRecent stops most splits before a headline is paid for; this catches
+ * what it misses, judged on the model's own headlines, which converge on the
+ * same wording for the same event however differently the outlets put it.
+ *
+ * The twin with more sources keeps its id, the older one on a tie, so the card
+ * already on the feed stays where it is. The other's articles move over and its
+ * row goes, recorded as gone for D1.
+ */
+export function mergeWrittenDuplicates(since: number): number {
+  const d = db();
+  const rows = d.prepare(
+    `SELECT id, headline, source_count, first_seen, summarised_at FROM clusters
+      WHERE headline IS NOT NULL AND last_seen >= ?`,
+  ).all(Date.now() - HEADLINE_WINDOW_MS) as unknown as
+    { id: string; headline: string; source_count: number; first_seen: number; summarised_at: number }[];
+  const fresh = rows.filter((r) => r.summarised_at >= since);
+  if (!fresh.length) return 0;
+
+  const tfs = rows.map((r) => termFreq(tokenise(r.headline)));
+  const idfs = corpusIdf(tfs);
+  const vecs = tfs.map((tf) => vector(tf, idfs));
+  const ents = rows.map((r) => entities(r.headline));
+  const at = new Map(rows.map((r, i) => [r.id, i]));
+
+  const move = d.prepare('UPDATE articles SET cluster_id = ? WHERE cluster_id = ? RETURNING id');
+  const drop = d.prepare('DELETE FROM clusters WHERE id = ?');
+  const gone = new Set<string>();
+  let merged = 0;
+  for (const f of fresh) {
+    if (gone.has(f.id)) continue;
+    const i = at.get(f.id)!;
+    let twin = -1, bestSim = HEADLINE_DUPLICATE;
+    for (let j = 0; j < rows.length; j++) {
+      if (j === i || gone.has(rows[j].id)) continue;
+      const o = overlap(vecs[i], vecs[j]);
+      if (o.sim < bestSim || o.residual < RESIDUAL_FLOOR) continue;
+      if (![...ents[i]].some((e) => ents[j].has(e))) continue;
+      twin = j; bestSim = o.sim;
+    }
+    if (twin === -1) continue;
+    const t = rows[twin];
+    const fKeeps = f.source_count > t.source_count
+      || (f.source_count === t.source_count && f.first_seen < t.first_seen);
+    const [keep, lose] = fKeeps ? [f.id, t.id] : [t.id, f.id];
+    const moved = (move.all(keep, lose) as unknown as { id: string }[]).map((r) => r.id);
+    drop.run(lose);
+    gone.add(lose);
+    markDirty('article', moved);
+    markDirty('cluster', recountClusters(d, [keep]));
+    markDirty('gone', [lose]);
+    merged++;
+  }
+  return merged;
 }
