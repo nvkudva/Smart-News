@@ -41,10 +41,12 @@ export const THEME_CHROME: Record<string, string> = {
   pastel: '#f8f8fa',
   broadsheet: '#f9f6f0',
   fjord: '#e9efef',
+  cover: '#f7f7fa',
   'frost-dark': '#15171c',
   'pastel-dark': '#08090e',
   'broadsheet-dark': '#141310',
   'fjord-dark': '#0d1618',
+  'cover-dark': '#15171c',
 };
 
 /**

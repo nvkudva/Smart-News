@@ -23,7 +23,7 @@
   --glass-edge:    rgba(255, 255, 255, 0.78);
   --glass-warm:    linear-gradient(140deg, rgba(255,252,244,0.74), rgba(255,247,238,0.52));
   --plate:         linear-gradient(150deg, oklch(0.87 0.045 250), oklch(0.90 0.030 300));
-  --shadow:        0 1px 2px rgba(30,38,60,0.04), 0 10px 26px -10px rgba(30,38,60,0.14);
+  --shadow:        0 1px 2px rgba(30,38,60,0.04), 0 6px 16px -8px rgba(30,38,60,0.08);
   --rule:          oklch(0.90 0.008 258);
   --ring:          oklch(0.48 0.15 252);
   /* What sits on top of an accent fill — inverts with the mode, not the theme. */
@@ -313,7 +313,7 @@ body {
 
 .shell {
   width: 100%; max-width: var(--content); margin: 0 auto; padding-bottom: 96px;
-  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+  padding-inline: max(var(--gap), env(safe-area-inset-left)) max(var(--gap), env(safe-area-inset-right));
 }
 
 .card {
@@ -430,6 +430,7 @@ body {
   box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 14px;
 }
+.panel--quiet { margin-top: 16px; }
 /* var(--kicker), not a literal: this was Frost's own blue-grey, and it stayed
    blue-grey on Broadsheet's paper and in Northlight's dark - one wrong colour
    on every panel of two themes, in both modes. */
@@ -478,7 +479,7 @@ body {
    gesture is a pan of its own, and the drag starts late or not at all. Only the
    feed, never .shell — an ancestor's pan-y would intersect away the category
    strip's pan-x and kill its scrolling. */
-.feed { display: flex; flex-direction: column; gap: 11px; touch-action: pan-y pinch-zoom; }
+.feed { display: flex; flex-direction: column; gap: var(--gap); touch-action: pan-y pinch-zoom; }
 .shell > .panel { touch-action: pan-y pinch-zoom; }
 
 /* Variants. `row` is the mobile default declared above; these add to it. */
@@ -497,7 +498,7 @@ body {
   .feed {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: var(--gap);
     align-items: start;            /* else glass cards stretch and read as empty */
   }
   .cardwrap:has(.card--lead) { grid-column: span 2; }
@@ -631,8 +632,8 @@ body {
    exceptions, and each says so where it is written. */
 @media (min-width: 700px) {
   :root { --content: 1200px; }
-  .shell { padding: 0 28px 110px; }
-  .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .shell { padding: 0 var(--gap) 110px; }
+  .feed { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   /* At three columns a two-wide lead strands a ragged hole beside it, so it
      takes the whole row instead. Four columns has room for two cards beside. */
   .cardwrap:has(.card--lead) { grid-column: span 3; }
@@ -640,7 +641,7 @@ body {
 
 @media (min-width: 1440px) {
   :root { --content: 1400px; }
-  .feed { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+  .feed { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .cardwrap:has(.card--lead) { grid-column: span 2; }
 }
 
@@ -988,9 +989,10 @@ body {
 /* How far a card holds its content off its own edge. A token because the
    exploration marker sits outside the card and has to line up with the text
    inside it; Broadsheet, which has no card edge to speak of, sets its own. */
-:root { --card-h: 400px; --gap: 14px; --card-pad-x: 16px; }
-@media (min-width: 700px) { :root { --card-h: 396px; --gap: 16px; } }
-@media (min-width: 1440px) { :root { --card-h: 372px; --gap: 18px; } }
+/* --gap is the one gutter: between cards and between a card and the screen edge. */
+:root { --card-h: 400px; --gap: 12px; --card-pad-x: 16px; }
+@media (min-width: 700px) { :root { --card-h: 396px; } }
+@media (min-width: 1440px) { :root { --card-h: 372px; } }
 
 /* ── Focus, pointer feedback, reduced motion ───────────────────────────────
    Every interactive surface is glass on glass, so a ring is the only
@@ -1476,7 +1478,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 @media (max-width: 699.98px) { :root[data-nav="side"] { --rail: 200px; } }
 
 :root[data-nav="side"] body { padding-left: var(--rail); }
-:root[data-nav="side"] .shell { width: auto; margin: 0 auto; padding: 0 16px 48px; }
+:root[data-nav="side"] .shell { width: auto; margin: 0 auto; padding: 0 var(--gap) 48px; }
 :root[data-nav="side"] .tabbar {
   left: 0; top: 0; bottom: 0; right: auto; transform: none;
   width: var(--rail); height: auto; border-radius: 0;
@@ -1794,7 +1796,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   --glass-edge:    oklch(0.882 0.012 195);
   --glass-warm:    none;
   --plate:         linear-gradient(150deg, oklch(0.845 0.028 196), oklch(0.895 0.022 100));
-  --shadow:        none;
+  --shadow:        0 1px 2px rgba(0,0,0,0.04), 0 6px 16px -8px rgba(0,0,0,0.08);
   --rule:          oklch(0.882 0.012 195);
   --ring:          oklch(0.470 0.080 190);
   --track:         oklch(0.895 0.014 195);
@@ -1843,6 +1845,90 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
    Each block redefines only what a dark ground changes. Geometry, type and the
    category hues are the theme's, and they are the same in both modes.
    ───────────────────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────
+   Theme E — Cover. Borderless photo cards, one per story, on a neutral fill
+   (white, or a dark neutral after dark): stack and lead show the photograph
+   over their top half and melt it into the fill, and compact keeps its photo
+   bled down the right edge. The category hue is left to the kicker. No borders,
+   no blur, no shadow anywhere; the radius stays the sheet's own --r-lg.
+   ───────────────────────────────────────────────────────────────────────── */
+:root[data-theme="cover"] [data-cat]                { --cat-h: 252; }
+:root[data-theme="cover"] [data-cat="top"]           { --cat-h: 252; }
+:root[data-theme="cover"] [data-cat="latest"]        { --cat-h: 32; }
+:root[data-theme="cover"] [data-cat="local"]         { --cat-h: 158; }
+:root[data-theme="cover"] [data-cat="national"]      { --cat-h: 62; }
+:root[data-theme="cover"] [data-cat="international"] { --cat-h: 232; }
+:root[data-theme="cover"] [data-cat="world"]         { --cat-h: 252; }
+:root[data-theme="cover"] [data-cat="india"]         { --cat-h: 62; }
+:root[data-theme="cover"] [data-cat="politics"]      { --cat-h: 305; }
+:root[data-theme="cover"] [data-cat="business"]      { --cat-h: 210; }
+:root[data-theme="cover"] [data-cat="technology"]    { --cat-h: 278; }
+:root[data-theme="cover"] [data-cat="science"]       { --cat-h: 195; }
+:root[data-theme="cover"] [data-cat="health"]        { --cat-h: 355; }
+:root[data-theme="cover"] [data-cat="sports"]        { --cat-h: 150; }
+:root[data-theme="cover"] [data-cat="entertainment"] { --cat-h: 330; }
+:root[data-theme="cover"] [data-cat="climate"]       { --cat-h: 128; }
+:root[data-theme="cover"] .wash { display: none; }
+:root[data-theme="cover"] .card {
+  overflow: hidden; border: 0;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+/* Stack and lead: the photo is the card, the text sits on its lower half. The
+   plate is absolute so the card's own padding becomes the text's inset. */
+/* Neutral cards: white in light mode, a dark neutral in dark mode. The
+   category hue is left to the kicker, so the photo does the colour work. */
+:root[data-theme="cover"] .card--stack,
+:root[data-theme="cover"] .card--lead {
+  position: relative; justify-content: flex-end; gap: 6px;
+  min-height: 340px; padding: 190px 16px 14px;
+  --cover-bg: #fff;
+  background: var(--cover-bg);
+}
+:root[data-theme="cover"] .card--stack .plate--hero,
+:root[data-theme="cover"] .card--lead .plate--hero {
+  position: absolute; inset: 0 0 auto 0; height: 58%; margin: 0; flex: none;
+  border: 0; border-radius: 0; aspect-ratio: auto;
+}
+/* The photo fills the top 58%; the scrim melts its lower edge into the card
+   fill the type sits on below. */
+:root[data-theme="cover"] .card--stack::after,
+:root[data-theme="cover"] .card--lead::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(to bottom,
+    transparent 0%, transparent 30%,
+    color-mix(in oklch, var(--cover-bg) 55%, transparent) 46%,
+    var(--cover-bg) 58%);
+}
+:root[data-theme="cover"] .card--stack > :not(.plate),
+:root[data-theme="cover"] .card--lead > :not(.plate) {
+  position: relative; z-index: 2;
+}
+:root[data-theme="cover"] .card--stack .kicker,
+:root[data-theme="cover"] .card--lead .kicker,
+:root[data-theme="cover"] .card--compact .kicker { color: oklch(0.49 0.15 var(--cat-h, 252)); }
+/* No photo: the same neutral fill. */
+:root[data-theme="cover"] .card--stack.card--text,
+:root[data-theme="cover"] .card--lead.card--text { background: var(--cover-bg); }
+/* Compact: neutral fill, photo bled down the right edge full-height. */
+:root[data-theme="cover"] .card--compact {
+  position: relative;
+  padding: 12px calc(36% + 14px) 12px 14px;
+  min-height: 118px; justify-content: center;
+  background: #fff;
+}
+:root[data-theme="cover"] .card--compact:not(:has(.plate--thumb)) { padding-right: 14px; }
+:root[data-theme="cover"] .card--compact .plate--thumb {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: 36%; height: 100%; margin: 0; flex: none;
+  border: 0; border-radius: 0;
+}
+:root[data-theme="cover"][data-mode="dark"] .card--stack,
+:root[data-theme="cover"][data-mode="dark"] .card--lead { --cover-bg: oklch(0.22 0.010 262); }
+:root[data-theme="cover"][data-mode="dark"] .card--compact { background: oklch(0.22 0.010 262); }
+:root[data-theme="cover"][data-mode="dark"] .card--stack .kicker,
+:root[data-theme="cover"][data-mode="dark"] .card--lead .kicker,
+:root[data-theme="cover"][data-mode="dark"] .card--compact .kicker { color: oklch(0.84 0.155 var(--cat-h, 252)); }
+
 :root[data-mode="dark"] {
   --ground:        oklch(0.165 0.014 262);
   --ink:           oklch(0.97 0.003 258);
@@ -1857,7 +1943,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   --glass-edge:    rgba(255, 255, 255, 0.12);
   --glass-warm:    linear-gradient(140deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045));
   --plate:         linear-gradient(150deg, oklch(0.34 0.045 258), oklch(0.27 0.040 296));
-  --shadow:        0 18px 44px -22px rgba(0, 0, 0, 0.70);
+  --shadow:        0 1px 2px rgba(0,0,0,0.30), 0 6px 16px -8px rgba(0,0,0,0.40);
   --rule:          rgba(255, 255, 255, 0.10);
   --ring:          oklch(0.80 0.11 254);
   --track:         rgba(255, 255, 255, 0.14);
@@ -1882,7 +1968,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   --glass:         oklch(0.28 0.055 282 / 0.42);
   --glass-edge:    oklch(0.55 0.120 285 / 0.38);
   --plate:         linear-gradient(150deg, oklch(0.40 0.150 288), oklch(0.32 0.120 320));
-  --shadow:        0 16px 44px -20px oklch(0.30 0.180 288 / 0.70);
+  --shadow:        0 1px 2px rgba(0,0,0,0.30), 0 6px 16px -8px rgba(0,0,0,0.40);
   --rule:          oklch(0.50 0.080 285 / 0.26);
   --track:         oklch(0.42 0.070 285 / 0.35);
   --bar:           oklch(0.205 0.055 284 / 0.80);
@@ -1948,7 +2034,7 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   --glass-edge:    oklch(0.300 0.016 200);
   --glass-warm:    none;
   --plate:         linear-gradient(150deg, oklch(0.330 0.035 190), oklch(0.300 0.030 130));
-  --shadow:        none;
+  --shadow:        0 1px 2px rgba(0,0,0,0.30), 0 6px 16px -8px rgba(0,0,0,0.40);
   --rule:          oklch(0.300 0.016 200);
   --track:         oklch(0.300 0.018 200);
   --bar:           oklch(0.205 0.014 200 / 0.92);

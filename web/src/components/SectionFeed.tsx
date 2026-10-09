@@ -39,7 +39,7 @@ export function SectionFeed({ cat, name }: { cat: string; name: string }) {
       <SubcategoryStrip cat={cat} label={name} base={cat === 'top' ? '/' : `/c/${cat}`}
                         subs={data.subs} active={active} />
       {shown.length === 0 ? (
-        <div className="panel">
+        <div className="panel panel--quiet">
           <div className="label">Quiet so far</div>
           <p>
             Nothing has been filed under {data.subs.find((s) => s.slug === active)?.name ?? name}
