@@ -10,7 +10,7 @@ const OPTIONS: [Theme, string, string][] = [
   ['pastel', 'Pastel', 'The same glass, each card tinted by its category.'],
   ['broadsheet', 'Broadsheet', 'Paper, serif headlines and hairlines instead of cards.'],
   ['fjord', 'Northlight', 'Cold daylight. Flat surfaces, one petrol accent, serif headlines.'],
-  ['cover', 'Cover', 'Borderless photo cards, each tinted by its category.'],
+  ['cover', 'Cover', 'Borderless photo cards on a neutral fill.'],
 ];
 
 function read(): Theme {
