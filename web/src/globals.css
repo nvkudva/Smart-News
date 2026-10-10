@@ -2898,6 +2898,12 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
   }
   :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card { text-align: left; }
   :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card p { text-align: justify; font-style: normal; }
+  /* A companion with no photograph has the height a photograph would take, so
+     it runs its whole headline and most of its summary instead of the clamp
+     sized for a card that shares its room with a picture. The lead's photo
+     takes up whatever difference is left, so the columns still end level. */
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card:not(:has(.plate)) h2 { -webkit-line-clamp: 5; }
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card:not(:has(.plate)) p { -webkit-line-clamp: 14; }
 }
 
 /* ── Newspaper: the lead's drop cap ───────────────────────────────────────
