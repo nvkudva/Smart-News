@@ -3039,7 +3039,7 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
 :root[data-theme="newspaper"][data-mode="dark"] .story__related { background: oklch(0.225 0.008 80); }
 :root[data-theme="newspaper"] .story__related > .sectitle { font-size: 0; padding-left: 0; }
 :root[data-theme="newspaper"] .story__related > .sectitle::before {
-  content: 'More on this story';
+  content: 'Related news';
   font-family: Newsreader, Georgia, serif; font-size: 0.95rem; font-weight: 800;
   letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink);
 }
