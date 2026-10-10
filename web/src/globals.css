@@ -3116,9 +3116,11 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
 
 /* ── Newspaper: the story page ────────────────────────────────────────────
    Set as an inside page: a big balanced headline closed by a double rule, a
-   small-caps dateline, the photograph across the top of the text with its
-   caption under it, the summary in columns with a drop cap, and the related
-   stories boxed as "More on this story". */
+   small-caps dateline, then the text and the photograph side by side, the way
+   a page runs a picture beside the column it illustrates. A photograph across
+   the full width pushed the first line of the story below the fold; beside
+   the text it costs no height at all. The first paragraph is the lede, set a
+   size up under a drop cap. Related stories are boxed as "More on this story". */
 :root[data-theme="newspaper"] .story__meta {
   font-family: Newsreader, Georgia, serif; font-variant: small-caps;
   letter-spacing: 0.06em; color: var(--ink-2);
@@ -3131,23 +3133,41 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
   font-size: calc(var(--np-h1) * 1.1); line-height: 1.06;
   font-weight: 800; letter-spacing: -0.026em; text-wrap: balance;
 }
-:root[data-theme="newspaper"] .detail__main > .panel p { text-align: justify; hyphens: auto; margin: 0 0 calc(var(--np-u) * 3); }
+:root[data-theme="newspaper"] .detail__main > .panel p {
+  text-align: justify; hyphens: auto; margin: 0 0 calc(var(--np-u) * 3);
+  font-size: 1.05rem; line-height: calc(var(--np-u) * 6.5);
+}
+:root[data-theme="newspaper"] .detail__main > .panel p:first-child {
+  font-size: 1.2rem; line-height: calc(var(--np-u) * 7); color: var(--ink);
+}
 :root[data-theme="newspaper"] .detail__main > .panel p:first-child::first-letter {
   float: left; font-family: Newsreader, Georgia, serif; font-weight: 800; color: var(--ink);
-  font-size: calc(var(--np-u) * 19); line-height: calc(var(--np-u) * 16);
-  padding: 2px 8px 0 0; margin-top: 2px;
+  font-size: calc(var(--np-u) * 22); line-height: calc(var(--np-u) * 19);
+  padding: 2px 10px 0 0; margin-top: 2px;
 }
 :root[data-theme="newspaper"] .plate--detail { border-radius: 0; }
+/* No photograph, no empty frame. */
+:root[data-theme="newspaper"] .plate--detail:not(:has(img)) { display: none; }
 @media (min-width: 700px) {
-  :root[data-theme="newspaper"] .detail__main { grid-template-columns: minmax(0, 1fr); }
-  :root[data-theme="newspaper"] .detail__main > .plate--detail { order: -1; width: 100%; aspect-ratio: 16 / 9; max-height: none; }
-  /* Block, not the panel's flex: columns only flow inside a block container. */
-  :root[data-theme="newspaper"] .detail__main > .panel {
-    display: block; column-count: 2; column-gap: calc(var(--gap) * 3); column-rule: 1px solid var(--rule);
+  /* Text wider than picture, parted by a column rule; the picture is a plain
+     4:3 that never grows taller than most of the window. */
+  :root[data-theme="newspaper"] .detail__main {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    column-gap: calc(var(--gap) * 3); align-items: start;
   }
-}
-@media (min-width: 1024px) {
-  :root[data-theme="newspaper"] .detail__main > .panel { column-count: 3; }
+  :root[data-theme="newspaper"] .detail__main > .panel {
+    display: block; padding-right: calc(var(--gap) * 3); margin-right: calc(var(--gap) * -1.5);
+    border-right: 1px solid var(--rule);
+  }
+  :root[data-theme="newspaper"] .detail__main > .plate--detail {
+    order: 0; width: 100%; aspect-ratio: 4 / 3; max-height: 70vh;
+  }
+  /* Without a photograph the text takes the page, in two columns. */
+  :root[data-theme="newspaper"] .detail__main:not(:has(> .plate--detail img)) { grid-template-columns: minmax(0, 1fr); }
+  :root[data-theme="newspaper"] .detail__main:not(:has(> .plate--detail img)) > .panel {
+    padding-right: 0; margin-right: 0; border-right: 0;
+    column-count: 2; column-gap: calc(var(--gap) * 3); column-rule: 1px solid var(--rule);
+  }
 }
 :root[data-theme="newspaper"] .story__related {
   padding: 12px 14px 14px;
