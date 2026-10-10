@@ -2773,29 +2773,12 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
 
 /* Brief: text only. A paper runs a photograph on one story in four or five. */
 :root[data-theme="newspaper"] .card--compact h2 { font-size: var(--np-h5); line-height: calc(var(--np-u) * 5); font-weight: 700; }
-:root[data-theme="newspaper"] .feed > :is([data-tier="brief"], [data-tier="item"], [data-tier="standout"]) .plate--thumb { display: none; }
+:root[data-theme="newspaper"] .feed > :is([data-tier="brief"], [data-tier="item"]) .plate--thumb { display: none; }
 
-/* Item: one source and little weight, so headline and credit only. */
+/* Item: little weight, so headline and credit only. */
 :root[data-theme="newspaper"] .feed > [data-tier="item"] .card p { display: none; }
 :root[data-theme="newspaper"] .feed > [data-tier="item"] .card { padding-block: calc(var(--np-u) * 2); }
 :root[data-theme="newspaper"] .feed > [data-tier="item"] .card h2 { font-weight: 600; }
-
-/* Standout: short and important, so the summary itself is set large, in
-   italic between rules, the way a paper lifts a line out of a story. */
-:root[data-theme="newspaper"] .feed > [data-tier="standout"] .card {
-  border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink);
-  padding-block: calc(var(--np-u) * 4); text-align: center;
-}
-:root[data-theme="newspaper"] .feed > [data-tier="standout"] .card h2 {
-  font-size: 0.85rem; line-height: calc(var(--np-u) * 5); font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--kicker);
-}
-:root[data-theme="newspaper"] .feed > [data-tier="standout"] .card p {
-  font-family: Newsreader, Georgia, 'Times New Roman', serif;
-  font-size: 1.3rem; line-height: calc(var(--np-u) * 7); font-style: italic; font-weight: 500;
-  text-align: center; hyphens: manual; -webkit-line-clamp: 5;
-}
-:root[data-theme="newspaper"] .feed > [data-tier="standout"] .card .foot { justify-content: center; }
 
 /* A story from outside the reader's usual sections is boxed, and is the one
    brief that keeps its picture. */
@@ -2868,18 +2851,23 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
     border-bottom: 3px double var(--press);
   }
   :root[data-theme="newspaper"] .feed__front > .cardwrap:first-child { grid-column: 1; grid-row: 1 / span 2; }
-  /* The lead's photo takes whatever height the companions leave, so the two
-     columns end on one line. Headline over it, summary in two text columns
-     under it. */
+  /* Headline over a 4:3 photo, summary in two text columns under it, and the
+     credit line pinned to the foot so both columns end on one line. */
   :root[data-theme="newspaper"] .feed__front .card--lead {
-    height: 100%;
+    height: 100%; container-type: inline-size;
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "head" "photo" "text" "foot";
-    grid-template-rows: auto minmax(260px, 1fr) auto auto;
+    grid-template-rows: auto auto auto 1fr;
   }
   /* The image is taken out of flow so its natural height cannot size the row
      and push the companions' rows taller with it. */
   :root[data-theme="newspaper"] .feed__front .card--lead > .plate { aspect-ratio: auto; height: auto; align-self: stretch; min-height: 0; }
+  /* A plain 4:3 of its own width. It used to stretch to the companions'
+     height, and a long companion column turned a landscape photograph into
+     a portrait crop; the spare height now goes above the credit line, which
+     still lands level with the companions' last line. */
+  :root[data-theme="newspaper"] .feed__front .card--lead > .plate { height: 75cqw; }
+  :root[data-theme="newspaper"] .feed__front .card--lead > .foot { align-self: end; }
   :root[data-theme="newspaper"] .feed__front .card--lead > .plate img { position: absolute; inset: 0; }
   :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) { align-self: start; }
   :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(2) { grid-row: 1; }
@@ -2899,9 +2887,9 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
   :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card { text-align: left; }
   :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card p { text-align: justify; font-style: normal; }
   /* A companion with no photograph has the height a photograph would take, so
-     it runs its whole headline and most of its summary instead of the clamp
-     sized for a card that shares its room with a picture. The lead's photo
-     takes up whatever difference is left, so the columns still end level. */
+     it runs its whole headline and more of its summary instead of the clamp
+     sized for a card that shares its room with a picture. The lead keeps its
+     credit line level with theirs. */
   :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card:not(:has(.plate)) h2 { -webkit-line-clamp: 5; }
   :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card:not(:has(.plate)) p { -webkit-line-clamp: 14; }
 }

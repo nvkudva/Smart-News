@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { Story } from '../../shared/types';
 import { slug } from '../../shared/taxonomy';
+import { label } from '../../shared/categories';
 
 /**
  * The index's two tile shapes. They share a grid, a type scale and a border
@@ -19,7 +20,7 @@ export function CategoryTile({ name, stories, lead }: {
     <Link to="/explore" search={{ category: name }}
           className="tile exploretile exploretint" data-cat={slug(name)}>
       <span className="exploretile__top">
-        <h3>{name}</h3>
+        <h3>{label(name)}</h3>
         <span className="tile__n">{stories}</span>
       </span>
       {lead && <p>{lead.headline}</p>}
@@ -35,7 +36,7 @@ export function SubTile({ cat, category, name, slug: sub, count }: {
 }) {
   return (
     <Link to="/c/$cat" params={{ cat }} search={{ sub }}
-          className="exploreplace exploresub exploretint" data-cat={cat} title={`${name} · ${category}`}>
+          className="exploreplace exploresub exploretint" data-cat={cat} title={`${name} · ${label(category)}`}>
       <span className="exploreplace__name">
         <b>{name}</b>
         <small>{category}</small>

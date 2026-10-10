@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 import { useLoaderData, useSearch } from '@tanstack/react-router';
 import { SCOPE_SUBS } from '../../shared/taxonomy';
+import { label } from '../../shared/categories';
 import { sectionFrom, type World } from '../lib/world';
 import { StoryCard, variantFor } from './StoryCard';
 import { SubcategoryStrip } from './SubcategoryStrip';
@@ -20,7 +21,8 @@ function bandsOf<T extends { category: string }>(stories: T[]): Band<T>[] {
   for (const s of stories) by.set(s.category, [...(by.get(s.category) ?? []), s]);
   const bands: Band<T>[] = [];
   const loose: T[] = [];
-  for (const [name, list] of by) {
+  for (const [category, list] of by) {
+    const name = label(category);
     if (list.length < 2) loose.push(...list);
     else bands.push({ name, id: `band-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, stories: list });
   }

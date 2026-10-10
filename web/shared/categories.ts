@@ -12,7 +12,7 @@ export type Category = (typeof CATEGORIES)[number];
  * the slug and the hidden-category prefs all keep the long name, so renaming a
  * label never needs a migration or breaks a saved link.
  */
-const LABELS: Partial<Record<string, string>> = { Technology: 'Tech' };
+const LABELS: Partial<Record<string, string>> = { Technology: 'Tech', 'Crime & Courts': 'Crime' };
 
 export function label(category: string): string {
   return LABELS[category] ?? category;

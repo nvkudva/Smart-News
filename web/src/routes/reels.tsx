@@ -3,6 +3,7 @@ import type { ReelsPayload } from '../../shared/types'
 import { ReelKeys } from '../components/ReelKeys'
 import { SaveButton } from '../components/SaveButton'
 import { storyWhen } from '../lib/format'
+import { label } from '../../shared/categories'
 import { TabBar } from '../components/TabBar'
 import { Back, Photo } from '../components/icons'
 import { load } from '../lib/load'
@@ -65,7 +66,7 @@ function Reels() {
                 its own right-aligned row read as a separate control. */}
             <div className="reel__foot">
               <div className="kicker kicker--reel">
-                <span>{s.category}</span>
+                <span>{label(s.category)}</span>
                 {s.place && <><span className="sep">·</span><span className="kicker__place">{s.place}</span></>}
                 <span className="sep">·</span>
                 <span>{storyWhen(s)}</span>

@@ -14,21 +14,11 @@ export type Variant = 'lead' | 'stack' | 'compact';
  */
 export function variantFor(story: Story, index: number): Variant {
   if (index === 0) return 'lead';
-  // Two ways in, because the two signals fail in opposite directions. The model
-  // rates almost everything 4-5, so importance alone makes every card full size
-  // — hence the corroboration floor beside it. But importance is also one guess
-  // from a dozen article bodies, and it reads a scheduled product launch as
-  // routine: the last clause is the crowd overruling it, because a story many
-  // outlets independently run is the stronger claim that it matters.
-  //
-  // The floor used to sit at three sources, and measured against a live window
-  // that left 78% of the feed compact — 57% of clusters carry exactly two
-  // sources, so the commonest story in the store could never be full size. At
-  // two it is 30%, and what stays compact is what the floor was always meant to
-  // catch: routine news one or two outlets bothered with.
-  if (story.importance >= 4 && story.source_count >= 2) return 'stack';
-  if (story.importance >= 3 && story.source_count >= 3) return 'stack';
-  if (story.source_count >= 8) return 'stack';
+  // Importance alone decides. How many outlets ran a story no longer makes it
+  // a half card: a single-source scoop is often the story worth reading. A 3
+  // or above is full size; a half card is only what the model rated 1 or 2,
+  // the routine items it was least sure were news.
+  if (story.importance >= 3) return 'stack';
   return 'compact';
 }
 
@@ -87,8 +77,7 @@ function tierFor(story: Story, variant: Variant) {
   // Both, not either: the model rates half the window 5, so importance alone
   // made every other story major. With the crowd beside it, about one in six.
   if (variant === 'stack') return story.importance >= 5 && story.source_count >= 8 ? 'major' : 'feature';
-  if (story.importance >= 4 && story.crux.length <= 200) return 'standout';
-  if (story.source_count <= 1 && story.importance <= 2) return 'item';
+  if (story.importance <= 2) return 'item';
   return 'brief';
 }
 
