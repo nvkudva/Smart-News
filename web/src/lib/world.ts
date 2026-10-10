@@ -153,7 +153,16 @@ async function resolve(): Promise<World> {
  * that is the order the feed shows them in and the worker caps the batch. The
  * worker skips what it already holds, so this is cheap to send on every load.
  */
+let newest = 0;
+const newestWatchers = new Set<() => void>();
+/** When the newest story in the held world last moved, which is when the news
+ *  on screen was last refreshed. 0 until a world has resolved. */
+export function newestAt() { return newest; }
+export function watchNewest(f: () => void) { newestWatchers.add(f); return () => { newestWatchers.delete(f); }; }
+
 function warmed(w: World): World {
+  const n = w.stories.reduce((m, s) => Math.max(m, s.last_seen, s.summarised_at ?? 0), 0);
+  if (n !== newest) { newest = n; newestWatchers.forEach((f) => f()); }
   // `ready`, not `controller`: on the very first load the world resolves
   // before the worker has claimed the page, and a message to nobody is lost.
   const urls = [...w.stories]

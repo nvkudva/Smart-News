@@ -39,13 +39,11 @@ export const MODE_KEY = 'sn_mode';
 export const THEME_CHROME: Record<string, string> = {
   frost: '#f7f7fa',
   pastel: '#f8f8fa',
-  broadsheet: '#f9f6f0',
   fjord: '#e9efef',
   cover: '#f7f7fa',
   newspaper: '#f2eee3',
   'frost-dark': '#15171c',
   'pastel-dark': '#08090e',
-  'broadsheet-dark': '#141310',
   'fjord-dark': '#0d1618',
   'cover-dark': '#15171c',
   'newspaper-dark': '#18171a',
@@ -60,6 +58,13 @@ export const THEME_CHROME: Record<string, string> = {
 export const BOOT =
   `try{var d=document.documentElement,n=localStorage.getItem('${NAV_KEY}');` +
   `if(n==='bottom'||n==='top'||n==='side')d.dataset.nav=n;` +
+  // ?theme= and ?mode= are a default for a reader who has not chosen, such as
+  // the browser add-on's frame, whose storage starts empty. Stored, so a reload
+  // or a hard navigation inside the frame keeps them; a choice made in Profile
+  // later replaces them like any other.
+  `var q=new URLSearchParams(location.search),qt=q.get('theme'),qm=q.get('mode');` +
+  `if(qt&&${JSON.stringify(THEME_CHROME)}[qt]&&!localStorage.getItem('${THEME_KEY}'))localStorage.setItem('${THEME_KEY}',qt);` +
+  `if((qm==='light'||qm==='dark'||qm==='auto')&&!localStorage.getItem('${MODE_KEY}'))localStorage.setItem('${MODE_KEY}',qm);` +
   `var t=localStorage.getItem('${THEME_KEY}')||'frost';` +
   // A theme that has since been removed would otherwise be stamped onto <html>
   // with no stylesheet behind it. Checked against the one list that knows.

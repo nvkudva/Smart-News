@@ -26,6 +26,18 @@ function apply(stored: Stored) {
   } catch { /* the mode still applies for this page's lifetime */ }
 }
 
+const listeners = new Set<(v: Stored) => void>();
+
+/**
+ * Change the mode from anywhere, and tell every control showing it. The theme
+ * picker uses this to reset to light, so the header toggle and the Appearance
+ * chips on the same page move with it.
+ */
+export function setMode(v: Stored) {
+  apply(v);
+  listeners.forEach((f) => f(v));
+}
+
 /** Shared so the header toggle and the settings control cannot disagree. */
 export function useMode() {
   // BOOT resolved the pair before first paint, so the stored value is what is
@@ -34,6 +46,7 @@ export function useMode() {
   const [stored, setStored] = useState<Stored>(read);
 
   useEffect(() => {
+    listeners.add(setStored);
     // Following the system means following it as it changes, not only as it was
     // at boot — a phone that dims itself at sunset should take the app with it.
     const mq = matchMedia('(prefers-color-scheme: dark)');
@@ -48,12 +61,13 @@ export function useMode() {
     };
     window.addEventListener('storage', onStorage);
     return () => {
+      listeners.delete(setStored);
       mq.removeEventListener('change', onSystem);
       window.removeEventListener('storage', onStorage);
     };
   }, []);
 
-  const choose = useCallback((v: Stored) => { setStored(v); apply(v); }, []);
+  const choose = useCallback((v: Stored) => setMode(v), []);
   return { stored, choose };
 }
 

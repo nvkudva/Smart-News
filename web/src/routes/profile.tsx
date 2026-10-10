@@ -21,7 +21,7 @@ export const Route = createFileRoute('/profile')({
   // useState ever reads it again, so a tick made here came back undone. Nothing
   // on this page is worth caching anyway: it is the reader's own row.
   gcTime: 0,
-  pendingComponent: () => <PageSkeleton title="Profile" tab="profile" />,
+  pendingComponent: () => <PageSkeleton title="Settings" tab="profile" />,
   component: Profile,
 })
 
@@ -66,7 +66,7 @@ function Profile() {
     <>
       <main className="shell setpage">
         <div className="pagehead">
-          <h1>Profile</h1>
+          <h1>Settings</h1>
           <p>What the feed is tuned to.</p>
         </div>
 

@@ -5,7 +5,8 @@ import { Pin } from './icons';
 import { ModeToggle } from './Mode';
 import { readPlaceLine, writePlaceLine, type PlaceLine } from '../lib/placeLine';
 import { sessionStamp, stillGood } from '../lib/store';
-import { isChecking, watchChecking } from '../lib/world';
+import { isChecking, newestAt, watchChecking, watchNewest } from '../lib/world';
+import { ago } from '../lib/format';
 
 /**
  * The date and the place are the only part of the header that is not the same
@@ -19,6 +20,13 @@ export function HeaderAside() {
   const [longDay, setLongDay] = useState('');
   const [here, setHere] = useState('');
   const checking = useSyncExternalStore(watchChecking, isChecking, () => false);
+  const updated = useSyncExternalStore(watchNewest, newestAt, () => 0);
+  // "12m ago" goes stale while the tab sits open; a minute's tick keeps it true.
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     const now = new Date();
@@ -57,6 +65,7 @@ export function HeaderAside() {
       <span className="appbar__when">
         <span className="appbar__date">{today}</span>
         <span className="appbar__date appbar__date--long">{longDay}</span>
+        {updated > 0 && <span className="appbar__updated">Updated {ago(updated)}</span>}
         {checking && <span className="appbar__sync" role="status">Getting new stories…</span>}
       </span>
       {/* The one way into the local surface: no sixth tab, but the pin was
@@ -68,7 +77,6 @@ export function HeaderAside() {
       <ModeToggle />
       {/* A masthead's ears. Hidden in every theme but Newspaper. */}
       <span className="appbar__ear appbar__ear--l" aria-hidden>{here ? `${here} Edition` : 'Daily Edition'}</span>
-      <span className="appbar__ear appbar__ear--r" aria-hidden>Many sources.<br />One story.</span>
     </div>
   );
 }

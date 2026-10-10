@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router';
 import type { Story } from '../../shared/types';
 import { Photo } from './icons';
 import { storyWhen } from '../lib/format';
-import { ExplorationDot } from './ExplorationDot';
 
 export type Variant = 'lead' | 'stack' | 'compact';
 
@@ -46,21 +45,21 @@ export function variantFor(story: Story, index: number): Variant {
  * and then the largest image on the page is some later card that is still
  * lazy - which is exactly what Lighthouse kept pointing at.
  */
-function Plate({ kind, src, credit, priority = false }: {
-  kind: 'hero' | 'thumb'; src: string | null; credit?: string | null; priority?: boolean;
+function Plate({ src, credit, priority = false }: {
+  src: string | null; credit?: string | null; priority?: boolean;
 }) {
   // A source that refuses the hotlink or has moved leaves the browser's broken
   // image icon; a calm gradient reads as a design choice instead.
   const [failed, setFailed] = useState(false);
-  if (src && failed) return <div className={`plate plate--${kind} plate--failed`} />;
+  if (src && failed) return <div className="plate plate--hero plate--failed" />;
   return (
-    <div className={`plate plate--${kind}`}>
+    <div className="plate plate--hero">
       {src
         ? <img src={src} alt=""
                loading={priority ? 'eager' : 'lazy'}
                fetchPriority={priority ? 'high' : undefined}
                onError={() => setFailed(true)} />
-        : <Photo size={kind === 'hero' ? 26 : 19} />}
+        : <Photo size={26} />}
       {src && credit && <span className="credit">Source : {credit}</span>}
     </div>
   );
@@ -122,27 +121,21 @@ export function StoryCard({ story, variant = 'compact', priority = false }: {
       <Link to="/story/$id" params={{ id: story.id }} className={className}
             preload={false} data-cat={story.category.toLowerCase()}>
         {variant === 'compact' ? (
-          /* Headline runs the full width; the thumbnail sits beside the summary,
-             which is the only block that can afford to be narrower. */
+          /* Text only: a half card is headline, summary and credit. The
+             photographs are kept for the cards wide enough to show one. */
           <>
             {head}
-            <div className="card__mid">
-              {crux}
-              {story.image_url && <Plate kind="thumb" src={story.image_url} />}
-            </div>
+            <div className="card__mid">{crux}</div>
             {foot}
           </>
         ) : (
           <>
-            {!textOnly && <Plate kind="hero" src={story.image_url} credit={story.image_source}
+            {!textOnly && <Plate src={story.image_url} credit={story.image_source}
                                   priority={priority} />}
             {head}{crux}{foot}
           </>
         )}
       </Link>
-      {/* Outside the Link on purpose: a button nested in an anchor is invalid,
-          and tapping the marker must explain rather than navigate. */}
-      {story.exploration === 1 && <ExplorationDot kind={story.exploration_kind ?? 'category'} />}
     </div>
   );
 }

@@ -46,7 +46,7 @@ function HeaderNav() {
       {item('/explore', 'Explore', <Compass />)}
       {item('/reels', 'Reels', <Logo size={18} tone="ink" tight />, false, 'appnav__link--reels')}
       {item('/saved', 'Saved', <Bookmark />)}
-      {item('/profile', 'Profile', <Person />)}
+      {item('/profile', 'Settings', <Person />)}
     </nav>
   );
 }

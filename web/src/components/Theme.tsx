@@ -1,14 +1,14 @@
 
 import { useState, useSyncExternalStore } from 'react';
-import { paintChrome, resolveMode, MODE_KEY, THEME_KEY } from '../lib/boot';
+import { THEME_KEY } from '../lib/boot';
+import { setMode } from './Mode';
 
 export type Theme =
-  | 'frost' | 'pastel' | 'broadsheet' | 'fjord' | 'cover' | 'newspaper';
+  | 'frost' | 'pastel' | 'fjord' | 'cover' | 'newspaper';
 
 const OPTIONS: [Theme, string, string][] = [
   ['frost', 'Frosted', 'White glass over a soft wash. The default.'],
   ['pastel', 'Pastel', 'The same glass, each card tinted by its category.'],
-  ['broadsheet', 'Broadsheet', 'Paper, serif headlines and hairlines instead of cards.'],
   ['fjord', 'Northlight', 'Cold daylight. Flat surfaces, one petrol accent, serif headlines.'],
   ['newspaper', 'Newspaper', 'Cream stock, heavy serif headlines, double rules and red labels, like a printed front page.'],
   ['cover', 'Cover', 'Borderless photo cards on a neutral fill.'],
@@ -49,9 +49,10 @@ export function ThemeControl() {
     setTheme(v);
     if (v === 'frost') delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = v;
-    let stored: string | null = null;
-    try { stored = localStorage.getItem(MODE_KEY); } catch { /* auto is fine */ }
-    paintChrome(v, resolveMode(stored));
+    // A new theme is first seen in light, the mode every theme was drawn in;
+    // the reader can switch it back to dark from there. setMode paints the
+    // browser chrome for the theme just set.
+    setMode('light');
     try {
       if (v === 'frost') localStorage.removeItem(THEME_KEY);
       else localStorage.setItem(THEME_KEY, v);

@@ -28,7 +28,7 @@ export function TabBar({ active = 'home' }: { active?: Tab }) {
         <Link to="/reels" className="reelsbtn" data-active={active === 'reels'} aria-current={active === 'reels' ? 'page' : undefined} aria-label="News reels"><Logo size={26} tone="invert" tight /><span className="reelsbtn__label">Reels</span></Link>
         <div className="tabgroup">
           {tab('/saved', 'saved', 'Saved', <Bookmark />)}
-          {tab('/profile', 'profile', 'Profile', <Person />)}
+          {tab('/profile', 'profile', 'Settings', <Person />)}
         </div>
       </div>
     </nav>

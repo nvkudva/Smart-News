@@ -52,6 +52,19 @@ export function StripScroller(
       const on = el.querySelector<HTMLElement>('[data-active="true"]');
       if (!on) return;
 
+      // A mouse reads the strip as a fixed menu: it stays where it is and the
+      // highlight moves. It scrolls only to bring an item past the edge into
+      // view, and only as far as that takes. Pinning is the thumb's model.
+      if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        if (slack.current) { slack.current = 0; row.style.paddingInlineEnd = ''; }
+        const lo = el.scrollLeft, hi = lo + el.clientWidth;
+        const reveal = on.offsetLeft < lo ? on.offsetLeft
+          : on.offsetLeft + on.offsetWidth > hi ? on.offsetLeft + on.offsetWidth - el.clientWidth
+          : null;
+        if (reveal !== null) el.scrollTo({ left: reveal, behavior: 'auto' });
+        return markEdges();
+      }
+
       // The row is the scroller's only child and is positioned, so offsetLeft is
       // already the scrollLeft that puts this item against the content edge.
       const left = on.offsetLeft;

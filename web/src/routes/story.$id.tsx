@@ -303,13 +303,18 @@ function StoryPage() {
                   <a href={a.url} target="_blank" rel="noreferrer noopener">{a.source}</a>
                 </li>
               ))}
-              <li className="sources__search">
-                <a onPointerEnter={() => warm(YOUTUBE)} onTouchStart={() => warm(YOUTUBE)} href={`${YOUTUBE}/results?search_query=${encodeURIComponent(cluster.headline)}`} target="_blank" rel="noreferrer noopener">YouTube</a>
-              </li>
-              <li>
-                <a onPointerEnter={() => warm(GOOGLE)} onTouchStart={() => warm(GOOGLE)} href={`${GOOGLE}/search?q=${encodeURIComponent(cluster.headline)}`} target="_blank" rel="noreferrer noopener">Google</a>
-              </li>
             </ul>
+            <div className="sources__search">
+              <span className="sources__label">Search on</span>
+              <ul className="sources">
+                <li>
+                  <a onPointerEnter={() => warm(YOUTUBE)} onTouchStart={() => warm(YOUTUBE)} href={`${YOUTUBE}/results?search_query=${encodeURIComponent(cluster.headline)}`} target="_blank" rel="noreferrer noopener">YouTube</a>
+                </li>
+                <li>
+                  <a onPointerEnter={() => warm(GOOGLE)} onTouchStart={() => warm(GOOGLE)} href={`${GOOGLE}/search?q=${encodeURIComponent(cluster.headline)}`} target="_blank" rel="noreferrer noopener">Google</a>
+                </li>
+              </ul>
+            </div>
           </div>
 
           <section className="story__coverage">
@@ -320,8 +325,9 @@ function StoryPage() {
             <section className="story__related">
               <h2 className="sectitle">Related</h2>
               <div className="story__relgrid">
-                {related.map((r) => (
-                  <StoryCard key={r.id} story={r} variant="compact" />
+                {/* A row of half cards, then a row of full ones. */}
+                {related.map((r, i) => (
+                  <StoryCard key={r.id} story={r} variant={i < 3 ? 'compact' : 'stack'} />
                 ))}
               </div>
             </section>
