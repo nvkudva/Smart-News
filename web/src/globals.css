@@ -465,8 +465,22 @@ body {
 }
 .sources a:hover { text-decoration: underline; }
 /* The web searches are not outlets: their own group, labelled, at the far end. */
-.sources__search { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.sources__label { font-size: var(--t-2); color: var(--ink-3); white-space: nowrap; }
+.sources__search { margin-left: auto; display: flex; flex-direction: column; gap: 12px; }
+/* Neither heading in this row carries the trailing rule: the chips beside
+   them already say where the list is. */
+.sources__read > .sectitle::after,
+.sources__search > .sectitle::after { display: none; }
+/* Two columns on one row from 700: the outlets take what is left and wrap
+   within it, so a long list runs on to a second line under itself rather
+   than pushing the searches down. Where even that cannot fit, the searches
+   drop to their own line and keep to the right. */
+.sources__read { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+@media (min-width: 700px) {
+  .sources__read { flex: 1 1 420px; flex-direction: row; align-items: baseline; gap: 18px; }
+  .sources__search { flex: 0 0 auto; flex-direction: row; align-items: baseline; gap: 18px; }
+  .sources__read > .sectitle,
+  .sources__search > .sectitle { flex: 0 0 auto; }
+}
 
 /* ─────────────────────────────────────────────────────────────────────────
    Responsive pass.
@@ -2453,7 +2467,7 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
 }
 .story__rail { display: flex; flex-direction: column; gap: 12px; }
 @media (min-width: 700px) {
-  .story__rail { flex-direction: row; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .story__rail { flex-direction: row; align-items: flex-start; gap: 12px 24px; flex-wrap: wrap; }
 }
 
 /* Build and data stamps, at the foot of the profile. Small and quiet: it is a
@@ -2982,7 +2996,7 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
    a page runs a picture beside the column it illustrates. A photograph across
    the full width pushed the first line of the story below the fold; beside
    the text it costs no height at all. The first paragraph is the lede, set a
-   size up under a drop cap. Related stories are boxed as "More on this story". */
+   size up under a drop cap. Related stories are boxed as "Related news". */
 :root[data-theme="newspaper"] .story__meta {
   font-family: Newsreader, Georgia, serif; font-variant: small-caps;
   letter-spacing: 0.06em; color: var(--ink-2);

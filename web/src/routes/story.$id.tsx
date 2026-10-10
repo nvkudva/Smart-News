@@ -296,16 +296,18 @@ function StoryPage() {
             {/* Not "Sources". The list is not a citation to be checked - it is
                 where the reporting is, and this page is a summary of it. The
                 title says what tapping one gets you. */}
-            <h2 className="sectitle">Read the full story at</h2>
-            <ul className="sources">
-              {outlets.map((a) => (
-                <li key={a.url}>
-                  <a href={a.url} target="_blank" rel="noreferrer noopener">{a.source}</a>
-                </li>
-              ))}
-            </ul>
+            <div className="sources__read">
+              <h2 className="sectitle">Read the full story at</h2>
+              <ul className="sources">
+                {outlets.map((a) => (
+                  <li key={a.url}>
+                    <a href={a.url} target="_blank" rel="noreferrer noopener">{a.source}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
             <div className="sources__search">
-              <span className="sources__label">Search on</span>
+              <h2 className="sectitle">Search on</h2>
               <ul className="sources">
                 <li>
                   <a onPointerEnter={() => warm(YOUTUBE)} onTouchStart={() => warm(YOUTUBE)} href={`${YOUTUBE}/results?search_query=${encodeURIComponent(cluster.headline)}`} target="_blank" rel="noreferrer noopener">YouTube</a>
