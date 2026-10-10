@@ -16,11 +16,14 @@ import { isChecking, watchChecking } from '../lib/world';
  */
 export function HeaderAside() {
   const [today, setToday] = useState('');
+  const [longDay, setLongDay] = useState('');
   const [here, setHere] = useState('');
   const checking = useSyncExternalStore(watchChecking, isChecking, () => false);
 
   useEffect(() => {
-    setToday(new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }));
+    const now = new Date();
+    setToday(now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }));
+    setLongDay(now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
 
     let live = true;
     const held: PlaceLine | null = readPlaceLine();
@@ -53,6 +56,7 @@ export function HeaderAside() {
     <div className="appbar__aside">
       <span className="appbar__when">
         <span className="appbar__date">{today}</span>
+        <span className="appbar__date appbar__date--long">{longDay}</span>
         {checking && <span className="appbar__sync" role="status">Getting new stories…</span>}
       </span>
       {/* The one way into the local surface: no sixth tab, but the pin was
@@ -62,6 +66,9 @@ export function HeaderAside() {
         <span className="pinchip__t">{here || 'City'}</span>
       </Link>
       <ModeToggle />
+      {/* A masthead's ears. Hidden in every theme but Newspaper. */}
+      <span className="appbar__ear appbar__ear--l" aria-hidden>{here ? `${here} Edition` : 'Daily Edition'}</span>
+      <span className="appbar__ear appbar__ear--r" aria-hidden>Many sources.<br />One story.</span>
     </div>
   );
 }

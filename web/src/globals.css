@@ -479,6 +479,7 @@ body {
    gesture is a pan of its own, and the drag starts late or not at all. Only the
    feed, never .shell — an ancestor's pan-y would intersect away the category
    strip's pan-x and kill its scrolling. */
+.feed__front { display: contents; }
 .feed { display: flex; flex-direction: column; gap: var(--gap); touch-action: pan-y pinch-zoom; }
 .shell > .panel { touch-action: pan-y pinch-zoom; }
 
@@ -1669,6 +1670,8 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
   font-size: var(--t-2); font-weight: 600; color: var(--kicker); white-space: nowrap;
 }
 .appbar__when { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+/* Newspaper's masthead furniture; no other theme shows it. */
+.appbar__date--long, .appbar__ear { display: none; }
 .appbar__sync { font-size: 11px; color: var(--kicker); opacity: .8; white-space: nowrap; }
 /* Hidden until the local surface is reworked. */
 .appbar__aside .pinchip { display: none; }
@@ -1936,7 +1939,8 @@ button.chip { font: inherit; font-size: var(--t-2); font-weight: 600; cursor: po
 /* card__mid is positioned by nothing here: it dissolves so the photo anchors to
    the card itself and the summary becomes a plain child above the scrim. */
 :root[data-theme="cover"] .card--compact .card__mid { display: contents; }
-:root[data-theme="cover"] .card--compact > :not(.plate) { position: relative; z-index: 2; }
+:root[data-theme="cover"] .card--compact > :not(.plate),
+:root[data-theme="cover"] .card--compact .card__mid > :not(.plate) { position: relative; z-index: 2; }
 :root[data-theme="cover"][data-mode="dark"] .card--stack,
 :root[data-theme="cover"][data-mode="dark"] .card--lead { --cover-bg: oklch(0.22 0.010 262); }
 :root[data-theme="cover"][data-mode="dark"] .card--compact { --cover-bg: oklch(0.22 0.010 262); }
@@ -2624,3 +2628,545 @@ a.story__nav__btn:hover { background: color-mix(in oklab, var(--ink) 8%, transpa
 :root[data-mode="dark"] .plate--failed {
   background: linear-gradient(135deg, oklch(0.36 0.045 230), oklch(0.33 0.050 290) 55%, oklch(0.35 0.040 340));
 }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Theme F — Newspaper. A printed front page rather than aged paper: cream
+   stock, near-black ink, square corners and rules that do the structure —
+   a heavy double rule over every story and a hard-edged box round every
+   panel. Headlines are the heavy display serif, category labels are the one
+   red, and photographs take on a little of newsprint's contrast. Same faces as
+   Broadsheet, so no extra font is downloaded.
+   ───────────────────────────────────────────────────────────────────────── */
+:root[data-theme="newspaper"] {
+  --card-pad-x:    2px;
+  /* One leading unit and one headline ladder, so type and rules land on a shared
+     rhythm: 4px unit; headline line boxes of 52 / 32 / 28 / 24 / 20px. */
+  --np-u:          4px;
+  --np-h1:         clamp(2rem, 1rem + 3.2vw, 3rem);
+  --np-h2:         1.75rem;
+  --np-h3:         1.4rem;
+  --np-h4:         1.15rem;
+  --np-h5:         1rem;
+  --ground:        oklch(0.948 0.018 88);
+  --ink:           oklch(0.185 0.008 80);
+  --ink-2:         oklch(0.345 0.010 80);
+  --ink-3:         oklch(0.500 0.012 80);
+  --kicker:        oklch(0.440 0.150 28);
+  --kicker-near:   oklch(0.400 0.075 150);
+  --kicker-new:    oklch(0.440 0.150 28);
+  --accent:        oklch(0.440 0.150 28);
+  --reels-accent:  oklch(0.440 0.150 28);
+  --glass:         transparent;
+  --glass-edge:    oklch(0.800 0.020 84);
+  --glass-warm:    none;
+  --plate:         linear-gradient(150deg, oklch(0.870 0.022 86), oklch(0.905 0.018 86));
+  --shadow:        none;
+  --rule:          oklch(0.780 0.020 84);
+  --ring:          oklch(0.440 0.150 28);
+  --bar:           oklch(0.948 0.018 88 / 0.96);
+  --bar-edge:      oklch(0.470 0.030 72);
+  --press:         oklch(0.470 0.030 72);
+}
+:root[data-theme="newspaper"] .wash { display: none; }
+:root[data-theme="newspaper"] body {
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+}
+:root[data-theme="newspaper"] .card h2,
+:root[data-theme="newspaper"] .catlink,
+:root[data-theme="newspaper"] .story__title,
+:root[data-theme="newspaper"] .pagehead h1 {
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-weight: 700; letter-spacing: -0.014em;
+}
+:root[data-theme="newspaper"] .card p,
+:root[data-theme="newspaper"] .detail__main p,
+:root[data-theme="newspaper"] .pagehead p {
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  font-size: calc(var(--t-3) + 0.5px);
+  line-height: calc(var(--np-u) * 6);
+}
+/* The story's rule: a heavy double line on top, as above a column of type. */
+:root[data-theme="newspaper"] .card {
+  background: none; border: 0; border-radius: 0; box-shadow: none;
+  border-top: 3px double var(--press);
+  padding: calc(var(--np-u) * 3) var(--card-pad-x) calc(var(--np-u) * 3);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+/* A printed page does not lift when the pointer passes over it. */
+:root[data-theme="newspaper"] .card:hover { transform: none; box-shadow: none; }
+:root[data-theme="newspaper"] .plate { border-radius: 0; border: 0; }
+:root[data-theme="newspaper"] .plate img { filter: grayscale(0.3) sepia(0.22) contrast(0.88) brightness(1.03); }
+/* Halftone-ish grain: fractal noise multiplied over the photograph, so the ink
+   seems to sit in the paper's tooth. An inline SVG, so there is no file to fetch. */
+:root[data-theme="newspaper"] .plate:has(img)::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2  0 0 0 0 0.17  0 0 0 0 0.12  0 0 0 1.1 -0.35'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply; opacity: 0.55;
+}
+:root[data-theme="newspaper"][data-mode="dark"] .plate:has(img)::after { mix-blend-mode: normal; opacity: 0.22; }
+:root[data-theme="newspaper"] .panel {
+  background: oklch(0.915 0.020 86);
+  border: 0; border-radius: 0; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+:root[data-theme="newspaper"] .detail__main > .panel,
+:root[data-theme="newspaper"][data-mode="dark"] .detail__main > .panel {
+  background: none; padding-inline: 0;
+}
+:root[data-theme="newspaper"] .label { border-bottom: 1px solid var(--press); padding-bottom: 6px; color: var(--ink); }
+
+/* The same press after dark: charcoal stock, warm white ink. */
+:root[data-theme="newspaper"][data-mode="dark"] {
+  --ground:        oklch(0.185 0.006 80);
+  --ink:           oklch(0.940 0.010 86);
+  --ink-2:         oklch(0.780 0.010 84);
+  --ink-3:         oklch(0.680 0.010 84);
+  --kicker:        oklch(0.730 0.130 30);
+  --kicker-near:   oklch(0.780 0.080 150);
+  --kicker-new:    oklch(0.730 0.130 30);
+  --accent:        oklch(0.730 0.130 30);
+  --reels-accent:  oklch(0.730 0.130 30);
+  --glass-edge:    oklch(0.320 0.010 80);
+  --plate:         linear-gradient(150deg, oklch(0.300 0.010 82), oklch(0.250 0.008 82));
+  --rule:          oklch(0.340 0.010 80);
+  --ring:          oklch(0.730 0.130 30);
+  --bar:           oklch(0.185 0.006 80 / 0.96);
+  --bar-edge:      oklch(0.560 0.020 80);
+  --press:         oklch(0.560 0.020 80);
+}
+:root[data-theme="newspaper"][data-mode="dark"] .card { background: none; }
+:root[data-theme="newspaper"][data-mode="dark"] .panel {
+  background: oklch(0.225 0.008 80);
+}
+
+/* ── Newspaper: the masthead ──────────────────────────────────────────────
+   The bar becomes a front page's head: the name set large and centred between
+   rules, then a dateline row — the date on the left, the pages as section
+   labels in the middle, the light/dark switch on the right. The wordmark text
+   is swapped in CSS so no other theme's header changes; the link keeps its
+   aria-label. The bar is fixed and the page reserves --appbar-h for it, so the
+   masthead's height is fixed to match. */
+:root[data-theme="newspaper"] { --appbar-h: calc(102px + env(safe-area-inset-top)); }
+@media (min-width: 700px) {
+  :root[data-theme="newspaper"] { --appbar-h: calc(112px + env(safe-area-inset-top)); }
+}
+:root[data-theme="newspaper"] .appbar {
+  align-items: flex-start;
+  padding-block: calc(6px + env(safe-area-inset-top)) 0;
+  background: var(--ground);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-bottom: 0;
+}
+:root[data-theme="newspaper"] .appbar__inner {
+  box-sizing: border-box;
+  height: calc(var(--appbar-h) - env(safe-area-inset-top) - 6px);
+  display: grid; grid-template-columns: 1fr auto 1fr; grid-template-rows: 1fr auto;
+  align-items: center; column-gap: 12px;
+  padding-inline: max(var(--gap), env(safe-area-inset-left)) max(var(--gap), env(safe-area-inset-right));
+  border-bottom: 2px solid var(--press);
+}
+:root[data-theme="newspaper"] .appbar__brand {
+  grid-column: 1 / -1; grid-row: 1; align-self: end;
+  display: flex; justify-content: center; gap: 0;
+  padding-block: 0 3px; border-bottom: 3px double var(--press);
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+  font-size: 0;
+}
+:root[data-theme="newspaper"] .appbar__brand svg { display: none; }
+:root[data-theme="newspaper"] .appbar__brand span { font-size: 0; }
+:root[data-theme="newspaper"] .appbar__brand span::before {
+  content: 'The Smart News';
+  font-size: clamp(2rem, 10.5vw, 2.9rem);
+}
+@media (min-width: 700px) {
+  :root[data-theme="newspaper"] .appbar__brand span::before { font-size: 3.4rem; }
+}
+:root[data-theme="newspaper"] .appbar__aside { display: contents; }
+:root[data-theme="newspaper"] .appbar__when {
+  grid-column: 1; grid-row: 2; justify-self: start; align-items: flex-start;
+}
+:root[data-theme="newspaper"] .appbar__date {
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-variant: small-caps; letter-spacing: 0.06em; font-weight: 500;
+  font-size: var(--t-3); color: var(--ink);
+}
+:root[data-theme="newspaper"] .appbar__sync { font-family: Newsreader, Georgia, serif; font-style: italic; }
+:root[data-theme="newspaper"] .appbar__aside > :not(.appbar__when):not(.pinchip) {
+  grid-column: 3; grid-row: 2; justify-self: end;
+}
+:root[data-theme="newspaper"] .modetoggle { width: 32px; height: 32px; margin-right: -4px; }
+:root[data-theme="newspaper"] .appnav { grid-column: 2; grid-row: 2; gap: 4px; }
+:root[data-theme="newspaper"] .appnav__link {
+  height: 32px; padding: 0 10px; border-radius: 0; background: none;
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-variant: small-caps; letter-spacing: 0.08em; font-weight: 500;
+  font-size: var(--t-3); color: var(--ink-2);
+}
+:root[data-theme="newspaper"] .appnav__link svg { display: none; }
+:root[data-theme="newspaper"] .appnav__link[aria-current="page"],
+:root[data-theme="newspaper"][data-mode="dark"] .appnav__link[aria-current="page"] {
+  background: none; color: var(--kicker); box-shadow: inset 0 -2px 0 var(--kicker);
+}
+@media (hover: hover) { :root[data-theme="newspaper"] .appnav__link:hover { color: var(--kicker); } }
+@media (min-width: 700px) and (max-width: 859.98px) {
+  :root[data-theme="newspaper"]:not([data-nav]) .appnav__link span {
+    position: static; width: auto; height: auto; overflow: visible; clip-path: none;
+  }
+}
+
+/* ── Newspaper: the categories stay a horizontal strip ─────────────────────
+   On a desktop the other themes turn the strip into a left column. A paper's
+   section line runs across the page, so here it stays the phone's sweep at
+   every width, set as section labels. */
+:root[data-theme="newspaper"] .catstrip__row { gap: 22px; }
+:root[data-theme="newspaper"] .catlink,
+:root[data-theme="newspaper"] .shell > .catstrip .catlink {
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-size: clamp(20px, 2vw, 26px); font-weight: 700; letter-spacing: -0.01em;
+  padding: 8px 0; border-radius: 0; color: var(--ink-3);
+}
+:root[data-theme="newspaper"] .catlink[aria-current="page"],
+:root[data-theme="newspaper"] .catlink[data-active="true"],
+:root[data-theme="newspaper"] .shell > .catstrip .catlink[aria-current="page"],
+:root[data-theme="newspaper"] .shell > .catstrip .catlink[data-active="true"] {
+  color: var(--ink); background: none; box-shadow: none;
+  text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 7px;
+}
+@media (min-width: 1024px) {
+  :root[data-theme="newspaper"] .shell:has(> .catstrip) { display: block; }
+  :root[data-theme="newspaper"] .shell > .catstrip {
+    position: static;
+    margin-inline: calc(var(--gap) * -1); padding: 10px var(--gap) 14px;
+    overflow-x: auto; overflow-y: hidden;
+  }
+  :root[data-theme="newspaper"] .shell > .catstrip .catstrip__row {
+    flex-direction: row; width: max-content; align-items: baseline; gap: 22px;
+  }
+  :root[data-theme="newspaper"] .shell > .catstrip[data-edge="end"] {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+  }
+  :root[data-theme="newspaper"] .shell > .catstrip[data-edge="start"] {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 20px);
+            mask-image: linear-gradient(90deg, transparent, #000 20px);
+  }
+  :root[data-theme="newspaper"] .shell > .catstrip[data-edge="both"] {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 20px, #000 calc(100% - 34px), transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 20px, #000 calc(100% - 34px), transparent);
+  }
+}
+
+/* ── Newspaper: a page of unequal stories ─────────────────────────────────
+   A front page is not a grid of equals: one story shouts, some run as
+   features, the rest are briefs. The tier StoryCard writes on each wrapper
+   (tierFor) picks the treatment from what the story is, so a big story looks
+   big wherever it falls. Scoped to the feed's own children: the front block
+   and the story page's related box set their cards themselves. */
+:root[data-theme="newspaper"] .card p { text-align: justify; hyphens: auto; }
+:root[data-theme="newspaper"] .card h2 { text-wrap: balance; }
+
+/* Hairlines between stories. The heavy rules are kept for the edges of the
+   front block and the head of each section, so they mean something. */
+:root[data-theme="newspaper"] .card { border-top: 1px solid var(--rule); }
+:root[data-theme="newspaper"] .card--lead { border-top: 0; }
+
+:root[data-theme="newspaper"] .card--lead h2 {
+  font-size: var(--np-h1); line-height: calc(var(--np-u) * 13);
+  font-weight: 800; letter-spacing: -0.024em;
+}
+/* A raised initial: a floated drop cap does not survive the summary's line clamp. */
+:root[data-theme="newspaper"] .card--lead p::first-letter {
+  font-family: Newsreader, Georgia, serif; font-weight: 800;
+  font-size: 2.4em; line-height: 1; color: var(--ink);
+}
+
+/* Feature: a 3:2 photograph over a left-set headline. */
+:root[data-theme="newspaper"] .card--stack h2 { font-size: var(--np-h3); line-height: calc(var(--np-u) * 7); font-weight: 800; }
+:root[data-theme="newspaper"] .card--stack .plate--hero { height: auto; aspect-ratio: 3 / 2; }
+
+/* Major: the stories with weight, centred a size up under a heavier rule. */
+:root[data-theme="newspaper"] .feed > [data-tier="major"] .card { border-top: 2px solid var(--ink); text-align: center; }
+:root[data-theme="newspaper"] .feed > [data-tier="major"] .card h2 { font-size: var(--np-h2); line-height: calc(var(--np-u) * 8); }
+:root[data-theme="newspaper"] .feed > [data-tier="major"] .card p { text-align: center; font-style: italic; }
+:root[data-theme="newspaper"] .feed > [data-tier="major"] .card .kicker,
+:root[data-theme="newspaper"] .feed > [data-tier="major"] .card .foot { justify-content: center; }
+
+/* Brief: text only. A paper runs a photograph on one story in four or five. */
+:root[data-theme="newspaper"] .card--compact h2 { font-size: var(--np-h5); line-height: calc(var(--np-u) * 5); font-weight: 700; }
+:root[data-theme="newspaper"] .feed > :is([data-tier="brief"], [data-tier="item"], [data-tier="standout"]) .plate--thumb { display: none; }
+
+/* Item: one source and little weight, so headline and credit only. */
+:root[data-theme="newspaper"] .feed > [data-tier="item"] .card p { display: none; }
+:root[data-theme="newspaper"] .feed > [data-tier="item"] .card { padding-block: calc(var(--np-u) * 2); }
+:root[data-theme="newspaper"] .feed > [data-tier="item"] .card h2 { font-weight: 600; }
+
+/* Standout: short and important, so the summary itself is set large, in
+   italic between rules, the way a paper lifts a line out of a story. */
+:root[data-theme="newspaper"] .feed > [data-tier="standout"] .card {
+  border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink);
+  padding-block: calc(var(--np-u) * 4); text-align: center;
+}
+:root[data-theme="newspaper"] .feed > [data-tier="standout"] .card h2 {
+  font-size: 0.85rem; line-height: calc(var(--np-u) * 5); font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--kicker);
+}
+:root[data-theme="newspaper"] .feed > [data-tier="standout"] .card p {
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-size: 1.3rem; line-height: calc(var(--np-u) * 7); font-style: italic; font-weight: 500;
+  text-align: center; hyphens: manual; -webkit-line-clamp: 5;
+}
+:root[data-theme="newspaper"] .feed > [data-tier="standout"] .card .foot { justify-content: center; }
+
+/* A story from outside the reader's usual sections is boxed, and is the one
+   brief that keeps its picture. */
+:root[data-theme="newspaper"] .card--compact.card--explore {
+  background: oklch(0.915 0.020 86); border: 1px solid var(--rule);
+  border-top: 2px solid var(--ink); padding-inline: 12px;
+}
+:root[data-theme="newspaper"] .card--compact.card--explore .plate--thumb { display: flex; }
+:root[data-theme="newspaper"][data-mode="dark"] .card--compact.card--explore { background: oklch(0.225 0.008 80); }
+
+/* ── Newspaper: columns, and more kinds of story ──────────────────────────
+   Above 700px the feed stops being a grid of equal cells and becomes what a
+   page of newsprint is: text flowing down real columns, separated by a rule,
+   with the lead and the occasional feature breaking across all of them. Cards
+   keep their own height, so there is no row to leave a gap in. Two columns
+   from 700, three from 1024, four from 1440. The feed reads down each column
+   in rank order, as a paper does, not across. */
+@media (min-width: 700px) {
+  :root[data-theme="newspaper"] .feed {
+    display: block; column-count: 2; column-gap: calc(var(--gap) * 2);
+    column-rule: 1px solid var(--rule);
+  }
+  :root[data-theme="newspaper"] .cardwrap {
+    break-inside: avoid; padding-bottom: var(--gap); height: auto;
+  }
+  :root[data-theme="newspaper"] .cardwrap > .card { height: auto; }
+
+  /* The lead breaks across every column: headline over the full width, then the
+     photo at a plain 4:3 beside the text. A strip the width of the page is a
+     banner, not a photograph. */
+  :root[data-theme="newspaper"] .cardwrap:has(.card--lead) { column-span: all; }
+  :root[data-theme="newspaper"] .card--lead {
+    display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-areas: "head head" "photo text" "photo foot";
+    grid-template-rows: auto auto 1fr;
+    column-gap: calc(var(--gap) * 2); row-gap: 10px; align-items: start;
+  }
+  :root[data-theme="newspaper"] .card--lead > h2 { grid-area: head; }
+  :root[data-theme="newspaper"] .card--lead > .plate {
+    grid-area: photo; margin: 0; height: auto; min-height: 0; flex: none;
+    aspect-ratio: 4 / 3;
+  }
+  :root[data-theme="newspaper"] .card--lead > p { grid-area: text; -webkit-line-clamp: 10; }
+  :root[data-theme="newspaper"] .card--lead > .foot { grid-area: foot; align-self: end; margin-top: 0; }
+  :root[data-theme="newspaper"] .card--lead:not(:has(> .plate)) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "text" "foot";
+  }
+
+  /* No story breaks across the page below the front block. Each one cut the
+     flow into a short run of its own, and a run of five stories over four
+     columns balances with a hole in it. */
+}
+@media (min-width: 1024px) { :root[data-theme="newspaper"] .feed { column-count: 3; } }
+@media (min-width: 1440px) { :root[data-theme="newspaper"] .feed { column-count: 4; } }
+
+/* On a phone the lead keeps its own stack, but a photograph, not a strip. */
+:root[data-theme="newspaper"] .card--lead .plate--hero { aspect-ratio: 4 / 3; }
+
+/* ── Newspaper: the front page block ──────────────────────────────────────
+   The three best stories are laid out by rank, not by flow: the lead takes the
+   wide left column and the next two stack down the right, parted by a column
+   rule. Everything after flows in columns below. */
+@media (min-width: 700px) {
+  :root[data-theme="newspaper"] .feed__front {
+    display: grid; column-span: all;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    column-gap: calc(var(--gap) * 2); align-items: stretch;
+    padding-bottom: var(--gap); margin-bottom: var(--gap);
+    border-bottom: 3px double var(--press);
+  }
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:first-child { grid-column: 1; grid-row: 1 / span 2; }
+  /* The lead's photo takes whatever height the companions leave, so the two
+     columns end on one line. Headline over it, summary in two text columns
+     under it. */
+  :root[data-theme="newspaper"] .feed__front .card--lead {
+    height: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "photo" "text" "foot";
+    grid-template-rows: auto minmax(260px, 1fr) auto auto;
+  }
+  /* The image is taken out of flow so its natural height cannot size the row
+     and push the companions' rows taller with it. */
+  :root[data-theme="newspaper"] .feed__front .card--lead > .plate { aspect-ratio: auto; height: auto; align-self: stretch; min-height: 0; }
+  :root[data-theme="newspaper"] .feed__front .card--lead > .plate img { position: absolute; inset: 0; }
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) { align-self: start; }
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(2) { grid-row: 1; }
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(3) { grid-row: 2; }
+  :root[data-theme="newspaper"] .feed__front .card--lead > p {
+    display: block; -webkit-line-clamp: none; overflow: visible;
+    column-count: 2; column-gap: calc(var(--gap) * 2); column-rule: 1px solid var(--rule);
+  }
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) {
+    grid-column: 2; padding-left: calc(var(--gap) * 2 - 1px);
+    margin-left: calc(var(--gap) * -1); border-left: 1px solid var(--rule);
+  }
+  /* Beside the lead the companions run at the second step, whatever their rank. */
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card h2 {
+    font-size: var(--np-h3); line-height: calc(var(--np-u) * 7); font-style: normal; font-weight: 800; text-align: left;
+  }
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card { text-align: left; }
+  :root[data-theme="newspaper"] .feed__front > .cardwrap:nth-child(n+2) .card p { text-align: justify; font-style: normal; }
+}
+
+/* ── Newspaper: the lead's drop cap ───────────────────────────────────────
+   In the front block the lead's summary is unclamped and set in two text
+   columns, so a true three-line drop cap can float there. */
+@media (min-width: 700px) {
+  :root[data-theme="newspaper"] .feed__front .card--lead > p::first-letter {
+    float: left; font-size: calc(var(--np-u) * 19); line-height: calc(var(--np-u) * 16);
+    padding: 2px 8px 0 0; margin-top: 2px;
+  }
+}
+
+/* ── Newspaper: sections inside the feed ──────────────────────────────────
+   Below the front block the Top feed is grouped by section, each under a
+   heavy-ruled head in capitals. The head stays with the story under it. */
+:root[data-theme="newspaper"] .feed__band {
+  grid-column: 1 / -1;
+  margin: 0; padding: 6px 0 5px;
+  border-top: 4px solid var(--ink); border-bottom: 1px solid var(--ink);
+  font-family: Newsreader, Georgia, 'Times New Roman', serif;
+  font-size: 0.95rem; line-height: 1; font-weight: 800;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink);
+  break-after: avoid; break-inside: avoid;
+  scroll-margin-top: calc(var(--appbar-h) + 12px);
+}
+:root[data-theme="newspaper"] .feed__band ~ .feed__band { margin-top: calc(var(--gap) * 2); }
+:root[data-theme="newspaper"] .feed__band + .cardwrap .card { border-top: 0; }
+
+/* ── Newspaper: the index ─────────────────────────────────────────────────
+   "Inside": one line per section with its best headline, as a front page
+   points to its inside pages. A sweep on a phone, a row of cells above. */
+.paperindex { display: none; }
+:root[data-theme="newspaper"] .paperindex {
+  display: flex; gap: 0; overflow-x: auto; scrollbar-width: none;
+  margin: 2px 0 var(--gap); padding-block: 8px;
+  border-top: 1px solid var(--press); border-bottom: 3px double var(--press);
+}
+:root[data-theme="newspaper"] .paperindex::-webkit-scrollbar { display: none; }
+:root[data-theme="newspaper"] .paperindex__label {
+  flex: 0 0 auto; align-self: center; padding-right: 12px;
+  font-family: Newsreader, Georgia, serif; font-size: 1.15rem; font-style: italic; font-weight: 700;
+  color: var(--ink);
+}
+:root[data-theme="newspaper"] .paperindex__item {
+  flex: 0 0 200px; display: flex; flex-direction: column; gap: 2px;
+  padding: 0 12px; border-left: 1px solid var(--rule);
+  color: var(--ink); text-decoration: none;
+}
+:root[data-theme="newspaper"] .paperindex__item b {
+  font-family: Newsreader, Georgia, serif; font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--kicker);
+}
+:root[data-theme="newspaper"] .paperindex__item span {
+  font-size: 0.85rem; line-height: 1.3; color: var(--ink-2);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+@media (hover: hover) { :root[data-theme="newspaper"] .paperindex__item:hover span { color: var(--ink); text-decoration: underline; } }
+@media (min-width: 1024px) {
+  :root[data-theme="newspaper"] .paperindex { overflow: visible; }
+  :root[data-theme="newspaper"] .paperindex__item { flex: 1 1 0; min-width: 0; }
+}
+
+/* ── Newspaper: photo captions ────────────────────────────────────────────
+   The credit leaves the picture and sits under it in small italic, as a
+   printed caption line does, instead of white type over the photograph. */
+:root[data-theme="newspaper"] .card .plate--hero:has(.credit),
+:root[data-theme="newspaper"] .detail__main > .plate--detail:has(.credit) {
+  overflow: visible; margin-bottom: 18px;
+}
+:root[data-theme="newspaper"] .plate .credit {
+  top: calc(100% + 4px); bottom: auto; left: 0; right: 0; max-width: none;
+  font-family: 'Source Serif 4', Georgia, serif; font-style: italic;
+  font-size: 11px; color: var(--ink-3); text-shadow: none; text-align: right;
+}
+
+/* ── Newspaper: masthead furniture ────────────────────────────────────────
+   The long date in the dateline from 700, and the two ears either side of
+   the name from 1024: the edition on the left, the paper's line on the right. */
+@media (min-width: 700px) {
+  :root[data-theme="newspaper"] .appbar__date { display: none; }
+  :root[data-theme="newspaper"] .appbar__date.appbar__date--long { display: inline; }
+}
+@media (min-width: 1024px) {
+  :root[data-theme="newspaper"] .appbar__aside > .appbar__ear.appbar__ear--l,
+  :root[data-theme="newspaper"] .appbar__aside > .appbar__ear.appbar__ear--r {
+    display: block; grid-row: 1; align-self: center; z-index: 1; max-width: 170px;
+    padding: 4px 8px; border: 1px solid var(--press);
+    font-family: Newsreader, Georgia, serif; font-size: 10.5px; line-height: 1.35;
+    font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2);
+  }
+  :root[data-theme="newspaper"] .appbar__aside > .appbar__ear.appbar__ear--l { grid-column: 1; justify-self: start; }
+  :root[data-theme="newspaper"] .appbar__aside > .appbar__ear.appbar__ear--r { grid-column: 3; justify-self: end; text-align: right; }
+}
+
+/* ── Newspaper: the story page ────────────────────────────────────────────
+   Set as an inside page: a big balanced headline closed by a double rule, a
+   small-caps dateline, the photograph across the top of the text with its
+   caption under it, the summary in columns with a drop cap, and the related
+   stories boxed as "More on this story". */
+:root[data-theme="newspaper"] .story__meta {
+  font-family: Newsreader, Georgia, serif; font-variant: small-caps;
+  letter-spacing: 0.06em; color: var(--ink-2);
+}
+:root[data-theme="newspaper"] .story__head {
+  padding-bottom: calc(var(--np-u) * 3); border-bottom: 3px double var(--press);
+}
+:root[data-theme="newspaper"] .story__title,
+:root[data-theme="newspaper"] .detail h1.story__title {
+  font-size: calc(var(--np-h1) * 1.1); line-height: 1.06;
+  font-weight: 800; letter-spacing: -0.026em; text-wrap: balance;
+}
+:root[data-theme="newspaper"] .detail__main > .panel p { text-align: justify; hyphens: auto; margin: 0 0 calc(var(--np-u) * 3); }
+:root[data-theme="newspaper"] .detail__main > .panel p:first-child::first-letter {
+  float: left; font-family: Newsreader, Georgia, serif; font-weight: 800; color: var(--ink);
+  font-size: calc(var(--np-u) * 19); line-height: calc(var(--np-u) * 16);
+  padding: 2px 8px 0 0; margin-top: 2px;
+}
+:root[data-theme="newspaper"] .plate--detail { border-radius: 0; }
+@media (min-width: 700px) {
+  :root[data-theme="newspaper"] .detail__main { grid-template-columns: minmax(0, 1fr); }
+  :root[data-theme="newspaper"] .detail__main > .plate--detail { order: -1; width: 100%; aspect-ratio: 16 / 9; max-height: none; }
+  /* Block, not the panel's flex: columns only flow inside a block container. */
+  :root[data-theme="newspaper"] .detail__main > .panel {
+    display: block; column-count: 2; column-gap: calc(var(--gap) * 3); column-rule: 1px solid var(--rule);
+  }
+}
+@media (min-width: 1024px) {
+  :root[data-theme="newspaper"] .detail__main > .panel { column-count: 3; }
+}
+:root[data-theme="newspaper"] .story__related {
+  padding: 12px 14px 14px;
+  background: oklch(0.925 0.020 86);
+  border: 1px solid var(--press); border-top: 4px solid var(--ink);
+}
+:root[data-theme="newspaper"][data-mode="dark"] .story__related { background: oklch(0.225 0.008 80); }
+:root[data-theme="newspaper"] .story__related > .sectitle { font-size: 0; padding-left: 0; }
+:root[data-theme="newspaper"] .story__related > .sectitle::before {
+  content: 'More on this story';
+  font-family: Newsreader, Georgia, serif; font-size: 0.95rem; font-weight: 800;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink);
+}
+:root[data-theme="newspaper"] .story__related > .sectitle::after { display: none; }
+:root[data-theme="newspaper"] .story__related .card { border-top: 1px solid var(--rule); }
+
+/* ── Newspaper: the photo budget ──────────────────────────────────────────
+   Where the feed is set in sections, a section runs one picture: on its
+   first story, and on any major story. The rest of its features are text.
+   A picture that failed to load is dropped rather than left as a swatch. */
+:root[data-theme="newspaper"] .feed:has(> .feed__band) > [data-tier="feature"]:not(.feed__band + *) .plate--hero { display: none; }
+:root[data-theme="newspaper"] .plate--failed { display: none; }

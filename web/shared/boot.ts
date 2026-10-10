@@ -42,11 +42,13 @@ export const THEME_CHROME: Record<string, string> = {
   broadsheet: '#f9f6f0',
   fjord: '#e9efef',
   cover: '#f7f7fa',
+  newspaper: '#f2eee3',
   'frost-dark': '#15171c',
   'pastel-dark': '#08090e',
   'broadsheet-dark': '#141310',
   'fjord-dark': '#0d1618',
   'cover-dark': '#15171c',
+  'newspaper-dark': '#18171a',
 };
 
 /**

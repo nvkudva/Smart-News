@@ -77,6 +77,22 @@ function Kicker({ story }: { story: Story }) {
   return <div className="kicker">{place && <span className="kicker__place">{place}</span>}</div>;
 }
 
+/**
+ * A finer grade than the variant, for themes that set stories by weight rather
+ * than by size alone (Newspaper). The others ignore it. Read from the same
+ * signals as variantFor, so a story's treatment follows what it is, not where
+ * it happens to land in the feed.
+ */
+function tierFor(story: Story, variant: Variant) {
+  if (variant === 'lead') return 'lead';
+  // Both, not either: the model rates half the window 5, so importance alone
+  // made every other story major. With the crowd beside it, about one in six.
+  if (variant === 'stack') return story.importance >= 5 && story.source_count >= 8 ? 'major' : 'feature';
+  if (story.importance >= 4 && story.crux.length <= 200) return 'standout';
+  if (story.source_count <= 1 && story.importance <= 2) return 'item';
+  return 'brief';
+}
+
 export function StoryCard({ story, variant = 'compact', priority = false }: {
   story: Story; variant?: Variant; priority?: boolean;
 }) {
@@ -98,7 +114,7 @@ export function StoryCard({ story, variant = 'compact', priority = false }: {
   ].filter(Boolean).join(' ');
 
   return (
-    <div className="cardwrap">
+    <div className="cardwrap" data-tier={tierFor(story, variant)}>
       {/* Prefetching is StoryWarm's job, not this link's. Link's own hover
           prefetch has no dwell and no ceiling, so a pointer crossing a grid
           fetched every card it grazed — and on a hover that was meant, the two

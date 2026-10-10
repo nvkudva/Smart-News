@@ -1,15 +1,16 @@
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { paintChrome, resolveMode, MODE_KEY, THEME_KEY } from '../lib/boot';
 
 export type Theme =
-  | 'frost' | 'pastel' | 'broadsheet' | 'fjord' | 'cover';
+  | 'frost' | 'pastel' | 'broadsheet' | 'fjord' | 'cover' | 'newspaper';
 
 const OPTIONS: [Theme, string, string][] = [
   ['frost', 'Frosted', 'White glass over a soft wash. The default.'],
   ['pastel', 'Pastel', 'The same glass, each card tinted by its category.'],
   ['broadsheet', 'Broadsheet', 'Paper, serif headlines and hairlines instead of cards.'],
   ['fjord', 'Northlight', 'Cold daylight. Flat surfaces, one petrol accent, serif headlines.'],
+  ['newspaper', 'Newspaper', 'Cream stock, heavy serif headlines, double rules and red labels, like a printed front page.'],
   ['cover', 'Cover', 'Borderless photo cards on a neutral fill.'],
 ];
 
@@ -19,6 +20,22 @@ function read(): Theme {
     if (v && OPTIONS.some(([o]) => o === v)) return v;
   } catch { /* storage blocked — the default is the right answer anyway */ }
   return 'frost';
+}
+
+function watch(onChange: () => void) {
+  const mo = new MutationObserver(onChange);
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  return () => mo.disconnect();
+}
+const current = () => (document.documentElement.dataset.theme ?? 'frost') as Theme;
+
+/**
+ * The theme on <html>, kept live. Most themes are CSS alone; a component asks
+ * this only for markup one theme needs and the rest must not carry, such as
+ * Newspaper's section bands.
+ */
+export function useTheme(): Theme {
+  return useSyncExternalStore(watch, current, () => 'frost');
 }
 
 export function ThemeControl() {
