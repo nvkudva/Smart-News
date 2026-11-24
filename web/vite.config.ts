@@ -61,7 +61,9 @@ function serviceWorker(): Plugin {
     generateBundle(_options, bundle) {
       // Client build only. The Worker build runs through this config too, and
       // has no /assets output to hash.
-      const assets = Object.keys(bundle).filter((f) => f.startsWith('assets/')).sort()
+      const assets = Object.keys(bundle)
+        .filter((f) => f.startsWith('assets/') && !f.endsWith('.wasm') && !f.includes('ttsWorker'))
+        .sort()
       if (assets.length === 0) return
 
       const version = createHash('sha256').update(assets.join('\n')).digest('hex').slice(0, 12)
@@ -98,8 +100,16 @@ const BUILD = (() => {
   return { sha: `${sha}${dirty}`, at: Date.now() }
 })()
 
+const ISOLATION_HEADERS = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'credentialless',
+}
+
 export default defineConfig({
   define: { __BUILD_SHA__: JSON.stringify(BUILD.sha), __BUILD_AT__: JSON.stringify(BUILD.at) },
+  server: { allowedHosts: ['.trycloudflare.com'], headers: ISOLATION_HEADERS },
+  preview: { headers: ISOLATION_HEADERS },
+  worker: { format: 'es' },
   plugins: [
     // Must precede the react plugin: it generates routeTree.gen.ts from src/routes.
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),

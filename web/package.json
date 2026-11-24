@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@tanstack/react-router": "^1.170.36",
+    "kokoro-js": "^1.2.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

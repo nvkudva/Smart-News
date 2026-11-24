@@ -34,3 +34,21 @@ export const Back = ({ size = 21 }: P) => (
 export const Photo = ({ size = 26 }: P) => (
   <svg {...base(size)} strokeWidth={1.6}><rect x="3" y="5" width="18" height="14" rx="2.5" /><circle cx="8.5" cy="10" r="1.6" /><path d="m3.5 16.5 4.5-4 3.5 3 3.5-3.5 5.5 5" /></svg>
 );
+export const Play = ({ size = 20 }: P) => (
+  <svg {...base(size)} fill="currentColor" stroke="none"><path d="M8 5.5v13l10.5-6.5Z" /></svg>
+);
+export const Pause = ({ size = 20 }: P) => (
+  <svg {...base(size)} fill="currentColor" stroke="none"><rect x="6.5" y="5" width="4" height="14" rx="1.2" /><rect x="13.5" y="5" width="4" height="14" rx="1.2" /></svg>
+);
+export const Stop = ({ size = 16 }: P) => (
+  <svg {...base(size)} fill="currentColor" stroke="none"><rect x="5" y="5" width="14" height="14" rx="2.5" /></svg>
+);
+export const SkipPrev = ({ size = 18 }: P) => (
+  <svg {...base(size)} strokeWidth={2.1}><path d="M6 6v12" /><path d="M18 6.5 9.5 12 18 17.5Z" fill="currentColor" /></svg>
+);
+export const SkipNext = ({ size = 18 }: P) => (
+  <svg {...base(size)} strokeWidth={2.1}><path d="M18 6v12" /><path d="M6 6.5 14.5 12 6 17.5Z" fill="currentColor" /></svg>
+);
+export const FastForward = ({ size = 18 }: P) => (
+  <svg {...base(size)} strokeWidth={2}><path d="M4.5 6.5 11.5 12l-7 5.5Z" fill="currentColor" /><path d="M12.5 6.5 19.5 12l-7 5.5Z" fill="currentColor" /></svg>
+);

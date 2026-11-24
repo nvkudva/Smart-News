@@ -11,7 +11,7 @@
  * agree about them: Theme and NavPlacement each declared their own 'sn_theme'
  * and 'sn_nav' literals, which is two sources for one fact.
  */
-export { NAV_KEY, HIDDEN_KEY, THEME_KEY, MODE_KEY } from '../../shared/boot';
+export { NAV_KEY, HIDDEN_KEY, INTERESTS_KEY, THEME_KEY, MODE_KEY } from '../../shared/boot';
 
 import { THEME_CHROME } from '../../shared/boot';
 

@@ -1,7 +1,7 @@
 
 import { label } from '../../shared/categories';
 import { useState, useTransition } from 'react';
-import { HIDDEN_KEY } from '../lib/boot';
+import { HIDDEN_KEY, INTERESTS_KEY } from '../lib/boot';
 import { toggleHiddenAction, toggleInterestAction } from '../lib/actions';
 import { prefsChanged } from './prefsChanged';
 
@@ -41,7 +41,10 @@ export function PrefChips(
     // Comma-delimited on both sides so "India" cannot match "Indian"; empty
     // rather than a bare pair of commas when nothing is hidden.
     const list = next.hidden.length ? `,${next.hidden.join(',')},` : '';
-    try { localStorage.setItem(HIDDEN_KEY, list); } catch { /* server still knows */ }
+    try {
+      localStorage.setItem(HIDDEN_KEY, list);
+      localStorage.setItem(INTERESTS_KEY, JSON.stringify(next.categories));
+    } catch { /* server still knows */ }
     document.documentElement.dataset.hidden = list;
   };
 

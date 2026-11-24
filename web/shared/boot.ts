@@ -26,6 +26,7 @@ export const NAV_KEY = 'sn_nav';
  * the record; this is a copy the shell can read.
  */
 export const HIDDEN_KEY = 'sn_hidden';
+export const INTERESTS_KEY = 'sn_interests';
 export const THEME_KEY = 'sn_theme';
 export const MODE_KEY = 'sn_mode';
 

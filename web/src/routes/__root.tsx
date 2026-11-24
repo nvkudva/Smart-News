@@ -4,7 +4,9 @@ import { AppHeader } from '../components/AppHeader'
 import { ServiceWorker } from '../components/ServiceWorker'
 import { StoryWarm } from '../components/StoryWarm'
 import { UpdateBanner } from '../components/UpdateBanner'
+import { PodcastPlayer } from '../components/PodcastPlayer'
 import { onWorldUpdate, startWorldRefresh } from '../lib/world'
+import { preloadPodcast } from '../lib/podcastStore'
 import { TabBar } from '../components/TabBar'
 import { PullToRefresh } from '../components/PullToRefresh'
 
@@ -25,6 +27,7 @@ function Root() {
   // meant a timer nothing had asked for and nothing could stop; it is the
   // app's clock, so the app's root starts it.
   useEffect(startWorldRefresh, [])
+  useEffect(preloadPodcast, [])
   const router = useRouter()
   useEffect(() => onWorldUpdate(() => void router.invalidate()), [router])
 
@@ -36,6 +39,7 @@ function Root() {
       <Outlet />
       <StoryWarm />
       <ServiceWorker />
+      <PodcastPlayer />
       <UpdateBanner />
     </>
   )

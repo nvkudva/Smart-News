@@ -1,7 +1,7 @@
 
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Pin } from './icons';
+import { Bookmark, Pin } from './icons';
 import { ModeToggle } from './Mode';
 import { readPlaceLine, writePlaceLine, type PlaceLine } from '../lib/placeLine';
 import { sessionStamp, stillGood } from '../lib/store';
@@ -74,7 +74,13 @@ export function HeaderAside() {
         <span className="pinchip__i"><Pin size={12} /></span>
         <span className="pinchip__t">{here || 'City'}</span>
       </Link>
-      <ModeToggle />
+      <div className="appbar__tools">
+        <Link to="/saved" className="appbar__saved" aria-label="Saved stories" title="Saved stories"
+              activeProps={{ 'aria-current': 'page' }}>
+          <Bookmark size={19} />
+        </Link>
+        <ModeToggle />
+      </div>
       {/* A masthead's ears. Hidden in every theme but Newspaper. */}
       <span className="appbar__ear appbar__ear--l" aria-hidden>{here ? `${here} Edition` : 'Daily Edition'}</span>
     </div>
